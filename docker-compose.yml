@@ -1,0 +1,127 @@
+# Docker Compose configuration for local development
+#
+# Usage:
+#   docker compose up        - Start all services
+#   docker compose up -d     - Start in background
+#   docker compose down      - Stop all services
+#   docker compose logs -f   - Follow logs
+#   docker compose run app pytest  - Run tests
+#
+# For development with hot reload:
+#   docker compose up dev
+#
+# For running tests:
+#   docker compose run --rm test
+#
+
+services:
+  # ===========================================================================
+  # Development service with hot reload
+  # ===========================================================================
+  dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      # Named volume for caching
+      - uv-cache:/root/.cache/uv
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+    stdin_open: true
+    tty: true
+    command: ["bash"]
+
+  # ===========================================================================
+  # Test runner service
+  # ===========================================================================
+  test:
+    build:
+      context: .
+      target: development
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      - APP_ENV=test
+    command: ["pytest", "-v", "--tb=short"]
+
+  # ===========================================================================
+  # Test with coverage
+  # ===========================================================================
+  test-cov:
+    build:
+      context: .
+      target: development
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./htmlcov:/app/htmlcov
+    environment:
+      - APP_ENV=test
+    command: ["pytest", "-v", "--cov=my_project", "--cov-report=html", "--cov-report=term"]
+
+  # ===========================================================================
+  # Linting service
+  # ===========================================================================
+  lint:
+    build:
+      context: .
+      target: development
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    command: ["ruff", "check", "src", "tests"]
+
+  # ===========================================================================
+  # Format checker service
+  # ===========================================================================
+  format:
+    build:
+      context: .
+      target: development
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    command: ["ruff", "format", "src", "tests"]
+
+  # ===========================================================================
+  # Type checking service
+  # ===========================================================================
+  typecheck:
+    build:
+      context: .
+      target: development
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    command: ["mypy", "src"]
+
+  # ===========================================================================
+  # Production service (for testing production build)
+  # ===========================================================================
+  app:
+    build:
+      context: .
+      target: production
+    environment:
+      - APP_ENV=production
+    # Add any production-specific config here
+    # ports:
+    #   - "8000:8000"
+
+# ===========================================================================
+# Named volumes
+# ===========================================================================
+volumes:
+  uv-cache:
+    name: ${COMPOSE_PROJECT_NAME:-my-project}-uv-cache

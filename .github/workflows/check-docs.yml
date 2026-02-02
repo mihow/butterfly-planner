@@ -1,0 +1,131 @@
+# Check Claude Code documentation for updates
+#
+# Runs weekly to detect changes in official best practices.
+# Creates an issue when significant changes are found.
+
+name: Check Claude Docs
+
+on:
+  schedule:
+    # Run every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check-docs:
+    name: Check for Documentation Updates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 markdownify
+
+      - name: Fetch and compare documentation
+        id: check
+        run: |
+          python << 'EOF'
+          import os
+          import hashlib
+          import requests
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          from markdownify import markdownify as md
+
+          DOCS_DIR = Path(".claude/docs/snapshots")
+          DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
+          URLS = {
+              "best-practices": "https://code.claude.com/docs/en/best-practices",
+              "memory": "https://code.claude.com/docs/en/memory",
+              "skills": "https://code.claude.com/docs/en/skills",
+              "sub-agents": "https://code.claude.com/docs/en/sub-agents",
+          }
+
+          changes = []
+
+          for name, url in URLS.items():
+              snapshot_file = DOCS_DIR / f"{name}.md"
+              hash_file = DOCS_DIR / f"{name}.hash"
+
+              try:
+                  # Fetch current docs
+                  resp = requests.get(url, timeout=30, headers={
+                      "User-Agent": "Claude-First-Template-Bot/1.0"
+                  })
+                  resp.raise_for_status()
+
+                  # Extract main content and convert to markdown
+                  soup = BeautifulSoup(resp.text, 'html.parser')
+                  main = soup.find('main') or soup.find('article') or soup.body
+                  if main:
+                      content = md(str(main))
+                  else:
+                      content = md(resp.text)
+
+                  # Calculate hash
+                  content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
+
+                  # Compare with previous
+                  old_hash = hash_file.read_text().strip() if hash_file.exists() else ""
+
+                  if content_hash != old_hash:
+                      changes.append(f"- **{name}**: {url}")
+                      snapshot_file.write_text(content)
+                      hash_file.write_text(content_hash)
+                      print(f"CHANGED: {name}")
+                  else:
+                      print(f"UNCHANGED: {name}")
+
+              except Exception as e:
+                  print(f"ERROR fetching {name}: {e}")
+
+          # Write output
+          if changes:
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("has_changes=true\n")
+
+              # Write change summary for issue body
+              summary = "## Documentation Updates Detected\n\n"
+              summary += "The following Claude Code documentation pages have changed:\n\n"
+              summary += "\n".join(changes)
+              summary += "\n\n### Action Required\n\n"
+              summary += "1. Review the changes at the URLs above\n"
+              summary += "2. Update `.claude/` files if needed\n"
+              summary += "3. Update `best-practices-sources.md` with new date\n"
+
+              Path("change_summary.md").write_text(summary)
+          else:
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("has_changes=false\n")
+          EOF
+
+      - name: Create issue if changes detected
+        if: steps.check.outputs.has_changes == 'true'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Claude Code documentation has been updated"
+          content-filepath: ./change_summary.md
+          labels: |
+            documentation
+            automated
+
+      - name: Commit snapshot updates
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .claude/docs/snapshots/
+          git diff --staged --quiet || git commit -m "chore: update Claude docs snapshots [skip ci]"
+          git push
