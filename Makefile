@@ -1,4 +1,4 @@
-# Makefile for Claude-First Python Template
+# Makefile for Butterfly Planner
 #
 # Usage:
 #   make help       - Show available commands
@@ -20,7 +20,7 @@ YELLOW := \033[0;33m
 NC := \033[0m # No Color
 
 help: ## Show this help message
-	@echo "$(BLUE)Claude-First Python Template$(NC)"
+	@echo "$(BLUE)Butterfly Planner$(NC)"
 	@echo ""
 	@echo "$(GREEN)Available commands:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-15s$(NC) %s\n", $$1, $$2}'
@@ -43,10 +43,10 @@ test: ## Run tests
 	pytest
 
 test-cov: ## Run tests with coverage report (local)
-	pytest --cov=my_project --cov-report=html --cov-report=term
+	pytest --cov=butterfly_planner --cov-report=html --cov-report=term
 
 test-ci: ## Run tests with coverage for CI (xml output)
-	pytest -v --cov=my_project --cov-report=xml --cov-report=term
+	pytest -v --cov=butterfly_planner --cov-report=xml --cov-report=term
 
 test-fast: ## Run tests excluding slow tests
 	pytest -m "not slow"
@@ -112,7 +112,7 @@ docker-dev: ## Start development shell in Docker
 	docker compose run --rm dev
 
 docker-build: ## Build production Docker image
-	docker build -t my-project --target production .
+	docker build -t butterfly-planner --target production .
 
 docker-clean: ## Remove Docker containers and volumes
 	docker compose down -v --remove-orphans
@@ -122,7 +122,7 @@ docker-clean: ## Remove Docker containers and volumes
 # =============================================================================
 
 run: ## Run the CLI info command
-	my-project info
+	butterfly-planner info
 
 setup: install-dev ## Full development setup
 	@echo "$(GREEN)Development environment ready!$(NC)"
@@ -134,7 +134,7 @@ setup: install-dev ## Full development setup
 
 verify: ## Run full verification suite (imports, tests, smoke, CLI)
 	@echo "$(BLUE)=== Level 1: Import Check ===$(NC)"
-	python -c "from my_project import *; print('$(GREEN)imports ok$(NC)')"
+	python -c "from butterfly_planner import *; print('$(GREEN)imports ok$(NC)')"
 	@echo ""
 	@echo "$(BLUE)=== Level 2: Unit Tests ===$(NC)"
 	pytest -x -q
@@ -143,8 +143,8 @@ verify: ## Run full verification suite (imports, tests, smoke, CLI)
 	pytest tests/test_smoke.py -v
 	@echo ""
 	@echo "$(BLUE)=== Level 4: CLI Execution ===$(NC)"
-	python -m my_project.cli info
-	python -m my_project.cli run --name verify-test
+	python -m butterfly_planner.cli info
+	python -m butterfly_planner.cli run --name verify-test
 	@echo ""
 	@echo "$(GREEN)=== VERIFICATION PASSED ===$(NC)"
 

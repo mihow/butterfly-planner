@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from my_project.config import Settings, get_settings
+from butterfly_planner.config import Settings, get_settings
 
 
 class TestSettings:
@@ -23,7 +23,7 @@ class TestSettings:
 
         settings = Settings()
 
-        assert settings.app_name == "my-project"
+        assert settings.app_name == "butterfly-planner"
         assert settings.app_env == "development"
         assert settings.debug is False
 

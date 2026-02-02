@@ -6,8 +6,8 @@ These tests verify the main application functionality.
 
 from unittest.mock import patch
 
-from my_project.core import create_example, process_example, validate_input
-from my_project.models import Status
+from butterfly_planner.core import create_example, process_example, validate_input
+from butterfly_planner.models import Status
 
 
 class TestCreateExample:
@@ -63,7 +63,7 @@ class TestProcessExample:
 
     def test_handles_exception(self) -> None:
         """Exception during processing returns error result."""
-        with patch("my_project.core.create_example") as mock_create:
+        with patch("butterfly_planner.core.create_example") as mock_create:
             mock_create.side_effect = ValueError("Test error")
             result = process_example("test")
 

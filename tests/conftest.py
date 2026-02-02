@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from my_project.config import Settings, get_settings
-from my_project.models import Example, Status
+from butterfly_planner.config import Settings, get_settings
+from butterfly_planner.models import Example, Status
 
 # =============================================================================
 # Environment Fixtures

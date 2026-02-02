@@ -2,8 +2,8 @@
 #
 # Multi-stage Dockerfile for Python applications using uv
 #
-# Build: docker build -t my-project .
-# Run:   docker run --rm my-project
+# Build: docker build -t butterfly-planner .
+# Run:   docker run --rm butterfly-planner
 #
 
 # =============================================================================
@@ -92,14 +92,14 @@ USER app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "from my_project import __version__; print(__version__)" || exit 1
+    CMD python -c "from butterfly_planner import __version__; print(__version__)" || exit 1
 
 # Default command
-CMD ["my-project", "info"]
+CMD ["butterfly-planner", "info"]
 
 # =============================================================================
 # Labels
 # =============================================================================
-LABEL org.opencontainers.image.title="my-project" \
-      org.opencontainers.image.description="A Claude-first Python application" \
-      org.opencontainers.image.source="https://github.com/yourusername/my-project"
+LABEL org.opencontainers.image.title="butterfly-planner" \
+      org.opencontainers.image.description="Butterfly abundance and species diversity forecasting for Oregon and Washington" \
+      org.opencontainers.image.source="https://github.com/mihow/butterfly-planner"

@@ -1,14 +1,14 @@
 [project]
-name = "my-project"  # TODO: Change to your project name
+name = "butterfly-planner"
 version = "0.1.0"
-description = "A Claude-first Python project"  # TODO: Update description
+description = "Use butterfly observation and environmental data to create GIS layers for butterfly abundance and species diversity forecasting in Oregon and Washington"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"
 authors = [
-    { name = "Your Name", email = "you@example.com" },  # TODO: Update author
+    { name = "Michael Howden", email = "michael@howden.io" },
 ]
-keywords = ["claude", "ai", "template"]  # TODO: Update keywords
+keywords = ["butterfly", "gis", "phenology", "biodiversity", "oregon", "washington"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -34,19 +34,19 @@ dev = [
 ]
 
 [project.scripts]
-my-project = "my_project.cli:main"  # TODO: Update entry point
+butterfly-planner = "butterfly_planner.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/my-project"  # TODO: Update URL
-Repository = "https://github.com/yourusername/my-project.git"
-Issues = "https://github.com/yourusername/my-project/issues"
+Homepage = "https://github.com/mihow/butterfly-planner"
+Repository = "https://github.com/mihow/butterfly-planner.git"
+Issues = "https://github.com/mihow/butterfly-planner/issues"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/my_project"]
+packages = ["src/butterfly_planner"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -84,7 +84,7 @@ asyncio_mode = "auto"
 # Coverage Configuration
 # ============================================================================
 [tool.coverage.run]
-source = ["src/my_project"]
+source = ["src/butterfly_planner"]
 branch = true
 omit = [
     "*/tests/*",
@@ -139,7 +139,7 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["my_project"]
+known-first-party = ["butterfly_planner"]
 
 [tool.ruff.format]
 quote-style = "double"

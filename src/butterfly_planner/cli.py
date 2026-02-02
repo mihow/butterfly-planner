@@ -9,16 +9,16 @@ from __future__ import annotations
 import argparse
 import sys
 
-from my_project import __version__
-from my_project.config import get_settings
-from my_project.core import process_example
+from butterfly_planner import __version__
+from butterfly_planner.config import get_settings
+from butterfly_planner.core import process_example
 
 
 def create_parser() -> argparse.ArgumentParser:
     """Create the argument parser for the CLI."""
     parser = argparse.ArgumentParser(
-        prog="my-project",
-        description="A Claude-first Python application",
+        prog="butterfly-planner",
+        description="GIS layers for butterfly abundance and species diversity forecasting",
     )
     parser.add_argument(
         "-v",

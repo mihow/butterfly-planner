@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from my_project.models import Example, Result, Status
+from butterfly_planner.models import Example, Result, Status
 
 
 class TestStatus:

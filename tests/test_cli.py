@@ -12,8 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
-from my_project.cli import cmd_info, cmd_run, create_parser, main
-from my_project.models import Result
+from butterfly_planner.cli import cmd_info, cmd_run, create_parser, main
+from butterfly_planner.models import Result
 
 
 class TestCreateParser:
@@ -23,7 +23,7 @@ class TestCreateParser:
         """Parser is created successfully."""
         parser = create_parser()
         assert isinstance(parser, argparse.ArgumentParser)
-        assert parser.prog == "my-project"
+        assert parser.prog == "butterfly-planner"
 
     def test_parser_has_version(self) -> None:
         """Parser has version argument."""
@@ -65,7 +65,7 @@ class TestCmdRun:
         """Successful run returns exit code 0."""
         args = argparse.Namespace(name="test", debug=False)
 
-        with patch("my_project.cli.process_example") as mock_process:
+        with patch("butterfly_planner.cli.process_example") as mock_process:
             mock_process.return_value = Result(
                 success=True,
                 message="Success message",
@@ -80,7 +80,7 @@ class TestCmdRun:
         """Failed run returns exit code 1."""
         args = argparse.Namespace(name="test", debug=False)
 
-        with patch("my_project.cli.process_example") as mock_process:
+        with patch("butterfly_planner.cli.process_example") as mock_process:
             mock_process.return_value = Result(
                 success=False,
                 message="",
@@ -94,7 +94,7 @@ class TestCmdRun:
         """Debug mode prints settings."""
         args = argparse.Namespace(name="test", debug=True)
 
-        with patch("my_project.cli.process_example") as mock_process:
+        with patch("butterfly_planner.cli.process_example") as mock_process:
             mock_process.return_value = Result(success=True, message="ok", data={})
 
             with patch("sys.stdout", new=StringIO()) as mock_stdout:
@@ -106,7 +106,7 @@ class TestCmdRun:
         """Name argument is passed to process_example."""
         args = argparse.Namespace(name="custom-name", debug=False)
 
-        with patch("my_project.cli.process_example") as mock_process:
+        with patch("butterfly_planner.cli.process_example") as mock_process:
             mock_process.return_value = Result(success=True, message="ok", data={})
             cmd_run(args)
             mock_process.assert_called_once_with("custom-name")
@@ -136,15 +136,15 @@ class TestMain:
 
     def test_no_command_shows_help(self) -> None:
         """No command shows help and exits 0."""
-        with patch("sys.argv", ["my-project"]):
+        with patch("sys.argv", ["butterfly-planner"]):
             exit_code = main()
             assert exit_code == 0
 
     def test_run_command_executes(self) -> None:
         """Run command executes successfully."""
         with (
-            patch("sys.argv", ["my-project", "run", "--name", "test"]),
-            patch("my_project.cli.cmd_run") as mock_cmd,
+            patch("sys.argv", ["butterfly-planner", "run", "--name", "test"]),
+            patch("butterfly_planner.cli.cmd_run") as mock_cmd,
         ):
             mock_cmd.return_value = 0
             exit_code = main()
@@ -154,8 +154,8 @@ class TestMain:
     def test_info_command_executes(self) -> None:
         """Info command executes successfully."""
         with (
-            patch("sys.argv", ["my-project", "info"]),
-            patch("my_project.cli.cmd_info") as mock_cmd,
+            patch("sys.argv", ["butterfly-planner", "info"]),
+            patch("butterfly_planner.cli.cmd_info") as mock_cmd,
         ):
             mock_cmd.return_value = 0
             exit_code = main()
@@ -167,8 +167,8 @@ class TestMain:
         # This tests the defensive code path, though argparse
         # would normally catch unknown commands
         with (
-            patch("sys.argv", ["my-project", "run"]),
-            patch("my_project.cli.create_parser") as mock_parser,
+            patch("sys.argv", ["butterfly-planner", "run"]),
+            patch("butterfly_planner.cli.create_parser") as mock_parser,
         ):
             mock_parser.return_value.parse_args.return_value = argparse.Namespace(command="unknown")
             exit_code = main()

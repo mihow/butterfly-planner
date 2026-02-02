@@ -2,7 +2,7 @@
 
 ## Project
 
-A Claude-first Python project template. See @README.md for full documentation.
+Butterfly Planner - GIS layers for butterfly abundance and species diversity forecasting in Oregon and Washington. Uses butterfly observation data, environmental data, and flower phenology to predict optimal butterfly viewing locations by week of the year. Isochrone mapping for driving time analysis is a key feature.
 
 ## IMPORTANT: Verify What You Change
 

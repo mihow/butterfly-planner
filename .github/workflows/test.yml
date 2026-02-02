@@ -142,7 +142,7 @@ jobs:
       - name: Verify package
         run: |
           uv pip install --system dist/*.whl
-          my-project --version
+          butterfly-planner --version
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -172,6 +172,6 @@ jobs:
           context: .
           target: production
           push: false
-          tags: my-project:latest
+          tags: butterfly-planner:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

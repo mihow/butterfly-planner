@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     )
 
     # Application settings
-    app_name: str = Field(default="my-project", description="Application name")
+    app_name: str = Field(default="butterfly-planner", description="Application name")
     app_env: str = Field(
         default="development", description="Environment (development/staging/production)"
     )

@@ -15,7 +15,7 @@ class TestImports:
 
     def test_package_imports(self) -> None:
         """Main package imports successfully."""
-        from my_project import Example, Settings, __version__
+        from butterfly_planner import Example, Settings, __version__
 
         assert __version__
         assert Settings is not None
@@ -23,7 +23,7 @@ class TestImports:
 
     def test_all_modules_import(self) -> None:
         """All submodules import without errors."""
-        from my_project import cli, config, core, models
+        from butterfly_planner import cli, config, core, models
 
         assert cli
         assert config
@@ -37,7 +37,7 @@ class TestCLI:
     def test_cli_info_runs(self) -> None:
         """CLI info command executes and returns success."""
         result = subprocess.run(
-            [sys.executable, "-m", "my_project.cli", "info"],
+            [sys.executable, "-m", "butterfly_planner.cli", "info"],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
@@ -45,12 +45,12 @@ class TestCLI:
             check=False,
         )
         assert result.returncode == 0, f"CLI failed: {result.stderr}"
-        assert "my-project" in result.stdout.lower() or "version" in result.stdout.lower()
+        assert "butterfly-planner" in result.stdout.lower() or "version" in result.stdout.lower()
 
     def test_cli_run_executes(self) -> None:
         """CLI run command executes without error."""
         result = subprocess.run(
-            [sys.executable, "-m", "my_project.cli", "run", "--name", "smoke-test"],
+            [sys.executable, "-m", "butterfly_planner.cli", "run", "--name", "smoke-test"],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
@@ -63,7 +63,7 @@ class TestCLI:
     def test_cli_help_works(self) -> None:
         """CLI --help works."""
         result = subprocess.run(
-            [sys.executable, "-m", "my_project.cli", "--help"],
+            [sys.executable, "-m", "butterfly_planner.cli", "--help"],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
@@ -79,8 +79,8 @@ class TestCoreIntegration:
 
     def test_create_and_process(self) -> None:
         """Full workflow: create example, process it, verify result."""
-        from my_project.core import create_example, process_example
-        from my_project.models import Status
+        from butterfly_planner.core import create_example, process_example
+        from butterfly_planner.models import Status
 
         # Create
         example = create_example("integration-test", metadata={"test": "true"})
@@ -95,7 +95,7 @@ class TestCoreIntegration:
 
     def test_config_loads(self) -> None:
         """Configuration loads from environment."""
-        from my_project.config import get_settings
+        from butterfly_planner.config import get_settings
 
         get_settings.cache_clear()
         settings = get_settings()
