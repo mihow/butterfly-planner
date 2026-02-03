@@ -6,9 +6,9 @@ on:
     - cron: '0 6 * * *'
   # Manual trigger
   workflow_dispatch:
-  # Also run on push to main (for testing)
+  # Run on push to main or feature branches
   push:
-    branches: [main]
+    branches: [main, 'claude/*']
 
 # Sets permissions for GitHub Pages deployment
 permissions:
