@@ -8,7 +8,7 @@ These define the canonical schema - services normalize API responses to these.
 from __future__ import annotations
 
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
-class Status(str, Enum):
+class Status(StrEnum):
     """Status enum for tracking item state."""
 
     PENDING = "pending"
@@ -51,7 +51,7 @@ class Result(BaseModel):
 # =============================================================================
 
 
-class TaxonRank(str, Enum):
+class TaxonRank(StrEnum):
     """Taxonomic rank levels."""
 
     ORDER = "order"
@@ -81,7 +81,7 @@ class Taxon(BaseModel):
 # =============================================================================
 
 
-class QualityGrade(str, Enum):
+class QualityGrade(StrEnum):
     """Observation verification level."""
 
     RESEARCH = "research"
