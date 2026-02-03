@@ -9,6 +9,6 @@ __version__ = "0.1.0"
 __author__ = "Michael Howden"
 
 from butterfly_planner.config import Settings
-from butterfly_planner.models import Example
+from butterfly_planner.schemas import Example
 
 __all__ = ["Example", "Settings", "__version__"]
