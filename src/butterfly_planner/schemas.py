@@ -30,6 +30,8 @@ class Status(StrEnum):
 class Example(BaseModel):
     """Placeholder model - replace with domain models."""
 
+    model_config = {"str_strip_whitespace": True}
+
     id: str = Field(..., description="Unique identifier")
     name: str = Field(..., description="Display name")
     status: Status = Field(default=Status.PENDING)
