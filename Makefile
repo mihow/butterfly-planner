@@ -30,10 +30,10 @@ help: ## Show this help message
 # =============================================================================
 
 install: ## Install production dependencies
-	uv pip install -e .
+	uv sync --no-dev
 
 install-dev: ## Install development dependencies
-	uv pip install -e ".[dev]"
+	uv sync
 
 # =============================================================================
 # Testing
