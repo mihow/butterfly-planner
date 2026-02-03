@@ -28,11 +28,13 @@ except ImportError:
     def task(**_kwargs):  # type: ignore[no-redef]
         def decorator(fn):  # type: ignore[no-untyped-def]
             return fn
+
         return decorator
 
     def flow(**_kwargs):  # type: ignore[no-redef]
         def decorator(fn):  # type: ignore[no-untyped-def]
             return fn
+
         return decorator
 
 
