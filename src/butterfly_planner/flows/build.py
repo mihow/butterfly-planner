@@ -10,8 +10,24 @@ Run locally:
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+# Try to import Prefect, fall back to no-op decorators if unavailable
+try:
+    from prefect import flow, task
+except ImportError:
+    # Fallback: simple pass-through decorators
+    def task(**_kwargs):  # type: ignore[no-redef]
+        def decorator(fn):  # type: ignore[no-untyped-def]
+            return fn
+        return decorator
+
+    def flow(**_kwargs):  # type: ignore[no-redef]
+        def decorator(fn):  # type: ignore[no-untyped-def]
+            return fn
+        return decorator
+
 
 # Directories
 DATA_DIR = Path("data")
@@ -65,16 +81,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 
-def load_weather() -> dict | None:
+@task(name="load-weather")
+def load_weather() -> dict[str, Any] | None:
     """Load raw weather data."""
     path = RAW_DIR / "weather.json"
     if not path.exists():
         return None
-    with open(path) as f:
+    with path.open() as f:
         return json.load(f)
 
 
-def build_html(weather_data: dict) -> str:
+@task(name="build-html")
+def build_html(weather_data: dict[str, Any]) -> str:
     """Build HTML page from weather data."""
     data = weather_data["data"]["daily"]
     updated = weather_data["fetched_at"][:16].replace("T", " ")
@@ -94,26 +112,40 @@ def build_html(weather_data: dict) -> str:
     return HTML_TEMPLATE.format(updated=updated, rows="\n        ".join(rows))
 
 
-def run() -> dict:
-    """Main entry point - build static site."""
+@task(name="write-site")
+def write_site(html: str) -> Path:
+    """Write HTML to site directory."""
     SITE_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = SITE_DIR / "index.html"
+    with output_path.open("w") as f:
+        f.write(html)
+    return output_path
 
+
+@flow(name="build-site", log_prints=True)
+def build_all() -> dict[str, Any]:
+    """
+    Build static site from raw data.
+
+    This is the main Prefect flow that generates the static site.
+    """
+    print("Loading weather data...")
     weather = load_weather()
+
     if not weather:
-        print("No weather data found. Run fetch first.")
+        print("No weather data found. Run fetch flow first.")
         return {"error": "no data"}
 
-    print("Building static site...")
+    print("Building HTML...")
     html = build_html(weather)
 
-    output_path = SITE_DIR / "index.html"
-    with open(output_path, "w") as f:
-        f.write(html)
+    print("Writing site...")
+    output_path = write_site(html)
 
-    print(f"Built {output_path}")
+    print(f"Site built: {output_path}")
     return {"pages": 1, "output": str(output_path)}
 
 
 if __name__ == "__main__":
-    result = run()
-    print(f"Build complete: {result}")
+    result = build_all()
+    print(f"Flow complete: {result}")

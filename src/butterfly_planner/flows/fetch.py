@@ -6,7 +6,7 @@ Working example using Open-Meteo (free, no API key).
 Run locally:
     python -m butterfly_planner.flows.fetch
 
-Run with Prefect (optional dashboard):
+Run with Prefect dashboard:
     prefect server start &
     python -m butterfly_planner.flows.fetch
 """
@@ -16,15 +16,33 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import requests
+
+# Try to import Prefect, fall back to no-op decorators if unavailable
+try:
+    from prefect import flow, task
+except ImportError:
+    # Fallback: simple pass-through decorators
+    def task(**_kwargs):  # type: ignore[no-redef]
+        def decorator(fn):  # type: ignore[no-untyped-def]
+            return fn
+        return decorator
+
+    def flow(**_kwargs):  # type: ignore[no-redef]
+        def decorator(fn):  # type: ignore[no-untyped-def]
+            return fn
+        return decorator
+
 
 # Data directories
 DATA_DIR = Path("data")
 RAW_DIR = DATA_DIR / "raw"
 
 
-def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict:
+@task(name="fetch-weather", retries=2, retry_delay_seconds=5)
+def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     """
     Fetch 7-day weather forecast from Open-Meteo.
 
@@ -49,16 +67,13 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict:
     return resp.json()
 
 
-def run() -> dict:
-    """Main entry point - fetch all data sources."""
+@task(name="save-weather")
+def save_weather(weather: dict[str, Any]) -> Path:
+    """Save weather data to JSON file."""
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Fetching weather data from Open-Meteo...")
-    weather = fetch_weather()
-
-    # Save raw data with metadata
     output_path = RAW_DIR / "weather.json"
-    with open(output_path, "w") as f:
+    with output_path.open("w") as f:
         json.dump(
             {
                 "fetched_at": datetime.now().isoformat(),
@@ -69,10 +84,27 @@ def run() -> dict:
             indent=2,
         )
 
-    print(f"Saved to {output_path}")
-    return {"weather_days": len(weather.get("daily", {}).get("time", []))}
+    return output_path
+
+
+@flow(name="fetch-data", log_prints=True)
+def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
+    """
+    Fetch all data sources.
+
+    This is the main Prefect flow that orchestrates data fetching.
+    """
+    print(f"Fetching weather for ({lat}, {lon})...")
+
+    weather = fetch_weather(lat, lon)
+    output_path = save_weather(weather)
+
+    days = len(weather.get("daily", {}).get("time", []))
+    print(f"Saved {days} days of weather data to {output_path}")
+
+    return {"weather_days": days, "output": str(output_path)}
 
 
 if __name__ == "__main__":
-    result = run()
-    print(f"Fetch complete: {result}")
+    result = fetch_all()
+    print(f"Flow complete: {result}")

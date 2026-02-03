@@ -34,9 +34,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          pip install requests
-          # pip install prefect  # Uncomment when using Prefect decorators
+        run: pip install -e .
 
       - name: Fetch data
         run: python -m butterfly_planner.flows.fetch
@@ -47,6 +45,9 @@ jobs:
         run: python -m butterfly_planner.flows.build
         env:
           PYTHONPATH: src
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
