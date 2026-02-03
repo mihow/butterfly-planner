@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from butterfly_planner.cli import cmd_info, cmd_run, create_parser, main
-from butterfly_planner.models import Result
+from butterfly_planner.schemas import Result
 
 
 class TestCreateParser:
