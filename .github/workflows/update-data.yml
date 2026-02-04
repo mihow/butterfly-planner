@@ -6,27 +6,42 @@ on:
     - cron: '0 6 * * *'
   # Manual trigger
   workflow_dispatch:
-  # Run on push to main or feature branches
+  # Run on push to main
   push:
-    branches: [main, 'claude/*']
+    branches: [main]
+  # Run on pull requests (for preview deployments)
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-# Sets permissions for GitHub Pages deployment
+# Permissions for GitHub Pages deployment and PR comments
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
+  pull-requests: write
 
-# Allow only one concurrent deployment
+# Allow only one concurrent deployment per ref
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   fetch-and-build:
     runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.pr-info.outputs.pr_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Get PR number
+        id: pr-info
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr_number=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,24 +61,102 @@ jobs:
         env:
           PYTHONPATH: src
 
-      - name: Setup Pages
-        if: github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: site
           path: site/
+          retention-days: 1
 
-  deploy:
+  # Deploy main branch to root of GitHub Pages
+  deploy-main:
     if: github.ref == 'refs/heads/main'
     needs: fetch-and-build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://mihow.github.io/butterfly-planner/
     steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          keep_files: true
+          exclude_assets: ''
+
+  # Deploy PR preview to /pr-<number>/ subdirectory
+  deploy-pr-preview:
+    if: github.event_name == 'pull_request'
+    needs: fetch-and-build
+    runs-on: ubuntu-latest
+    environment:
+      name: pr-preview
+      url: https://mihow.github.io/butterfly-planner/pr-${{ needs.fetch-and-build.outputs.pr_number }}/
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
+      - name: Deploy PR preview to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          destination_dir: pr-${{ needs.fetch-and-build.outputs.pr_number }}
+          keep_files: true
+
+      - name: Comment on PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ needs.fetch-and-build.outputs.pr_number }};
+            const previewUrl = `https://mihow.github.io/butterfly-planner/pr-${prNumber}/`;
+
+            // Check for existing preview comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview deployment')
+            );
+
+            const body = `## Preview deployment
+
+            Your preview is ready!
+
+            | Preview URL | Updated |
+            |-------------|---------|
+            | ${previewUrl} | ${new Date().toISOString()} |
+
+            This preview will remain available even after the PR is merged or closed.`;
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body,
+              });
+            }
