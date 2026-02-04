@@ -135,13 +135,13 @@ jobs:
 
             const body = `## Preview deployment
 
-            Your preview is ready!
+Your preview is ready!
 
-            | Preview URL | Updated |
-            |-------------|---------|
-            | ${previewUrl} | ${new Date().toISOString()} |
+| Preview URL | Updated |
+|-------------|---------|
+| ${previewUrl} | ${new Date().toISOString()} |
 
-            This preview will remain available even after the PR is merged or closed.`;
+This preview will remain available even after the PR is merged or closed.`;
 
             if (botComment) {
               // Update existing comment
