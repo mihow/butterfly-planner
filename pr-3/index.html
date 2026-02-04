@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Butterfly Planner - Weather</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { color: #2d5016; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f5f5f5; }
+        .meta { color: #666; font-size: 0.9rem; }
+        .temp-high { color: #c00; }
+        .temp-low { color: #00c; }
+    </style>
+</head>
+<body>
+    <h1>🦋 Butterfly Planner</h1>
+    <p class="meta">Weather forecast for Portland, OR | Last updated: 2026-02-04 22:31</p>
+
+    <h2>7-Day Forecast</h2>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Precip</th>
+        </tr>
+        <tr><td>2026-02-04</td><td class="temp-high">13.8°C</td><td class="temp-low">6.3°C</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-05</td><td class="temp-high">15.2°C</td><td class="temp-low">7.4°C</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-06</td><td class="temp-high">13.3°C</td><td class="temp-low">6.2°C</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-07</td><td class="temp-high">10.0°C</td><td class="temp-low">6.3°C</td><td>5.0mm</td></tr>
+        <tr><td>2026-02-08</td><td class="temp-high">10.7°C</td><td class="temp-low">7.0°C</td><td>29.8mm</td></tr>
+        <tr><td>2026-02-09</td><td class="temp-high">8.6°C</td><td class="temp-low">6.1°C</td><td>6.5mm</td></tr>
+        <tr><td>2026-02-10</td><td class="temp-high">9.7°C</td><td class="temp-low">5.0°C</td><td>0.5mm</td></tr>
+    </table>
+
+    <h2>About</h2>
+    <p>This is a demo of the data pipeline. The full app will show:</p>
+    <ul>
+        <li>Butterfly hotspots by week</li>
+        <li>Species diversity maps</li>
+        <li>Drive-time isochrones</li>
+        <li>Nearby campgrounds</li>
+    </ul>
+
+    <p class="meta">Data from <a href="https://open-meteo.com">Open-Meteo</a></p>
+</body>
+</html>
