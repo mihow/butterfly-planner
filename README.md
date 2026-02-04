@@ -52,7 +52,3 @@ src/butterfly_planner/
 
 tests/              # Test suite
 ```
-
-## License
-
-MIT
