@@ -133,3 +133,16 @@ cat file.json | jq .              # Pretty print
 - Use `tmp_path` fixture for temporary test files
 - Always run `make ci` before committing - catches lint/format/type issues
 - After pushing workflow changes, check Actions tab for actual results
+
+### uv gotchas
+- `[project.optional-dependencies]` are extras, NOT dev deps. `uv sync` alone skips them. Use `uv sync --extra dev` (Makefile:36). Only `[tool.uv] dev-dependencies` are installed by default with `uv sync`.
+- Never set `UV_SYSTEM_PYTHON=1` alongside `uv sync`. `uv sync` creates a `.venv`; the env var tells `uv run` to bypass it. The two are mutually exclusive. (.github/workflows/test.yml:21)
+
+### mypy vs Pyright (VS Code)
+- If mypy flags errors that VS Code doesn't show, it's likely a divergence, not a config problem. Key differences: Pyright handles `try/except ImportError` fallback patterns specially and won't flag redefinitions in the except branch. mypy does. Pyright doesn't enforce `warn_return_any` or `warn_unused_ignores` by default; mypy strict does. (src/butterfly_planner/flows/fetch.py:26)
+- `resp.json()` and `json.load()` return `Any`. With `warn_return_any`, assign to a typed local before returning rather than using `cast`. (src/butterfly_planner/flows/fetch.py:70)
+- `# type: ignore[no-redef]` vs `[misc]`: mypy uses `no-redef` for the first redefinition in a try/except but `misc` for subsequent ones. Check the actual error code before writing the ignore. (src/butterfly_planner/flows/fetch.py:35)
+
+### Debugging CI failures
+- `gh run view --log-failed` can return empty output. Use the API instead: `gh api repos/{owner}/{repo}/actions/runs/{run_id}/jobs` to get job IDs, then `gh api repos/{owner}/{repo}/actions/jobs/{job_id}/logs` for the full log.
+- A 12-second CI failure where install passes but the next step fails instantly usually means the tool binary isn't on PATH — check the installed package list in the log before assuming the command itself is wrong.

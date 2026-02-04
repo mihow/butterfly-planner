@@ -20,7 +20,6 @@ on:
 
 env:
   PYTHON_VERSION: "3.12"
-  UV_SYSTEM_PYTHON: "1"  # Use system Python (from setup-python) instead of venv
 
 jobs:
   # ===========================================================================
@@ -137,7 +136,7 @@ jobs:
         run: uv pip install --system build
 
       - name: Build package
-        run: make build
+        run: python -m build
 
       - name: Verify package
         run: |

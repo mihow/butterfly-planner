@@ -21,6 +21,8 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "pyyaml>=6.0",
+    "requests>=2.31.0",
+    "prefect>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +32,7 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
+    "types-requests>=2.31.0",
     "pre-commit>=3.0.0",
 ]
 

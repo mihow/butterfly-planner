@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from butterfly_planner.config import Settings, get_settings
-from butterfly_planner.models import Example, Status
+from butterfly_planner.schemas import Example, Status
 
 # =============================================================================
 # Environment Fixtures

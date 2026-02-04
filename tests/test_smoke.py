@@ -23,12 +23,18 @@ class TestImports:
 
     def test_all_modules_import(self) -> None:
         """All submodules import without errors."""
-        from butterfly_planner import cli, config, core, models
+        from butterfly_planner import cli, config, core, schemas
+        from butterfly_planner.services import gbif, inat, recreation, routing, weather
 
         assert cli
         assert config
         assert core
-        assert models
+        assert schemas
+        assert gbif
+        assert inat
+        assert recreation
+        assert routing
+        assert weather
 
 
 class TestCLI:
@@ -80,7 +86,7 @@ class TestCoreIntegration:
     def test_create_and_process(self) -> None:
         """Full workflow: create example, process it, verify result."""
         from butterfly_planner.core import create_example, process_example
-        from butterfly_planner.models import Status
+        from butterfly_planner.schemas import Status
 
         # Create
         example = create_example("integration-test", metadata={"test": "true"})

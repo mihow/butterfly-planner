@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("data"), description="Data directory path")
     log_dir: Path = Field(default=Path("logs"), description="Log directory path")
 
+    # Location (default: Portland, OR)
+    lat: float = Field(default=45.5, description="Latitude for weather/data queries")
+    lon: float = Field(default=-122.6, description="Longitude for weather/data queries")
+
     # API settings (example)
     api_host: str = Field(default="0.0.0.0", description="API host")
     api_port: int = Field(default=8000, description="API port")

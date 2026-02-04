@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from butterfly_planner.models import Example, Result, Status
+from butterfly_planner.schemas import Example, Result, Status
 
 
 def create_example(name: str, metadata: dict[str, str] | None = None) -> Example:
