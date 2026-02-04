@@ -14,25 +14,28 @@ Run with Prefect dashboard:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import requests
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 # Try to import Prefect, fall back to no-op decorators if unavailable
 try:
     from prefect import flow, task
-except ImportError:
+except ImportError:  # pragma: no cover
     # Fallback: simple pass-through decorators
-    def task(**_kwargs):  # type: ignore[no-redef]
-        def decorator(fn):  # type: ignore[no-untyped-def]
+    def task(**_kwargs: Any) -> Callable[[_F], _F]:  # type: ignore[no-redef]
+        def decorator(fn: _F) -> _F:
             return fn
 
         return decorator
 
-    def flow(**_kwargs):  # type: ignore[no-redef]
-        def decorator(fn):  # type: ignore[no-untyped-def]
+    def flow(**_kwargs: Any) -> Callable[[_F], _F]:  # type: ignore[misc]
+        def decorator(fn: _F) -> _F:
             return fn
 
         return decorator
@@ -56,7 +59,7 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
         Weather data dict
     """
     url = "https://api.open-meteo.com/v1/forecast"
-    params = {
+    params: dict[str, str | int | float | list[str]] = {
         "latitude": lat,
         "longitude": lon,
         "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
@@ -66,7 +69,8 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
 
     resp = requests.get(url, params=params, timeout=30)
     resp.raise_for_status()
-    return resp.json()
+    result: dict[str, Any] = resp.json()
+    return result
 
 
 @task(name="save-weather")

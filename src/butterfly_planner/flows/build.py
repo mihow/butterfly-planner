@@ -10,22 +10,25 @@ Run locally:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 # Try to import Prefect, fall back to no-op decorators if unavailable
 try:
     from prefect import flow, task
-except ImportError:
+except ImportError:  # pragma: no cover
     # Fallback: simple pass-through decorators
-    def task(**_kwargs):  # type: ignore[no-redef]
-        def decorator(fn):  # type: ignore[no-untyped-def]
+    def task(**_kwargs: Any) -> Callable[[_F], _F]:  # type: ignore[no-redef]
+        def decorator(fn: _F) -> _F:
             return fn
 
         return decorator
 
-    def flow(**_kwargs):  # type: ignore[no-redef]
-        def decorator(fn):  # type: ignore[no-untyped-def]
+    def flow(**_kwargs: Any) -> Callable[[_F], _F]:  # type: ignore[misc]
+        def decorator(fn: _F) -> _F:
             return fn
 
         return decorator
@@ -90,7 +93,8 @@ def load_weather() -> dict[str, Any] | None:
     if not path.exists():
         return None
     with path.open() as f:
-        return json.load(f)
+        result: dict[str, Any] = json.load(f)
+        return result
 
 
 @task(name="build-html")

@@ -114,7 +114,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
         return 1
 
     handler = http.server.SimpleHTTPRequestHandler
-    handler.directory = str(site_dir)  # type: ignore[attr-defined]
+    handler.directory = str(site_dir)
 
     with http.server.HTTPServer(("", port), handler) as server:
         print(f"Serving site on http://localhost:{port}/ (Ctrl+C to stop)")

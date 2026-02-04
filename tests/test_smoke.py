@@ -24,11 +24,17 @@ class TestImports:
     def test_all_modules_import(self) -> None:
         """All submodules import without errors."""
         from butterfly_planner import cli, config, core, schemas
+        from butterfly_planner.services import gbif, inat, recreation, routing, weather
 
         assert cli
         assert config
         assert core
         assert schemas
+        assert gbif
+        assert inat
+        assert recreation
+        assert routing
+        assert weather
 
 
 class TestCLI:
