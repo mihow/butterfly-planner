@@ -15,15 +15,14 @@ on:
 
 # Permissions for GitHub Pages deployment and PR comments
 permissions:
-  contents: write
-  pages: write
-  id-token: write
-  pull-requests: write
+  contents: write  # Required for peaceiris/actions-gh-pages to push to gh-pages branch
+  pull-requests: write  # Required for commenting on PRs
 
 # Allow only one concurrent deployment per ref
+# Don't cancel in-progress runs to avoid interrupting scheduled data fetches
 concurrency:
   group: "pages-${{ github.ref }}"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   fetch-and-build:
@@ -75,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: https://mihow.github.io/butterfly-planner/
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
     steps:
       - name: Download site artifact
         uses: actions/download-artifact@v4
@@ -89,7 +88,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site
           keep_files: true
-          exclude_assets: ''
 
   # Deploy PR preview to /pr-<number>/ subdirectory
   deploy-pr-preview:
@@ -98,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pr-preview
-      url: https://mihow.github.io/butterfly-planner/pr-${{ needs.fetch-and-build.outputs.pr_number }}/
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ needs.fetch-and-build.outputs.pr_number }}/
     steps:
       - name: Download site artifact
         uses: actions/download-artifact@v4
@@ -119,7 +117,9 @@ jobs:
         with:
           script: |
             const prNumber = ${{ needs.fetch-and-build.outputs.pr_number }};
-            const previewUrl = `https://mihow.github.io/butterfly-planner/pr-${prNumber}/`;
+            const owner = '${{ github.repository_owner }}';
+            const repo = '${{ github.event.repository.name }}';
+            const previewUrl = `https://${owner}.github.io/${repo}/pr-${prNumber}/`;
 
             // Check for existing preview comment
             const comments = await github.rest.issues.listComments({
