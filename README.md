@@ -1,5 +1,7 @@
 # Butterfly Planner
 
+A combination of site-suitability analysis with **trip**-suitability analysis. Depending on the availability and interest of the participants on a given day.
+
 GIS layers for butterfly abundance and species diversity forecasting in Oregon and Washington.
 
 Uses butterfly observation data, environmental data, and flower phenology to predict optimal butterfly viewing locations by week of the year. Includes isochrone mapping for driving time analysis.
@@ -50,7 +52,3 @@ src/butterfly_planner/
 
 tests/              # Test suite
 ```
-
-## License
-
-MIT
