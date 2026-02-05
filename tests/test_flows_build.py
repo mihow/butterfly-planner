@@ -437,13 +437,15 @@ class TestBuildButterflySightingsHtml:
         """Test building HTML with species data."""
         result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
-        assert "Butterfly Sightings - June" in result
+        assert "Butterfly Sightings" in result
+        assert "June" in result
         assert "Painted Lady" in result
         assert "Vanessa cardui" in result
-        assert "542 research-grade observations" in result
+        assert ">542<" in result
         assert "Cabbage White" in result
-        assert "species-card" in result
         assert "inaturalist.org/taxa/48662" in result
+        assert "<table>" in result
+        assert "<thead>" in result
 
     def test_with_photo(self) -> None:
         """Test that photo URL renders as img tag."""
@@ -457,6 +459,18 @@ class TestBuildButterflySightingsHtml:
         result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         assert "species-photo-placeholder" in result
+
+    def test_deep_links(self) -> None:
+        """Test that observation counts link to iNaturalist search."""
+        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+
+        # Observation count should link to filtered search
+        assert "taxon_id=48662&month=6" in result
+        assert "quality_grade=research" in result
+        # "Browse on iNaturalist" link for all butterflies in region
+        assert "taxon_id=47224&month=6" in result
+        # Photo should link to taxon page
+        assert 'href="https://www.inaturalist.org/taxa/48662"' in result
 
     def test_empty_species(self) -> None:
         """Test with no species data."""
@@ -494,7 +508,8 @@ class TestBuildHtmlWithInaturalist:
 
         result = build.build_html(weather_data, None, SAMPLE_INAT_DATA)
 
-        assert "Butterfly Sightings - June" in result
+        assert "Butterfly Sightings" in result
+        assert "June" in result
         assert "Painted Lady" in result
         assert "iNaturalist" in result
 
