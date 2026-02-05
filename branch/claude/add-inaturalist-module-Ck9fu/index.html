@@ -27,11 +27,19 @@
         .legend { display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; }
         .legend-item { display: flex; align-items: center; gap: 0.5rem; }
         .legend-box { width: 20px; height: 20px; border-radius: 2px; }
+        .species-card { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 0.5rem; }
+        .species-photo { width: 60px; height: 60px; border-radius: 4px; object-fit: cover; }
+        .species-photo-placeholder { width: 60px; height: 60px; border-radius: 4px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1.5rem; }
+        .species-info { flex: 1; }
+        .species-name { font-weight: 600; color: #2d5016; }
+        .species-scientific { font-style: italic; color: #666; font-size: 0.9rem; }
+        .species-count { color: #888; font-size: 0.85rem; }
+        .obs-bar { display: inline-block; height: 14px; background: #8bc34a; border-radius: 3px; margin-right: 0.5rem; vertical-align: middle; }
     </style>
 </head>
 <body>
     <h1>🦋 Butterfly Planner</h1>
-    <p class="meta">Weather forecast for Portland, OR | Last updated: 2026-02-04 23:06</p>
+    <p class="meta">Weather forecast for Portland, OR | Last updated: 2026-02-04 23:22</p>
 
     
     <h2>☀️ Today's Sun Breaks (February 04)</h2>
@@ -66,6 +74,16 @@
     <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).</p>
     
 
+    
+    <h2>Butterfly Sightings - February</h2>
+    <p>Butterfly species observed in NW Oregon / SW Washington during February
+    (all years, research-grade observations from
+    <a href="https://www.inaturalist.org">iNaturalist</a>).</p>
+    <div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/2041/medium.jpg" alt="California Tortoiseshell"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/49920">California Tortoiseshell</a></div><div class="species-scientific">Nymphalis californica</div><div class="species-count"><div class="obs-bar" style="width: 200px;"></div>11 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/390722/medium.jpg" alt="Satyr Comma"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/56644">Satyr Comma</a></div><div class="species-scientific">Polygonia satyrus</div><div class="species-count"><div class="obs-bar" style="width: 90px;"></div>5 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/53928483/medium.jpg" alt="Red Admiral"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/49133">Red Admiral</a></div><div class="species-scientific">Vanessa atalanta</div><div class="species-count"><div class="obs-bar" style="width: 36px;"></div>2 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://static.inaturalist.org/photos/182618709/medium.jpeg" alt="Echo Azure"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/52484">Echo Azure</a></div><div class="species-scientific">Celastrina echo</div><div class="species-count"><div class="obs-bar" style="width: 36px;"></div>2 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/9506438/medium.jpg" alt="Painted Lady"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/48548">Painted Lady</a></div><div class="species-scientific">Vanessa cardui</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/2489727/medium.jpg" alt="Anise Swallowtail"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/51097">Anise Swallowtail</a></div><div class="species-scientific">Papilio zelicaon</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/28420401/medium.jpg" alt="Small White"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/55626">Small White</a></div><div class="species-scientific">Pieris rapae</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://static.inaturalist.org/photos/128945411/medium.jpeg" alt="Common Wood-Nymph"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/58606">Common Wood-Nymph</a></div><div class="species-scientific">Cercyonis pegala</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/952/medium.jpg" alt="California Sister"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/67560">California Sister</a></div><div class="species-scientific">Adelpha californica</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/9955156/medium.jpeg" alt="Green Comma"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/68262">Green Comma</a></div><div class="species-scientific">Polygonia faunus</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div><div class="species-card"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/87949317/medium.jpeg" alt="Oreas Comma"><div class="species-info"><div class="species-name"><a href="https://www.inaturalist.org/taxa/117764">Oreas Comma</a></div><div class="species-scientific">Polygonia oreas</div><div class="species-count"><div class="obs-bar" style="width: 18px;"></div>1 research-grade observations</div></div></div>
+    <p class="meta">Data from iNaturalist community observations.
+    Observation counts reflect all years combined for February.</p>
+    
+
     <h2>7-Day Weather Forecast</h2>
     <table>
         <tr>
@@ -75,7 +93,7 @@
             <th>Precip</th>
         </tr>
         <tr><td>2026-02-04</td><td class="temp-high">13.9°C (57°F)</td><td class="temp-low">6.3°C (43°F)</td><td>0.0mm</td></tr>
-        <tr><td>2026-02-05</td><td class="temp-high">14.5°C (58°F)</td><td class="temp-low">7.7°C (46°F)</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-05</td><td class="temp-high">14.5°C (58°F)</td><td class="temp-low">7.3°C (45°F)</td><td>0.0mm</td></tr>
         <tr><td>2026-02-06</td><td class="temp-high">14.5°C (58°F)</td><td class="temp-low">4.6°C (40°F)</td><td>0.0mm</td></tr>
         <tr><td>2026-02-07</td><td class="temp-high">13.5°C (56°F)</td><td class="temp-low">6.3°C (43°F)</td><td>0.8mm</td></tr>
         <tr><td>2026-02-08</td><td class="temp-high">11.2°C (52°F)</td><td class="temp-low">6.6°C (44°F)</td><td>37.5mm</td></tr>
@@ -93,6 +111,6 @@
         <li>Nearby campgrounds</li>
     </ul>
 
-    <p class="meta">Data from <a href="https://open-meteo.com">Open-Meteo</a></p>
+    <p class="meta">Data from <a href="https://open-meteo.com">Open-Meteo</a> and <a href="https://www.inaturalist.org">iNaturalist</a></p>
 </body>
 </html>
