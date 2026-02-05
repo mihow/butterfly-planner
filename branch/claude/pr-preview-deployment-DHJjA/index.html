@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Butterfly Planner - Weather & Sunshine</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { color: #2d5016; }
+        h2 { color: #3d6026; margin-top: 2rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f5f5f5; }
+        .meta { color: #666; font-size: 0.9rem; }
+        .temp-high { color: #c00; }
+        .temp-low { color: #00c; }
+        .sunshine-bar { display: inline-block; height: 20px; background: #ffd700; border-radius: 3px; }
+        .sunshine-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 1rem 0; }
+        .sunshine-slot { height: 30px; border-radius: 2px; }
+        .sunshine-none { background: #e0e0e0; }
+        .sunshine-low { background: #fff9c4; }
+        .sunshine-med { background: #ffeb3b; }
+        .sunshine-high { background: #ffc107; }
+        .sunshine-full { background: #ff9800; }
+        .good-day { background: #e8f5e9; }
+        .poor-day { background: #ffebee; }
+        .legend { display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+        .legend-box { width: 20px; height: 20px; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <h1>🦋 Butterfly Planner</h1>
+    <p class="meta">Weather forecast for Portland, OR | Last updated: 2026-02-04 21:42</p>
+
+    
+    <h2>☀️ Today's Sun Breaks (February 04)</h2>
+    <p>Total sunshine expected: <strong>7.4 hours</strong></p>
+    
+    <div class="legend">
+        <div class="legend-item"><div class="legend-box sunshine-none"></div> None</div>
+        <div class="legend-item"><div class="legend-box sunshine-low"></div> 0-25%</div>
+        <div class="legend-item"><div class="legend-box sunshine-med"></div> 25-50%</div>
+        <div class="legend-item"><div class="legend-box sunshine-high"></div> 50-75%</div>
+        <div class="legend-item"><div class="legend-box sunshine-full"></div> 75-100%</div>
+    </div>
+    
+    <div class="sunshine-grid">
+        <div class="sunshine-slot sunshine-none" title="07:30 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="07:45 AM: 0 min"></div><div class="sunshine-slot sunshine-low" title="08:00 AM: 1 min"></div><div class="sunshine-slot sunshine-none" title="08:15 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="08:30 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="08:45 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="09:00 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="09:15 AM: 0 min"></div><div class="sunshine-slot sunshine-med" title="09:30 AM: 5 min"></div><div class="sunshine-slot sunshine-full" title="09:45 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:00 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:15 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:30 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:45 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:00 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:15 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:30 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:45 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:45 PM: 15 min"></div><div class="sunshine-slot sunshine-none" title="05:00 PM: 0 min"></div><div class="sunshine-slot sunshine-low" title="05:15 PM: 3 min"></div>
+    </div>
+    <p class="meta">Each block = 15 minutes. Hover for time and duration.</p>
+    
+
+    
+    <h2>📅 16-Day Sunshine Forecast</h2>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Sunshine</th>
+            <th>Daylight</th>
+            <th>% Sunny</th>
+            <th>Conditions</th>
+        </tr>
+        <tr class="good-day"><td>2026-02-04</td><td>7.8h</td><td>9.9h</td><td>78% <div class="sunshine-bar" style="width: 235px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-05</td><td>8.7h</td><td>10.0h</td><td>87% <div class="sunshine-bar" style="width: 262px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-06</td><td>8.9h</td><td>10.0h</td><td>89% <div class="sunshine-bar" style="width: 266px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-07</td><td>7.0h</td><td>10.0h</td><td>69% <div class="sunshine-bar" style="width: 207px;"></div></td><td>☀️ Good</td></tr><tr class=""><td>2026-02-08</td><td>0.0h</td><td>10.1h</td><td>0% <div class="sunshine-bar" style="width: 0px;"></div></td><td></td></tr><tr class="good-day"><td>2026-02-09</td><td>8.5h</td><td>10.1h</td><td>83% <div class="sunshine-bar" style="width: 250px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-10</td><td>7.6h</td><td>10.2h</td><td>74% <div class="sunshine-bar" style="width: 222px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-11</td><td>9.2h</td><td>10.2h</td><td>90% <div class="sunshine-bar" style="width: 269px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-12</td><td>9.2h</td><td>10.3h</td><td>89% <div class="sunshine-bar" style="width: 268px;"></div></td><td>☀️ Good</td></tr><tr class=""><td>2026-02-13</td><td>2.9h</td><td>10.3h</td><td>28% <div class="sunshine-bar" style="width: 84px;"></div></td><td></td></tr><tr class="good-day"><td>2026-02-14</td><td>9.4h</td><td>10.4h</td><td>90% <div class="sunshine-bar" style="width: 270px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-15</td><td>9.3h</td><td>10.4h</td><td>89% <div class="sunshine-bar" style="width: 268px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-16</td><td>9.5h</td><td>10.5h</td><td>90% <div class="sunshine-bar" style="width: 271px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-17</td><td>6.7h</td><td>10.5h</td><td>64% <div class="sunshine-bar" style="width: 192px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-18</td><td>5.1h</td><td>10.6h</td><td>48% <div class="sunshine-bar" style="width: 144px;"></div></td><td>☀️ Good</td></tr><tr class=""><td>2026-02-19</td><td>0.3h</td><td>10.6h</td><td>3% <div class="sunshine-bar" style="width: 9px;"></div></td><td></td></tr>
+    </table>
+    <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).</p>
+    
+
+    <h2>7-Day Weather Forecast</h2>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Precip</th>
+        </tr>
+        <tr><td>2026-02-04</td><td class="temp-high">13.9°C (57°F)</td><td class="temp-low">6.3°C (43°F)</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-05</td><td class="temp-high">14.9°C (59°F)</td><td class="temp-low">7.6°C (46°F)</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-06</td><td class="temp-high">14.5°C (58°F)</td><td class="temp-low">4.6°C (40°F)</td><td>0.0mm</td></tr>
+        <tr><td>2026-02-07</td><td class="temp-high">13.5°C (56°F)</td><td class="temp-low">6.3°C (43°F)</td><td>0.8mm</td></tr>
+        <tr><td>2026-02-08</td><td class="temp-high">11.2°C (52°F)</td><td class="temp-low">6.6°C (44°F)</td><td>37.5mm</td></tr>
+        <tr><td>2026-02-09</td><td class="temp-high">9.3°C (49°F)</td><td class="temp-low">5.9°C (43°F)</td><td>7.3mm</td></tr>
+        <tr><td>2026-02-10</td><td class="temp-high">8.8°C (48°F)</td><td class="temp-low">4.8°C (41°F)</td><td>0.6mm</td></tr>
+    </table>
+
+    <h2>About</h2>
+    <p>This page shows sunshine forecasts to help plan butterfly viewing trips. Butterflies are most active during sunny periods.</p>
+    <p><strong>Good butterfly weather:</strong> &gt;3 hours of sunshine OR &gt;40% of daylight is sunny.</p>
+    <ul>
+        <li>Butterfly hotspots by week</li>
+        <li>Species diversity maps</li>
+        <li>Drive-time isochrones</li>
+        <li>Nearby campgrounds</li>
+    </ul>
+
+    <p class="meta">Data from <a href="https://open-meteo.com">Open-Meteo</a></p>
+</body>
+</html>
