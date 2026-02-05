@@ -173,6 +173,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 0.9rem;
         }}
 
+        /* --- Species sightings table --- */
+        .species-photo {{ width: 48px; height: 48px; border-radius: 3px; object-fit: cover; vertical-align: middle; }}
+        .species-photo-placeholder {{ display: inline-block; width: 48px; height: 48px; border-radius: 3px; background: #f0f0f0; text-align: center; line-height: 48px; color: #aaa; font-size: 1.2rem; vertical-align: middle; }}
+        .species-scientific {{ font-style: italic; }}
+        .obs-bar {{ display: inline-block; height: 12px; background: #8faa7b; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }}
+        td.obs-count {{ font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; white-space: nowrap; }}
+
         /* --- About section --- */
         .about p {{ text-align: justify; font-size: 0.92rem; }}
         .about ul {{
@@ -218,6 +225,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     {sunshine_16day}
 
+    {butterfly_sightings}
+
     <h2>About</h2>
     <div class="about">
         <p>This page presents sunshine and weather forecasts to aid in planning
@@ -238,7 +247,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </main>
 
     <footer>
-        <p>Data provided by <a href="https://open-meteo.com">Open-Meteo</a>.
+        <p>Data provided by <a href="https://open-meteo.com">Open-Meteo</a>
+        and <a href="https://www.inaturalist.org">iNaturalist</a>.
         Forecast models may not reflect actual conditions.</p>
     </footer>
 </body>
@@ -261,6 +271,17 @@ def load_weather() -> dict[str, Any] | None:
 def load_sunshine() -> dict[str, Any] | None:
     """Load raw sunshine data."""
     path = RAW_DIR / "sunshine.json"
+    if not path.exists():
+        return None
+    with path.open() as f:
+        result: dict[str, Any] = json.load(f)
+        return result
+
+
+@task(name="load-inaturalist")
+def load_inaturalist() -> dict[str, Any] | None:
+    """Load raw iNaturalist data."""
+    path = RAW_DIR / "inaturalist.json"
     if not path.exists():
         return None
     with path.open() as f:
@@ -511,9 +532,11 @@ def build_sunshine_16day_html(
 
     rows = []
     for i, date_str in enumerate(dates):
-        sunshine_hours = sunshine_secs[i] / 3600
-        daylight_hours = daylight_secs[i] / 3600
-        sunshine_pct = (sunshine_secs[i] / daylight_secs[i] * 100) if daylight_secs[i] > 0 else 0
+        sun_sec = sunshine_secs[i] if sunshine_secs[i] is not None else 0
+        day_sec = daylight_secs[i] if daylight_secs[i] is not None else 0
+        sunshine_hours = sun_sec / 3600
+        daylight_hours = day_sec / 3600
+        sunshine_pct = (sun_sec / day_sec * 100) if day_sec > 0 else 0
 
         # Determine if good butterfly weather
         is_good = sunshine_hours > 3.0 or sunshine_pct > 40.0
@@ -581,9 +604,127 @@ def build_sunshine_16day_html(
     """
 
 
+MONTH_NAMES = [
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+
+
+def _inat_obs_url(taxon_id: int, month: int) -> str:
+    """Build an iNaturalist observation search URL for a taxon in the target region."""
+    return (
+        f"https://www.inaturalist.org/observations"
+        f"?taxon_id={taxon_id}&month={month}"
+        f"&quality_grade=research&verifiable=true"
+        f"&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5"
+    )
+
+
+def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
+    """Build HTML table for butterfly species sightings from iNaturalist."""
+    data = inat_data.get("data", {})
+    species_list: list[dict[str, Any]] = data.get("species", [])
+    month = data.get("month", 0)
+
+    if not species_list:
+        return "<p>No butterfly sightings data available.</p>"
+
+    month_name = MONTH_NAMES[month] if 1 <= month <= 12 else "this month"
+
+    # Show top 15 species
+    top_species = sorted(species_list, key=lambda s: s["observation_count"], reverse=True)[:15]
+    max_count = top_species[0]["observation_count"] if top_species else 1
+
+    rows = []
+    for _rank, sp in enumerate(top_species, 1):
+        name = sp.get("common_name") or sp["scientific_name"]
+        scientific = sp["scientific_name"]
+        count = sp["observation_count"]
+        photo_url = sp.get("photo_url")
+        taxon_id = sp.get("taxon_id", 0)
+        taxon_url = sp.get("taxon_url", "")
+
+        # Observation bar (scaled to max)
+        bar_width = int((count / max_count) * 200) if max_count > 0 else 0
+
+        # Photo thumbnail linked to taxon page
+        if photo_url:
+            photo_html = (
+                f'<a href="{taxon_url}">'
+                f'<img class="species-photo" src="{photo_url}" alt="{name}">'
+                f"</a>"
+                if taxon_url
+                else f'<img class="species-photo" src="{photo_url}" alt="{name}">'
+            )
+        else:
+            photo_html = '<div class="species-photo-placeholder">&#x1f98b;</div>'
+
+        # Species name linked to taxon page
+        name_html = f'<a href="{taxon_url}">{name}</a>' if taxon_url else name
+
+        # Observation count linked to search results
+        obs_url = _inat_obs_url(taxon_id, month) if taxon_id and month else ""
+        count_html = f'<a href="{obs_url}">{count}</a>' if obs_url else str(count)
+
+        rows.append(
+            f"<tr>"
+            f"<td>{photo_html}</td>"
+            f"<td>{name_html}<br>"
+            f'<span class="species-scientific">{scientific}</span></td>'
+            f'<td class="obs-count">'
+            f'<div class="obs-bar" style="width: {bar_width}px;"></div>'
+            f"{count_html}</td>"
+            f"</tr>"
+        )
+
+    # Link to browse all butterfly observations in the region for this month
+    all_obs_url = (
+        f"https://www.inaturalist.org/observations"
+        f"?taxon_id=47224&month={month}"
+        f"&quality_grade=research&verifiable=true"
+        f"&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5"
+    )
+
+    return f"""
+    <h2>Butterfly Sightings &mdash; {month_name}</h2>
+    <p>Research-grade butterfly observations in NW Oregon / SW Washington
+    during {month_name}, all years combined
+    (<a href="{all_obs_url}">browse on iNaturalist</a>).</p>
+    <table>
+        <thead>
+        <tr>
+            <th></th>
+            <th>Species</th>
+            <th>Observations</th>
+        </tr>
+        </thead>
+        <tbody>
+        {"".join(rows)}
+        </tbody>
+    </table>
+    <p class="meta">Observation counts are cumulative across all years for {month_name}.
+    Species ranked by research-grade observation frequency.</p>
+    """
+
+
 @task(name="build-html")
-def build_html(weather_data: dict[str, Any], sunshine_data: dict[str, Any] | None) -> str:
-    """Build HTML page from weather and sunshine data."""
+def build_html(
+    weather_data: dict[str, Any],
+    sunshine_data: dict[str, Any] | None,
+    inat_data: dict[str, Any] | None = None,
+) -> str:
+    """Build HTML page from weather, sunshine, and iNaturalist data."""
     # Convert timestamp to local time (PST)
     fetched_dt = datetime.fromisoformat(weather_data["fetched_at"])
     pst = ZoneInfo("America/Los_Angeles")
@@ -597,10 +738,16 @@ def build_html(weather_data: dict[str, Any], sunshine_data: dict[str, Any] | Non
         sunshine_today_html = build_sunshine_today_html(sunshine_data)
         sunshine_16day_html = build_sunshine_16day_html(sunshine_data, weather_data)
 
+    # Build butterfly sightings section
+    butterfly_sightings_html = ""
+    if inat_data:
+        butterfly_sightings_html = build_butterfly_sightings_html(inat_data)
+
     return HTML_TEMPLATE.format(
         updated=updated,
         sunshine_today=sunshine_today_html,
         sunshine_16day=sunshine_16day_html,
+        butterfly_sightings=butterfly_sightings_html,
     )
 
 
@@ -633,8 +780,13 @@ def build_all() -> dict[str, Any]:
     if not sunshine:
         print("Warning: No sunshine data found. Building without sunshine modules.")
 
+    print("Loading iNaturalist data...")
+    inat = load_inaturalist()
+    if not inat:
+        print("Warning: No iNaturalist data found. Building without butterfly sightings.")
+
     print("Building HTML...")
-    html = build_html(weather, sunshine)
+    html = build_html(weather, sunshine, inat)
 
     print("Writing site...")
     output_path = write_site(html)

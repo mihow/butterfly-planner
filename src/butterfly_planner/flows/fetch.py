@@ -15,13 +15,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, TypeVar
 
 import requests
 
-from butterfly_planner import sunshine
+from butterfly_planner import inaturalist, sunshine
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -147,6 +147,48 @@ def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]
     return output_path
 
 
+@task(name="fetch-inaturalist", retries=2, retry_delay_seconds=5)
+def fetch_inaturalist() -> dict[str, Any]:
+    """Fetch butterfly species counts for the current month from iNaturalist."""
+    month = date.today().month
+    species = inaturalist.fetch_species_counts(month)
+    return {
+        "month": month,
+        "species": [
+            {
+                "taxon_id": s.taxon_id,
+                "scientific_name": s.scientific_name,
+                "common_name": s.common_name,
+                "rank": s.rank,
+                "observation_count": s.observation_count,
+                "photo_url": s.photo_url,
+                "taxon_url": s.taxon_url,
+            }
+            for s in species
+        ],
+    }
+
+
+@task(name="save-inaturalist")
+def save_inaturalist(inat_data: dict[str, Any]) -> Path:
+    """Save iNaturalist data to JSON file."""
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+    output_path = RAW_DIR / "inaturalist.json"
+    with output_path.open("w") as f:
+        json.dump(
+            {
+                "fetched_at": datetime.now().isoformat(),
+                "source": "inaturalist.org",
+                "data": inat_data,
+            },
+            f,
+            indent=2,
+        )
+
+    return output_path
+
+
 @flow(name="fetch-data", log_prints=True)
 def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     """
@@ -170,10 +212,22 @@ def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     slots = len(sunshine_15min.get("minutely_15", {}).get("time", []))
     print(f"Saved {slots} 15-min sunshine slots and 16 days to {sunshine_path}")
 
+    print("Fetching iNaturalist butterfly sightings...")
+    inat_data = fetch_inaturalist()
+    inat_path = save_inaturalist(inat_data)
+
+    species_count = len(inat_data.get("species", []))
+    print(f"Saved {species_count} butterfly species to {inat_path}")
+
     return {
         "weather_days": days,
         "sunshine_slots": slots,
-        "outputs": {"weather": str(output_path), "sunshine": str(sunshine_path)},
+        "inat_species": species_count,
+        "outputs": {
+            "weather": str(output_path),
+            "sunshine": str(sunshine_path),
+            "inaturalist": str(inat_path),
+        },
     }
 
 
