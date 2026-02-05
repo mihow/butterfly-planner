@@ -58,8 +58,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .temp-high {{ color: #c00; }}
         .temp-low {{ color: #00c; }}
         .sunshine-bar {{ display: inline-block; height: 20px; background: #ffd700; border-radius: 3px; }}
-        .sunshine-grid {{ display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 1rem 0; }}
-        .sunshine-slot {{ height: 30px; border-radius: 2px; }}
+        .timeline {{ margin: 1rem 0; }}
+        .tl-labels {{ position: relative; height: 1.4em; font-size: 0.8rem; color: #666; }}
+        .tl-label {{ position: absolute; transform: translateX(-50%); }}
+        .tl-bar {{ display: flex; gap: 1px; border-radius: 4px; overflow: hidden; height: 32px; }}
+        .tl-seg {{ flex: 1; min-width: 0; transition: opacity 0.15s; }}
+        .tl-seg:hover {{ opacity: 0.7; }}
         .sunshine-none {{ background: #e0e0e0; }}
         .sunshine-low {{ background: #fff9c4; }}
         .sunshine-med {{ background: #ffeb3b; }}
@@ -69,7 +73,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .poor-day {{ background: #ffebee; }}
         .hour-bar {{ display: inline-flex; gap: 1px; vertical-align: middle; }}
         .hour-seg {{ width: 16px; height: 18px; border-radius: 2px; }}
-        .legend {{ display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; }}
+        .legend {{ display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; flex-wrap: wrap; }}
         .legend-item {{ display: flex; align-items: center; gap: 0.5rem; }}
         .legend-box {{ width: 20px; height: 20px; border-radius: 2px; }}
     </style>
@@ -163,8 +167,26 @@ def wmo_code_to_conditions(code: int) -> str:
     return WMO_CONDITIONS.get(code, f"Unknown ({code})")
 
 
+def _sunshine_color_class(pct: float) -> str:
+    """Return CSS class name for a sunshine percentage (0-100)."""
+    if pct == 0:
+        return "sunshine-none"
+    if pct < 25:
+        return "sunshine-low"
+    if pct < 50:
+        return "sunshine-med"
+    if pct < 75:
+        return "sunshine-high"
+    return "sunshine-full"
+
+
 def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
-    """Build HTML for Module 1: Today's 15-minute sunshine."""
+    """Build HTML for today's sunshine as a horizontal timeline bar.
+
+    Renders a full-width bar from sunrise to sunset where each 15-min
+    segment is proportionally sized and colored by sunshine intensity.
+    Hour labels are positioned above for time orientation.
+    """
     minutely = sunshine_data["today_15min"].get("minutely_15", {})
     times = minutely.get("time", [])
     durations = minutely.get("sunshine_duration", [])
@@ -186,52 +208,65 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
     if not daylight_slots:
         return "<p>No daylight hours in forecast.</p>"
 
+    n_slots = len(daylight_slots)
+
     # Calculate total sunshine
     total_sunshine_sec = sum(dur for _, dur in daylight_slots)
     total_sunshine_hours = total_sunshine_sec / 3600
 
-    # Build grid visualization
-    grid_html = []
+    # Build timeline segments
+    segments = []
     for time_str, duration in daylight_slots:
         dt = datetime.fromisoformat(time_str)
         pct = (duration / 900) * 100  # 900 sec = 15 min
+        color_class = _sunshine_color_class(pct)
+        title = f"{dt.strftime('%I:%M %p')}: {duration / 60:.0f} min sun"
+        segments.append(f'<div class="tl-seg {color_class}" title="{title}"></div>')
 
-        # Color based on percentage
-        if pct == 0:
-            color_class = "sunshine-none"
-        elif pct < 25:
-            color_class = "sunshine-low"
-        elif pct < 50:
-            color_class = "sunshine-med"
-        elif pct < 75:
-            color_class = "sunshine-high"
-        else:
-            color_class = "sunshine-full"
+    # Build hour labels positioned above the bar
+    labels = []
+    seen_hours: set[int] = set()
+    for idx, (time_str, _) in enumerate(daylight_slots):
+        dt = datetime.fromisoformat(time_str)
+        if dt.hour not in seen_hours:
+            seen_hours.add(dt.hour)
+            left_pct = (idx / n_slots) * 100
+            label_text = dt.strftime("%-I%p").lower()
+            labels.append(
+                f'<span class="tl-label" style="left:{left_pct:.1f}%">{label_text}</span>'
+            )
 
-        title = f"{dt.strftime('%I:%M %p')}: {duration / 60:.0f} min"
-        grid_html.append(f'<div class="sunshine-slot {color_class}" title="{title}"></div>')
+    sunrise_dt = datetime.fromisoformat(daylight_slots[0][0])
+    sunset_dt = datetime.fromisoformat(daylight_slots[-1][0])
+    sunrise_str = sunrise_dt.strftime("%-I:%M %p")
+    sunset_str = sunset_dt.strftime("%-I:%M %p")
 
-    # Legend
+    today_date = sunrise_dt.strftime("%B %d")
+
     legend = """
     <div class="legend">
-        <div class="legend-item"><div class="legend-box sunshine-none"></div> None</div>
-        <div class="legend-item"><div class="legend-box sunshine-low"></div> 0-25%</div>
+        <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
+        <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
         <div class="legend-item"><div class="legend-box sunshine-med"></div> 25-50%</div>
         <div class="legend-item"><div class="legend-box sunshine-high"></div> 50-75%</div>
         <div class="legend-item"><div class="legend-box sunshine-full"></div> 75-100%</div>
     </div>
     """
 
-    today_date = datetime.fromisoformat(daylight_slots[0][0]).strftime("%B %d")
-
     return f"""
-    <h2>☀️ Today's Sun Breaks ({today_date})</h2>
-    <p>Total sunshine expected: <strong>{total_sunshine_hours:.1f} hours</strong></p>
+    <h2>\u2600\ufe0f Today's Sun Breaks ({today_date})</h2>
+    <p>Total sunshine expected: <strong>{total_sunshine_hours:.1f} hours</strong>
+    &mdash; Sunrise {sunrise_str}, Sunset {sunset_str}</p>
     {legend}
-    <div class="sunshine-grid">
-        {"".join(grid_html)}
+    <div class="timeline">
+        <div class="tl-labels">
+            {"".join(labels)}
+        </div>
+        <div class="tl-bar">
+            {"".join(segments)}
+        </div>
     </div>
-    <p class="meta">Each block = 15 minutes. Hover for time and duration.</p>
+    <p class="meta">Each segment = 15 minutes. Hover for exact time and duration.</p>
     """
 
 

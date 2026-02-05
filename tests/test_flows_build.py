@@ -85,7 +85,7 @@ class TestBuildSunshineTodayHtml:
     """Test building today's sunshine HTML."""
 
     def test_build_sunshine_today_html_with_data(self) -> None:
-        """Test building HTML with 15-minute sunshine data."""
+        """Test building HTML with 15-minute sunshine data as timeline."""
         sunshine_data = {
             "today_15min": {
                 "minutely_15": {
@@ -107,7 +107,13 @@ class TestBuildSunshineTodayHtml:
         assert "February 04" in result
         assert "sunshine-none" in result  # For 0% slot
         assert "sunshine-full" in result  # For 100% slot
-        assert "sunshine-grid" in result
+        assert "timeline" in result  # Timeline container
+        assert "tl-bar" in result  # Timeline bar
+        assert "tl-seg" in result  # Timeline segments
+        assert "tl-label" in result  # Hour labels
+        assert "8am" in result  # Hour label for 8 AM
+        assert "Sunrise" in result
+        assert "Sunset" in result
 
     def test_build_sunshine_today_html_filters_to_first_day(self) -> None:
         """Test that multi-day 15-min data only shows the first day."""
