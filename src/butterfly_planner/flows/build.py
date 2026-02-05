@@ -388,9 +388,11 @@ def build_sunshine_16day_html(
 
     rows = []
     for i, date_str in enumerate(dates):
-        sunshine_hours = sunshine_secs[i] / 3600
-        daylight_hours = daylight_secs[i] / 3600
-        sunshine_pct = (sunshine_secs[i] / daylight_secs[i] * 100) if daylight_secs[i] > 0 else 0
+        sun_sec = sunshine_secs[i] if sunshine_secs[i] is not None else 0
+        day_sec = daylight_secs[i] if daylight_secs[i] is not None else 0
+        sunshine_hours = sun_sec / 3600
+        daylight_hours = day_sec / 3600
+        sunshine_pct = (sun_sec / day_sec * 100) if day_sec > 0 else 0
 
         # Determine if good butterfly weather
         is_good = sunshine_hours > 3.0 or sunshine_pct > 40.0
