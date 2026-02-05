@@ -109,6 +109,29 @@ class TestBuildSunshineTodayHtml:
         assert "sunshine-full" in result  # For 100% slot
         assert "sunshine-grid" in result
 
+    def test_build_sunshine_today_html_filters_to_first_day(self) -> None:
+        """Test that multi-day 15-min data only shows the first day."""
+        sunshine_data = {
+            "today_15min": {
+                "minutely_15": {
+                    "time": [
+                        "2026-02-04T10:00:00",
+                        "2026-02-04T10:15:00",
+                        "2026-02-05T10:00:00",  # Next day - should be excluded
+                        "2026-02-05T10:15:00",
+                    ],
+                    "sunshine_duration": [900, 900, 900, 900],
+                    "is_day": [1, 1, 1, 1],
+                }
+            }
+        }
+
+        result = build.build_sunshine_today_html(sunshine_data)
+
+        assert "February 04" in result
+        # 2 slots x 900 sec = 1800 sec = 0.5 hours (only day 1)
+        assert "0.5 hours" in result
+
     def test_build_sunshine_today_html_no_times(self) -> None:
         """Test with empty time array."""
         sunshine_data = {

@@ -173,8 +173,15 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
     if not times:
         return "<p>No 15-minute sunshine data available.</p>"
 
-    # Filter to daylight hours only
-    daylight_slots = [(times[i], durations[i]) for i in range(len(times)) if is_day[i]]
+    # Determine today's date (first date in the data)
+    today_str = times[0][:10]  # "YYYY-MM-DD"
+
+    # Filter to today's daylight hours only
+    daylight_slots = [
+        (times[i], durations[i])
+        for i in range(len(times))
+        if is_day[i] and times[i][:10] == today_str
+    ]
 
     if not daylight_slots:
         return "<p>No daylight hours in forecast.</p>"
