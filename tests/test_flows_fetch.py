@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 from butterfly_planner.flows import fetch
+from butterfly_planner.inaturalist import SpeciesRecord
 from butterfly_planner.sunshine import DailySunshine, SunshineSlot
 
 if TYPE_CHECKING:
@@ -147,9 +148,78 @@ class TestSaveSunshine:
         assert saved_data["daily_16day"] == sunshine_16day
 
 
+class TestFetchInaturalist:
+    """Test fetching iNaturalist data."""
+
+    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
+    def test_fetch_inaturalist(self, mock_fetch: Mock) -> None:
+        """Test fetching iNaturalist species counts."""
+        mock_fetch.return_value = [
+            SpeciesRecord(
+                taxon_id=48662,
+                scientific_name="Vanessa cardui",
+                common_name="Painted Lady",
+                rank="species",
+                observation_count=542,
+                photo_url="https://example.com/photo.jpg",
+                taxon_url="https://www.inaturalist.org/taxa/48662",
+            ),
+        ]
+
+        result = fetch.fetch_inaturalist()
+
+        assert "month" in result
+        assert "species" in result
+        assert len(result["species"]) == 1
+        assert result["species"][0]["scientific_name"] == "Vanessa cardui"
+        assert result["species"][0]["observation_count"] == 542
+
+    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
+    def test_fetch_inaturalist_empty(self, mock_fetch: Mock) -> None:
+        """Test fetching with no species found."""
+        mock_fetch.return_value = []
+
+        result = fetch.fetch_inaturalist()
+
+        assert result["species"] == []
+
+
+class TestSaveInaturalist:
+    """Test saving iNaturalist data to file."""
+
+    def test_save_inaturalist(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test saving iNaturalist data to JSON file."""
+        raw_dir = tmp_path / "data" / "raw"
+        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+
+        inat_data = {
+            "month": 2,
+            "species": [
+                {
+                    "taxon_id": 48662,
+                    "scientific_name": "Vanessa cardui",
+                    "common_name": "Painted Lady",
+                    "rank": "species",
+                    "observation_count": 542,
+                }
+            ],
+        }
+
+        result = fetch.save_inaturalist(inat_data)
+
+        assert result == raw_dir / "inaturalist.json"
+        assert result.exists()
+
+        saved_data = json.loads(result.read_text())
+        assert "fetched_at" in saved_data
+        assert saved_data["source"] == "inaturalist.org"
+        assert saved_data["data"] == inat_data
+
+
 class TestFetchAllFlow:
     """Test the main fetch flow."""
 
+    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_16day_sunshine")
     @patch("butterfly_planner.flows.fetch.requests.get")
@@ -158,6 +228,7 @@ class TestFetchAllFlow:
         mock_get: Mock,
         mock_fetch_16day: Mock,
         mock_fetch_15min: Mock,
+        mock_fetch_inat: Mock,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -184,13 +255,27 @@ class TestFetchAllFlow:
             DailySunshine(date=date(2026, 2, 4), sunshine_seconds=14400, daylight_seconds=36000),
         ]
 
+        # Mock iNaturalist
+        mock_fetch_inat.return_value = [
+            SpeciesRecord(
+                taxon_id=48662,
+                scientific_name="Vanessa cardui",
+                common_name="Painted Lady",
+                rank="species",
+                observation_count=542,
+            ),
+        ]
+
         result = fetch.fetch_all(lat=45.5, lon=-122.6)
 
         assert result["weather_days"] == 2
         assert result["sunshine_slots"] == 1
+        assert result["inat_species"] == 1
         assert "weather" in result["outputs"]
         assert "sunshine" in result["outputs"]
+        assert "inaturalist" in result["outputs"]
 
         # Verify files were created
         assert (raw_dir / "weather.json").exists()
         assert (raw_dir / "sunshine.json").exists()
+        assert (raw_dir / "inaturalist.json").exists()

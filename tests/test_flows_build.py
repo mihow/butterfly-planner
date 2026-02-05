@@ -251,6 +251,150 @@ class TestBuildHtml:
         assert "Today's Sun Breaks" not in result
 
 
+SAMPLE_INAT_DATA: dict = {
+    "fetched_at": "2026-02-04T12:00:00",
+    "source": "inaturalist.org",
+    "data": {
+        "month": 6,
+        "species": [
+            {
+                "taxon_id": 48662,
+                "scientific_name": "Vanessa cardui",
+                "common_name": "Painted Lady",
+                "rank": "species",
+                "observation_count": 542,
+                "photo_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/123/medium.jpg",
+                "taxon_url": "https://www.inaturalist.org/taxa/48662",
+            },
+            {
+                "taxon_id": 48548,
+                "scientific_name": "Pieris rapae",
+                "common_name": "Cabbage White",
+                "rank": "species",
+                "observation_count": 318,
+                "photo_url": None,
+                "taxon_url": "https://www.inaturalist.org/taxa/48548",
+            },
+        ],
+    },
+}
+
+
+class TestLoadInaturalist:
+    """Test loading iNaturalist data from file."""
+
+    def test_load_inaturalist_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test loading iNaturalist data when file exists."""
+        raw_dir = tmp_path / "data" / "raw"
+        raw_dir.mkdir(parents=True)
+        inat_file = raw_dir / "inaturalist.json"
+        inat_file.write_text(json.dumps(SAMPLE_INAT_DATA))
+
+        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+
+        result = build.load_inaturalist()
+        assert result == SAMPLE_INAT_DATA
+
+    def test_load_inaturalist_not_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test loading iNaturalist data when file doesn't exist."""
+        raw_dir = tmp_path / "data" / "raw"
+        raw_dir.mkdir(parents=True)
+        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+
+        result = build.load_inaturalist()
+        assert result is None
+
+
+class TestBuildButterflySightingsHtml:
+    """Test building butterfly sightings HTML section."""
+
+    def test_with_species_data(self) -> None:
+        """Test building HTML with species data."""
+        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+
+        assert "Butterfly Sightings - June" in result
+        assert "Painted Lady" in result
+        assert "Vanessa cardui" in result
+        assert "542 research-grade observations" in result
+        assert "Cabbage White" in result
+        assert "species-card" in result
+        assert "inaturalist.org/taxa/48662" in result
+
+    def test_with_photo(self) -> None:
+        """Test that photo URL renders as img tag."""
+        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+
+        assert 'class="species-photo"' in result
+        assert "photos/123/medium.jpg" in result
+
+    def test_without_photo(self) -> None:
+        """Test placeholder when no photo URL."""
+        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+
+        assert "species-photo-placeholder" in result
+
+    def test_empty_species(self) -> None:
+        """Test with no species data."""
+        empty_data: dict = {"data": {"month": 1, "species": []}}
+        result = build.build_butterfly_sightings_html(empty_data)
+
+        assert "No butterfly sightings data available" in result
+
+    def test_observation_bar_scaling(self) -> None:
+        """Test that observation bars scale relative to max count."""
+        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+
+        # First species (542) should have full-width bar (200px)
+        assert 'style="width: 200px;"' in result
+        # Second species (318) should have proportional bar
+        assert 'style="width: 117px;"' in result
+
+
+class TestBuildHtmlWithInaturalist:
+    """Test build_html with iNaturalist data."""
+
+    def test_build_html_with_inat(self) -> None:
+        """Test that iNaturalist data is included in final HTML."""
+        weather_data = {
+            "fetched_at": "2026-02-04T12:00:00+00:00",
+            "data": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "temperature_2m_max": [15.0],
+                    "temperature_2m_min": [5.0],
+                    "precipitation_sum": [0],
+                }
+            },
+        }
+
+        result = build.build_html(weather_data, None, SAMPLE_INAT_DATA)
+
+        assert "Butterfly Sightings - June" in result
+        assert "Painted Lady" in result
+        assert "iNaturalist" in result
+
+    def test_build_html_without_inat(self) -> None:
+        """Test that HTML builds correctly without iNaturalist data."""
+        weather_data = {
+            "fetched_at": "2026-02-04T12:00:00+00:00",
+            "data": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "temperature_2m_max": [15.0],
+                    "temperature_2m_min": [5.0],
+                    "precipitation_sum": [0],
+                }
+            },
+        }
+
+        result = build.build_html(weather_data, None, None)
+
+        assert "<!DOCTYPE html>" in result
+        assert "Butterfly Sightings" not in result
+
+
 class TestWriteSite:
     """Test writing site to disk."""
 
@@ -309,7 +453,7 @@ class TestBuildAllFlow:
         assert (site_dir / "index.html").exists()
 
     def test_build_all_with_all_data(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test flow with both weather and sunshine data."""
+        """Test flow with weather, sunshine, and iNaturalist data."""
         raw_dir = tmp_path / "data" / "raw"
         site_dir = tmp_path / "site"
         raw_dir.mkdir(parents=True)
@@ -346,13 +490,16 @@ class TestBuildAllFlow:
         }
         (raw_dir / "weather.json").write_text(json.dumps(weather_data))
         (raw_dir / "sunshine.json").write_text(json.dumps(sunshine_data))
+        (raw_dir / "inaturalist.json").write_text(json.dumps(SAMPLE_INAT_DATA))
 
         result = build.build_all()
 
         assert result["pages"] == 1
         assert "output" in result
 
-        # Verify HTML contains sunshine sections
+        # Verify HTML contains all sections
         html_content = (site_dir / "index.html").read_text()
         assert "Today's Sun Breaks" in html_content
         assert "16-Day Sunshine Forecast" in html_content
+        assert "Butterfly Sightings" in html_content
+        assert "Painted Lady" in html_content
