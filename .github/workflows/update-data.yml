@@ -46,6 +46,21 @@ jobs:
         env:
           PYTHONPATH: src
 
+      # Upload site as artifact for PR previews (all branches)
+      - name: Upload site artifact for preview
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview-${{ github.sha }}
+          path: site/
+          retention-days: 7
+
+      # Print preview instructions in workflow log
+      - name: Preview instructions
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::notice title=Site Preview::Download the 'site-preview' artifact from this workflow run to preview the site locally"
+
       - name: Setup Pages
         if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
