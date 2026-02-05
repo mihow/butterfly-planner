@@ -21,6 +21,8 @@ from typing import Any, TypeVar
 
 import requests
 
+from butterfly_planner import sunshine
+
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 # Try to import Prefect, fall back to no-op decorators if unavailable
@@ -62,15 +64,46 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     params: dict[str, str | int | float | list[str]] = {
         "latitude": lat,
         "longitude": lon,
-        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
+        "daily": [
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "precipitation_sum",
+            "weather_code",
+        ],
         "timezone": "America/Los_Angeles",
-        "forecast_days": 7,
+        "forecast_days": 16,
     }
 
     resp = requests.get(url, params=params, timeout=30)
     resp.raise_for_status()
     result: dict[str, Any] = resp.json()
     return result
+
+
+@task(name="fetch-sunshine-15min", retries=2, retry_delay_seconds=5)
+def fetch_sunshine_15min(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
+    """Fetch 15-minute sunshine forecast for the next 3 days."""
+    slots = sunshine.fetch_today_15min_sunshine(lat, lon, forecast_days=3)
+    return {
+        "minutely_15": {
+            "time": [s.time.isoformat() for s in slots],
+            "sunshine_duration": [s.duration_seconds for s in slots],
+            "is_day": [1 if s.is_day else 0 for s in slots],
+        }
+    }
+
+
+@task(name="fetch-sunshine-16day", retries=2, retry_delay_seconds=5)
+def fetch_sunshine_16day(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
+    """Fetch 16-day daily sunshine forecast."""
+    forecasts = sunshine.fetch_16day_sunshine(lat, lon)
+    return {
+        "daily": {
+            "time": [f.date.isoformat() for f in forecasts],
+            "sunshine_duration": [f.sunshine_seconds for f in forecasts],
+            "daylight_duration": [f.daylight_seconds for f in forecasts],
+        }
+    }
 
 
 @task(name="save-weather")
@@ -85,6 +118,27 @@ def save_weather(weather: dict[str, Any]) -> Path:
                 "fetched_at": datetime.now().isoformat(),
                 "source": "open-meteo.com",
                 "data": weather,
+            },
+            f,
+            indent=2,
+        )
+
+    return output_path
+
+
+@task(name="save-sunshine")
+def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]) -> Path:
+    """Save sunshine data to JSON file."""
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+    output_path = RAW_DIR / "sunshine.json"
+    with output_path.open("w") as f:
+        json.dump(
+            {
+                "fetched_at": datetime.now().isoformat(),
+                "source": "open-meteo.com",
+                "today_15min": sunshine_15min,
+                "daily_16day": sunshine_16day,
             },
             f,
             indent=2,
@@ -108,7 +162,19 @@ def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     days = len(weather.get("daily", {}).get("time", []))
     print(f"Saved {days} days of weather data to {output_path}")
 
-    return {"weather_days": days, "output": str(output_path)}
+    print(f"Fetching sunshine data for ({lat}, {lon})...")
+    sunshine_15min = fetch_sunshine_15min(lat, lon)
+    sunshine_16day = fetch_sunshine_16day(lat, lon)
+    sunshine_path = save_sunshine(sunshine_15min, sunshine_16day)
+
+    slots = len(sunshine_15min.get("minutely_15", {}).get("time", []))
+    print(f"Saved {slots} 15-min sunshine slots and 16 days to {sunshine_path}")
+
+    return {
+        "weather_days": days,
+        "sunshine_slots": slots,
+        "outputs": {"weather": str(output_path), "sunshine": str(sunshine_path)},
+    }
 
 
 if __name__ == "__main__":

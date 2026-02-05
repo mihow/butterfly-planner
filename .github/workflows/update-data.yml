@@ -6,27 +6,41 @@ on:
     - cron: '0 6 * * *'
   # Manual trigger
   workflow_dispatch:
-  # Run on push to main or feature branches
+  # Run on push to main or claude branches
   push:
     branches: [main, 'claude/*']
+  # Run on pull requests (for preview deployments)
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-# Sets permissions for GitHub Pages deployment
+# Permissions for GitHub Pages deployment and PR comments
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write  # Required for peaceiris/actions-gh-pages to push to gh-pages branch
+  pull-requests: write  # Required for commenting on PRs
 
-# Allow only one concurrent deployment
+# Allow only one concurrent deployment per ref
+# Don't cancel in-progress runs to avoid interrupting scheduled data fetches
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.ref }}"
   cancel-in-progress: false
 
 jobs:
   fetch-and-build:
     runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.pr-info.outputs.pr_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Get PR number
+        id: pr-info
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr_number=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,24 +60,127 @@ jobs:
         env:
           PYTHONPATH: src
 
-      - name: Setup Pages
-        if: github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: site
           path: site/
+          retention-days: 1
 
-  deploy:
+  # Deploy main branch to root of GitHub Pages
+  deploy-main:
     if: github.ref == 'refs/heads/main'
     needs: fetch-and-build
     runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
     steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          keep_files: true
+
+  # Deploy PR preview to /pr-<number>/ subdirectory
+  deploy-pr-preview:
+    if: github.event_name == 'pull_request'
+    needs: fetch-and-build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: pr-preview
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ needs.fetch-and-build.outputs.pr_number }}/
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
+      - name: Deploy PR preview to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          destination_dir: pr-${{ needs.fetch-and-build.outputs.pr_number }}
+          keep_files: true
+
+      - name: Comment on PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ needs.fetch-and-build.outputs.pr_number }};
+            const owner = '${{ github.repository_owner }}';
+            const repo = '${{ github.event.repository.name }}';
+            const previewUrl = `https://${owner}.github.io/${repo}/pr-${prNumber}/`;
+
+            // Check for existing preview comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview deployment')
+            );
+
+            const body = `## Preview deployment\n\nYour preview is ready!\n\n| Preview URL | Updated |\n|-------------|---------|\n| ${previewUrl} | ${new Date().toISOString()} |\n\nThis preview will remain available even after the PR is merged or closed.`;
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body,
+              });
+            }
+
+  # Deploy claude/* branch previews to /branch/<name>/ subdirectory
+  deploy-branch-preview:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/')
+    needs: fetch-and-build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: branch-preview
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branch/${{ github.ref_name }}/
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
+      - name: Deploy branch preview to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          destination_dir: branch/${{ github.ref_name }}
+          keep_files: true
