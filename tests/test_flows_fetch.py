@@ -31,6 +31,7 @@ class TestFetchWeather:
                 "temperature_2m_max": [15.0, 18.0],
                 "temperature_2m_min": [5.0, 8.0],
                 "precipitation_sum": [0, 2.5],
+                "weather_code": [0, 61],
             }
         }
         mock_response.raise_for_status = Mock()
@@ -40,10 +41,13 @@ class TestFetchWeather:
 
         assert "daily" in result
         assert len(result["daily"]["time"]) == 2
+        assert result["daily"]["weather_code"] == [0, 61]
         mock_get.assert_called_once()
         call_kwargs = mock_get.call_args.kwargs
         assert call_kwargs["params"]["latitude"] == 45.5
         assert call_kwargs["params"]["longitude"] == -122.6
+        assert call_kwargs["params"]["forecast_days"] == 16
+        assert "weather_code" in call_kwargs["params"]["daily"]
 
 
 class TestFetchSunshine15Min:
@@ -51,7 +55,7 @@ class TestFetchSunshine15Min:
 
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     def test_fetch_sunshine_15min(self, mock_fetch: Mock) -> None:
-        """Test fetching 15-minute sunshine data."""
+        """Test fetching 15-minute sunshine data for 3 days."""
         mock_fetch.return_value = [
             SunshineSlot(time=datetime(2026, 2, 4, 12, 0), duration_seconds=900, is_day=True),
             SunshineSlot(time=datetime(2026, 2, 4, 12, 15), duration_seconds=450, is_day=True),
@@ -63,7 +67,7 @@ class TestFetchSunshine15Min:
         assert len(result["minutely_15"]["time"]) == 2
         assert result["minutely_15"]["sunshine_duration"] == [900, 450]
         assert result["minutely_15"]["is_day"] == [1, 1]
-        mock_fetch.assert_called_once_with(45.5, -122.6)
+        mock_fetch.assert_called_once_with(45.5, -122.6, forecast_days=3)
 
 
 class TestFetchSunshine16Day:
@@ -171,6 +175,9 @@ class TestFetchAllFlow:
             "daily": {
                 "time": ["2026-02-04", "2026-02-05"],
                 "temperature_2m_max": [15.0, 18.0],
+                "temperature_2m_min": [5.0, 8.0],
+                "precipitation_sum": [0, 2.5],
+                "weather_code": [0, 61],
             }
         }
         mock_response.raise_for_status = Mock()

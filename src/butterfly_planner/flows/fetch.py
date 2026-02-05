@@ -64,9 +64,14 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     params: dict[str, str | int | float | list[str]] = {
         "latitude": lat,
         "longitude": lon,
-        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
+        "daily": [
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "precipitation_sum",
+            "weather_code",
+        ],
         "timezone": "America/Los_Angeles",
-        "forecast_days": 7,
+        "forecast_days": 16,
     }
 
     resp = requests.get(url, params=params, timeout=30)
@@ -77,8 +82,8 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
 
 @task(name="fetch-sunshine-15min", retries=2, retry_delay_seconds=5)
 def fetch_sunshine_15min(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
-    """Fetch today's 15-minute sunshine forecast."""
-    slots = sunshine.fetch_today_15min_sunshine(lat, lon)
+    """Fetch 15-minute sunshine forecast for the next 3 days."""
+    slots = sunshine.fetch_today_15min_sunshine(lat, lon, forecast_days=3)
     return {
         "minutely_15": {
             "time": [s.time.isoformat() for s in slots],
