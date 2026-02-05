@@ -107,7 +107,7 @@ jobs:
       - name: Install dependencies
         run: make install-dev
 
-      - name: Run mypy
+      - name: Run pyright
         run: make typecheck
 
   # ===========================================================================

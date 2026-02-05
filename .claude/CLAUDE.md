@@ -138,10 +138,10 @@ cat file.json | jq .              # Pretty print
 - `[project.optional-dependencies]` are extras, NOT dev deps. `uv sync` alone skips them. Use `uv sync --extra dev` (Makefile:36). Only `[tool.uv] dev-dependencies` are installed by default with `uv sync`.
 - Never set `UV_SYSTEM_PYTHON=1` alongside `uv sync`. `uv sync` creates a `.venv`; the env var tells `uv run` to bypass it. The two are mutually exclusive. (.github/workflows/test.yml:21)
 
-### mypy vs Pyright (VS Code)
-- If mypy flags errors that VS Code doesn't show, it's likely a divergence, not a config problem. Key differences: Pyright handles `try/except ImportError` fallback patterns specially and won't flag redefinitions in the except branch. mypy does. Pyright doesn't enforce `warn_return_any` or `warn_unused_ignores` by default; mypy strict does. (src/butterfly_planner/flows/fetch.py:26)
-- `resp.json()` and `json.load()` return `Any`. With `warn_return_any`, assign to a typed local before returning rather than using `cast`. (src/butterfly_planner/flows/fetch.py:70)
-- `# type: ignore[no-redef]` vs `[misc]`: mypy uses `no-redef` for the first redefinition in a try/except but `misc` for subsequent ones. Check the actual error code before writing the ignore. (src/butterfly_planner/flows/fetch.py:35)
+### Pyright (type checker)
+- Project uses pyright (not mypy) for type checking. Pyright is the engine behind VS Code's Pylance, so CLI and editor results stay in sync.
+- Pyright handles `try/except ImportError` fallback patterns natively — no `type: ignore` comments needed. (src/butterfly_planner/flows/fetch.py:31, src/butterfly_planner/flows/build.py:26)
+- Pyright resolves packages from the venv more reliably than mypy, avoiding spurious "Cannot find implementation or library stub" errors.
 
 ### Debugging CI failures
 - `gh run view --log-failed` can return empty output. Use the API instead: `gh api repos/{owner}/{repo}/actions/runs/{run_id}/jobs` to get job IDs, then `gh api repos/{owner}/{repo}/actions/jobs/{job_id}/logs` for the full log.
