@@ -82,8 +82,8 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
 
 @task(name="fetch-sunshine-15min", retries=2, retry_delay_seconds=5)
 def fetch_sunshine_15min(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
-    """Fetch today's 15-minute sunshine forecast."""
-    slots = sunshine.fetch_today_15min_sunshine(lat, lon)
+    """Fetch 15-minute sunshine forecast for the next 3 days."""
+    slots = sunshine.fetch_today_15min_sunshine(lat, lon, forecast_days=3)
     return {
         "minutely_15": {
             "time": [s.time.isoformat() for s in slots],

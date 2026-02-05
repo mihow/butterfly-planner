@@ -55,7 +55,7 @@ class TestFetchSunshine15Min:
 
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     def test_fetch_sunshine_15min(self, mock_fetch: Mock) -> None:
-        """Test fetching 15-minute sunshine data."""
+        """Test fetching 15-minute sunshine data for 3 days."""
         mock_fetch.return_value = [
             SunshineSlot(time=datetime(2026, 2, 4, 12, 0), duration_seconds=900, is_day=True),
             SunshineSlot(time=datetime(2026, 2, 4, 12, 15), duration_seconds=450, is_day=True),
@@ -67,7 +67,7 @@ class TestFetchSunshine15Min:
         assert len(result["minutely_15"]["time"]) == 2
         assert result["minutely_15"]["sunshine_duration"] == [900, 450]
         assert result["minutely_15"]["is_day"] == [1, 1]
-        mock_fetch.assert_called_once_with(45.5, -122.6)
+        mock_fetch.assert_called_once_with(45.5, -122.6, forecast_days=3)
 
 
 class TestFetchSunshine16Day:

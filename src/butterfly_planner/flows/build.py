@@ -67,6 +67,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .sunshine-full {{ background: #ff9800; }}
         .good-day {{ background: #e8f5e9; }}
         .poor-day {{ background: #ffebee; }}
+        .hour-bar {{ display: inline-flex; gap: 1px; vertical-align: middle; }}
+        .hour-seg {{ width: 16px; height: 18px; border-radius: 2px; }}
         .legend {{ display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; }}
         .legend-item {{ display: flex; align-items: center; gap: 0.5rem; }}
         .legend-box {{ width: 20px; height: 20px; border-radius: 2px; }}
@@ -125,34 +127,34 @@ def c_to_f(celsius: float) -> float:
 
 # WMO Weather Interpretation Codes (https://open-meteo.com/en/docs)
 WMO_CONDITIONS: dict[int, str] = {
-    0: "Clear",
-    1: "Mostly Clear",
-    2: "Partly Cloudy",
-    3: "Overcast",
-    45: "Fog",
-    48: "Freezing Fog",
-    51: "Light Drizzle",
-    53: "Drizzle",
-    55: "Heavy Drizzle",
-    56: "Light Freezing Drizzle",
-    57: "Freezing Drizzle",
-    61: "Light Rain",
-    63: "Rain",
-    65: "Heavy Rain",
-    66: "Light Freezing Rain",
-    67: "Freezing Rain",
-    71: "Light Snow",
-    73: "Snow",
-    75: "Heavy Snow",
-    77: "Snow Grains",
-    80: "Light Showers",
-    81: "Showers",
-    82: "Heavy Showers",
-    85: "Light Snow Showers",
-    86: "Snow Showers",
-    95: "Thunderstorm",
-    96: "Thunderstorm w/ Hail",
-    99: "Heavy Thunderstorm",
+    0: "\u2600\ufe0f Clear",
+    1: "\U0001f324\ufe0f Mostly Clear",
+    2: "\u26c5 Partly Cloudy",
+    3: "\u2601\ufe0f Overcast",
+    45: "\U0001f32b\ufe0f Fog",
+    48: "\U0001f32b\ufe0f Freezing Fog",
+    51: "\U0001f326\ufe0f Light Drizzle",
+    53: "\U0001f326\ufe0f Drizzle",
+    55: "\U0001f326\ufe0f Heavy Drizzle",
+    56: "\U0001f9ca Light Freezing Drizzle",
+    57: "\U0001f9ca Freezing Drizzle",
+    61: "\U0001f327\ufe0f Light Rain",
+    63: "\U0001f327\ufe0f Rain",
+    65: "\U0001f327\ufe0f Heavy Rain",
+    66: "\U0001f9ca Light Freezing Rain",
+    67: "\U0001f9ca Freezing Rain",
+    71: "\U0001f328\ufe0f Light Snow",
+    73: "\U0001f328\ufe0f Snow",
+    75: "\U0001f328\ufe0f Heavy Snow",
+    77: "\U0001f328\ufe0f Snow Grains",
+    80: "\U0001f326\ufe0f Light Showers",
+    81: "\U0001f327\ufe0f Showers",
+    82: "\U0001f327\ufe0f Heavy Showers",
+    85: "\U0001f328\ufe0f Light Snow Showers",
+    86: "\U0001f328\ufe0f Snow Showers",
+    95: "\u26c8\ufe0f Thunderstorm",
+    96: "\u26c8\ufe0f Thunderstorm w/ Hail",
+    99: "\u26c8\ufe0f Heavy Thunderstorm",
 }
 
 
@@ -226,6 +228,73 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
     """
 
 
+def _group_15min_by_date(
+    sunshine_data: dict[str, Any],
+) -> dict[str, list[tuple[str, int, bool]]]:
+    """Group 15-minute sunshine slots by date.
+
+    Returns a dict mapping date strings (YYYY-MM-DD) to lists of
+    (time_iso, duration_seconds, is_day) tuples.
+    """
+    minutely = sunshine_data.get("today_15min", {}).get("minutely_15", {})
+    times = minutely.get("time", [])
+    durations = minutely.get("sunshine_duration", [])
+    is_day = minutely.get("is_day", [])
+
+    by_date: dict[str, list[tuple[str, int, bool]]] = {}
+    for i, time_str in enumerate(times):
+        date_str = time_str[:10]  # "YYYY-MM-DD"
+        by_date.setdefault(date_str, []).append((time_str, durations[i], bool(is_day[i])))
+    return by_date
+
+
+def _build_hourly_bar(slots: list[tuple[str, int, bool]]) -> str:
+    """Build an inline hourly sunshine bar from 15-min slot data.
+
+    Groups daylight 15-min slots into hours and renders a compact
+    colored bar showing sunshine intensity throughout the day.
+    """
+    # Filter to daylight only
+    daylight = [(t, d) for t, d, is_day in slots if is_day]
+    if not daylight:
+        return ""
+
+    # Group into hours: sum sunshine seconds per hour
+    hours: dict[int, int] = {}
+    for time_str, dur in daylight:
+        dt = datetime.fromisoformat(time_str)
+        hours.setdefault(dt.hour, 0)
+        hours[dt.hour] += dur
+
+    if not hours:
+        return ""
+
+    first_hour = min(hours)
+    last_hour = max(hours)
+
+    segments = []
+    for h in range(first_hour, last_hour + 1):
+        sun_secs = hours.get(h, 0)
+        # Max possible per hour = 3600 sec (4 slots x 900 sec)
+        pct = (sun_secs / 3600) * 100 if sun_secs else 0
+        if pct == 0:
+            color = "#e0e0e0"
+        elif pct < 25:
+            color = "#fff9c4"
+        elif pct < 50:
+            color = "#ffeb3b"
+        elif pct < 75:
+            color = "#ffc107"
+        else:
+            color = "#ff9800"
+
+        dt_hour = datetime.fromisoformat(daylight[0][0]).replace(hour=h, minute=0)
+        title = f"{dt_hour.strftime('%I %p')}: {sun_secs / 60:.0f}min sun"
+        segments.append(f'<div class="hour-seg" style="background:{color};" title="{title}"></div>')
+
+    return f'<div class="hour-bar">{"".join(segments)}</div>'
+
+
 def build_sunshine_16day_html(
     sunshine_data: dict[str, Any], weather_data: dict[str, Any] | None = None
 ) -> str:
@@ -251,6 +320,9 @@ def build_sunshine_16day_html(
                 "weather_code": w_daily.get("weather_code", [None])[j],
             }
 
+    # Group 15-min slots by date for granular bar charts
+    slots_by_date = _group_15min_by_date(sunshine_data)
+
     rows = []
     for i, date_str in enumerate(dates):
         sunshine_hours = sunshine_secs[i] / 3600
@@ -261,9 +333,13 @@ def build_sunshine_16day_html(
         is_good = sunshine_hours > 3.0 or sunshine_pct > 40.0
         row_class = "good-day" if is_good else ""
 
-        # Sunshine bar visualization
-        bar_width = int(sunshine_pct * 3)  # Scale to 300px max
-        bar = f'<div class="sunshine-bar" style="width: {bar_width}px;"></div>'
+        # Sunshine bar: hourly detail if 15-min data available, else simple bar
+        day_slots = slots_by_date.get(date_str)
+        if day_slots:
+            bar = _build_hourly_bar(day_slots)
+        else:
+            bar_width = int(sunshine_pct * 3)  # Scale to 300px max
+            bar = f'<div class="sunshine-bar" style="width: {bar_width}px;"></div>'
 
         # Weather columns (from merged data)
         w = weather_by_date.get(date_str)
@@ -271,26 +347,25 @@ def build_sunshine_16day_html(
             high_c = w["high_c"]
             low_c = w["low_c"]
             temp_cell = (
-                f'<td><span class="temp-high">{high_c:.0f}°C</span> / '
-                f'<span class="temp-low">{low_c:.0f}°C</span></td>'
+                f'<td><span class="temp-high">{high_c:.0f}\u00b0C</span> / '
+                f'<span class="temp-low">{low_c:.0f}\u00b0C</span></td>'
             )
             precip_mm = w["precip_mm"] if w["precip_mm"] is not None else 0
             precip_cell = f"<td>{precip_mm:.1f}mm</td>"
         else:
-            temp_cell = "<td>—</td>"
-            precip_cell = "<td>—</td>"
+            temp_cell = "<td>\u2014</td>"
+            precip_cell = "<td>\u2014</td>"
 
         # Conditions from WMO weather code
         if w and w["weather_code"] is not None:
             conditions = wmo_code_to_conditions(w["weather_code"])
         else:
-            conditions = "—"
+            conditions = "\u2014"
 
         rows.append(
             f'<tr class="{row_class}">'
             f"<td>{date_str}</td>"
-            f"<td>{sunshine_hours:.1f}h</td>"
-            f"<td>{daylight_hours:.1f}h</td>"
+            f"<td>{sunshine_hours:.1f}h of {daylight_hours:.1f}h</td>"
             f"<td>{sunshine_pct:.0f}% {bar}</td>"
             f"{temp_cell}"
             f"{precip_cell}"
@@ -299,12 +374,11 @@ def build_sunshine_16day_html(
         )
 
     return f"""
-    <h2>📅 16-Day Sunshine Forecast</h2>
+    <h2>\U0001f4c5 16-Day Sunshine Forecast</h2>
     <table>
         <tr>
             <th>Date</th>
-            <th>Sunshine</th>
-            <th>Daylight</th>
+            <th>Sun</th>
             <th>% Sunny</th>
             <th>High / Low</th>
             <th>Precip</th>
@@ -312,7 +386,8 @@ def build_sunshine_16day_html(
         </tr>
         {"".join(rows)}
     </table>
-    <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).</p>
+    <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).
+    Hover over hourly bars for detail.</p>
     """
 
 

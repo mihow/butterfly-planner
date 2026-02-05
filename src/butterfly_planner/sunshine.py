@@ -138,18 +138,19 @@ class EnsembleSunshine:
 
 
 def fetch_today_15min_sunshine(
-    lat: float, lon: float, timezone: str = "America/Los_Angeles"
+    lat: float, lon: float, timezone: str = "America/Los_Angeles", forecast_days: int = 1
 ) -> list[SunshineSlot]:
     """
-    Fetch today's 15-minute sunshine forecast (Module 1).
+    Fetch 15-minute sunshine forecast.
 
     Args:
         lat: Latitude
         lon: Longitude
         timezone: Timezone name (e.g., "America/Los_Angeles")
+        forecast_days: Number of days to fetch (1-16, default 1)
 
     Returns:
-        List of SunshineSlot objects for today
+        List of SunshineSlot objects
 
     Note:
         15-minute data is only available for Central Europe and North America.
@@ -160,7 +161,7 @@ def fetch_today_15min_sunshine(
         "longitude": lon,
         "minutely_15": "sunshine_duration,is_day",
         "timezone": timezone,
-        "forecast_days": 1,  # Today only
+        "forecast_days": forecast_days,
     }
 
     resp = requests.get(FORECAST_API, params=params, timeout=30)

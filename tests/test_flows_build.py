@@ -138,11 +138,20 @@ class TestWmoCodeToConditions:
     """Test WMO weather code mapping."""
 
     def test_known_codes(self) -> None:
-        """Test known WMO codes return correct conditions."""
-        assert build.wmo_code_to_conditions(0) == "Clear"
-        assert build.wmo_code_to_conditions(3) == "Overcast"
-        assert build.wmo_code_to_conditions(61) == "Light Rain"
-        assert build.wmo_code_to_conditions(95) == "Thunderstorm"
+        """Test known WMO codes return correct conditions with emojis."""
+        result_clear = build.wmo_code_to_conditions(0)
+        assert "Clear" in result_clear
+        assert "\u2600" in result_clear  # sun emoji
+
+        result_overcast = build.wmo_code_to_conditions(3)
+        assert "Overcast" in result_overcast
+        assert "\u2601" in result_overcast  # cloud emoji
+
+        result_rain = build.wmo_code_to_conditions(61)
+        assert "Light Rain" in result_rain
+
+        result_thunder = build.wmo_code_to_conditions(95)
+        assert "Thunderstorm" in result_thunder
 
     def test_unknown_code(self) -> None:
         """Test unknown WMO code returns fallback string."""
@@ -155,13 +164,14 @@ class TestBuildSunshine16DayHtml:
     def test_build_sunshine_16day_html_with_data(self) -> None:
         """Test building HTML with 16-day sunshine data and weather."""
         sunshine_data = {
+            "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
             "daily_16day": {
                 "daily": {
                     "time": ["2026-02-04", "2026-02-05"],
                     "sunshine_duration": [14400, 3600],  # 4h and 1h
                     "daylight_duration": [36000, 36000],  # 10h each
                 }
-            }
+            },
         }
         weather_data = {
             "data": {
@@ -179,24 +189,55 @@ class TestBuildSunshine16DayHtml:
 
         assert "16-Day Sunshine Forecast" in result
         assert "2026-02-04" in result
-        assert "4.0h" in result
+        assert "4.0h of 10.0h" in result  # Combined sun column
+        assert "Sun" in result  # Header
         assert "High / Low" in result
         assert "Precip" in result
         assert "Clear" in result
         assert "Light Rain" in result
-        assert "15°C" in result
+        assert "15\u00b0C" in result
         assert "5.2mm" in result
 
-    def test_build_sunshine_16day_html_without_weather(self) -> None:
-        """Test building HTML without weather data (em-dash fallbacks)."""
+    def test_build_sunshine_16day_html_with_hourly_bar(self) -> None:
+        """Test that days with 15-min data get hourly bar charts."""
         sunshine_data = {
+            "today_15min": {
+                "minutely_15": {
+                    "time": [
+                        "2026-02-04T08:00:00",
+                        "2026-02-04T08:15:00",
+                        "2026-02-04T08:30:00",
+                        "2026-02-04T08:45:00",
+                    ],
+                    "sunshine_duration": [900, 900, 450, 0],
+                    "is_day": [1, 1, 1, 1],
+                }
+            },
             "daily_16day": {
                 "daily": {
                     "time": ["2026-02-04"],
                     "sunshine_duration": [14400],
                     "daylight_duration": [36000],
                 }
-            }
+            },
+        }
+
+        result = build.build_sunshine_16day_html(sunshine_data)
+
+        assert "hour-bar" in result
+        assert "hour-seg" in result
+
+    def test_build_sunshine_16day_html_without_weather(self) -> None:
+        """Test building HTML without weather data (em-dash fallbacks)."""
+        sunshine_data = {
+            "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
+            "daily_16day": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "sunshine_duration": [14400],
+                    "daylight_duration": [36000],
+                }
+            },
         }
 
         result = build.build_sunshine_16day_html(sunshine_data)
@@ -207,13 +248,14 @@ class TestBuildSunshine16DayHtml:
     def test_build_sunshine_16day_html_no_data(self) -> None:
         """Test with empty data."""
         sunshine_data = {
+            "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
             "daily_16day": {
                 "daily": {
                     "time": [],
                     "sunshine_duration": [],
                     "daylight_duration": [],
                 }
-            }
+            },
         }
 
         result = build.build_sunshine_16day_html(sunshine_data)
@@ -222,13 +264,14 @@ class TestBuildSunshine16DayHtml:
     def test_build_sunshine_16day_html_zero_daylight(self) -> None:
         """Test with zero daylight (edge case)."""
         sunshine_data = {
+            "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
             "daily_16day": {
                 "daily": {
                     "time": ["2026-02-04"],
                     "sunshine_duration": [0],
                     "daylight_duration": [0],
                 }
-            }
+            },
         }
 
         result = build.build_sunshine_16day_html(sunshine_data)
@@ -274,10 +317,10 @@ class TestBuildHtml:
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Planner" in result
         assert "2026-02-04" in result
-        assert "15°C" in result
+        assert "15\u00b0C" in result
         assert "Today's Sun Breaks" in result
         assert "16-Day Sunshine Forecast" in result
-        assert "Clear" in result  # WMO code 0
+        assert "Clear" in result  # WMO code 0 (with emoji)
 
     def test_build_html_without_sunshine(self) -> None:
         """Test building HTML without sunshine data."""
