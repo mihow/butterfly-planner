@@ -80,17 +80,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     {sunshine_16day}
 
-    <h2>7-Day Weather Forecast</h2>
-    <table>
-        <tr>
-            <th>Date</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Precip</th>
-        </tr>
-        {weather_rows}
-    </table>
-
     <h2>About</h2>
     <p>This page shows sunshine forecasts to help plan butterfly viewing trips. Butterflies are most active during sunny periods.</p>
     <p><strong>Good butterfly weather:</strong> &gt;3 hours of sunshine OR &gt;40% of daylight is sunny.</p>
@@ -132,6 +121,44 @@ def load_sunshine() -> dict[str, Any] | None:
 def c_to_f(celsius: float) -> float:
     """Convert Celsius to Fahrenheit."""
     return celsius * 9 / 5 + 32
+
+
+# WMO Weather Interpretation Codes (https://open-meteo.com/en/docs)
+WMO_CONDITIONS: dict[int, str] = {
+    0: "Clear",
+    1: "Mostly Clear",
+    2: "Partly Cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Freezing Fog",
+    51: "Light Drizzle",
+    53: "Drizzle",
+    55: "Heavy Drizzle",
+    56: "Light Freezing Drizzle",
+    57: "Freezing Drizzle",
+    61: "Light Rain",
+    63: "Rain",
+    65: "Heavy Rain",
+    66: "Light Freezing Rain",
+    67: "Freezing Rain",
+    71: "Light Snow",
+    73: "Snow",
+    75: "Heavy Snow",
+    77: "Snow Grains",
+    80: "Light Showers",
+    81: "Showers",
+    82: "Heavy Showers",
+    85: "Light Snow Showers",
+    86: "Snow Showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm w/ Hail",
+    99: "Heavy Thunderstorm",
+}
+
+
+def wmo_code_to_conditions(code: int) -> str:
+    """Convert a WMO weather code to a human-readable condition string."""
+    return WMO_CONDITIONS.get(code, f"Unknown ({code})")
 
 
 def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
@@ -199,8 +226,10 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
     """
 
 
-def build_sunshine_16day_html(sunshine_data: dict[str, Any]) -> str:
-    """Build HTML for Module 2: 16-day daily sunshine."""
+def build_sunshine_16day_html(
+    sunshine_data: dict[str, Any], weather_data: dict[str, Any] | None = None
+) -> str:
+    """Build HTML for the merged 16-day forecast (sunshine + weather)."""
     daily = sunshine_data["daily_16day"].get("daily", {})
     dates = daily.get("time", [])
     sunshine_secs = daily.get("sunshine_duration", [])
@@ -208,6 +237,19 @@ def build_sunshine_16day_html(sunshine_data: dict[str, Any]) -> str:
 
     if not dates:
         return "<p>No 16-day sunshine data available.</p>"
+
+    # Build a lookup from weather data keyed by date string
+    weather_by_date: dict[str, dict[str, Any]] = {}
+    if weather_data:
+        w_daily = weather_data.get("data", {}).get("daily", {})
+        w_dates = w_daily.get("time", [])
+        for j, w_date in enumerate(w_dates):
+            weather_by_date[w_date] = {
+                "high_c": w_daily.get("temperature_2m_max", [None])[j],
+                "low_c": w_daily.get("temperature_2m_min", [None])[j],
+                "precip_mm": w_daily.get("precipitation_sum", [None])[j],
+                "weather_code": w_daily.get("weather_code", [None])[j],
+            }
 
     rows = []
     for i, date_str in enumerate(dates):
@@ -218,11 +260,31 @@ def build_sunshine_16day_html(sunshine_data: dict[str, Any]) -> str:
         # Determine if good butterfly weather
         is_good = sunshine_hours > 3.0 or sunshine_pct > 40.0
         row_class = "good-day" if is_good else ""
-        indicator = "☀️ Good" if is_good else ""
 
         # Sunshine bar visualization
         bar_width = int(sunshine_pct * 3)  # Scale to 300px max
         bar = f'<div class="sunshine-bar" style="width: {bar_width}px;"></div>'
+
+        # Weather columns (from merged data)
+        w = weather_by_date.get(date_str)
+        if w and w["high_c"] is not None:
+            high_c = w["high_c"]
+            low_c = w["low_c"]
+            temp_cell = (
+                f'<td><span class="temp-high">{high_c:.0f}°C</span> / '
+                f'<span class="temp-low">{low_c:.0f}°C</span></td>'
+            )
+            precip_mm = w["precip_mm"] if w["precip_mm"] is not None else 0
+            precip_cell = f"<td>{precip_mm:.1f}mm</td>"
+        else:
+            temp_cell = "<td>—</td>"
+            precip_cell = "<td>—</td>"
+
+        # Conditions from WMO weather code
+        if w and w["weather_code"] is not None:
+            conditions = wmo_code_to_conditions(w["weather_code"])
+        else:
+            conditions = "—"
 
         rows.append(
             f'<tr class="{row_class}">'
@@ -230,7 +292,9 @@ def build_sunshine_16day_html(sunshine_data: dict[str, Any]) -> str:
             f"<td>{sunshine_hours:.1f}h</td>"
             f"<td>{daylight_hours:.1f}h</td>"
             f"<td>{sunshine_pct:.0f}% {bar}</td>"
-            f"<td>{indicator}</td>"
+            f"{temp_cell}"
+            f"{precip_cell}"
+            f"<td>{conditions}</td>"
             f"</tr>"
         )
 
@@ -242,6 +306,8 @@ def build_sunshine_16day_html(sunshine_data: dict[str, Any]) -> str:
             <th>Sunshine</th>
             <th>Daylight</th>
             <th>% Sunny</th>
+            <th>High / Low</th>
+            <th>Precip</th>
             <th>Conditions</th>
         </tr>
         {"".join(rows)}
@@ -253,41 +319,23 @@ def build_sunshine_16day_html(sunshine_data: dict[str, Any]) -> str:
 @task(name="build-html")
 def build_html(weather_data: dict[str, Any], sunshine_data: dict[str, Any] | None) -> str:
     """Build HTML page from weather and sunshine data."""
-    data = weather_data["data"]["daily"]
-
     # Convert timestamp to local time (PST)
     fetched_dt = datetime.fromisoformat(weather_data["fetched_at"])
     pst = ZoneInfo("America/Los_Angeles")
     local_dt = fetched_dt.astimezone(pst)
     updated = local_dt.strftime("%Y-%m-%d %H:%M")
 
-    # Build weather table
-    weather_rows = []
-    for i, date in enumerate(data["time"]):
-        high_c = data["temperature_2m_max"][i]
-        low_c = data["temperature_2m_min"][i]
-        high_f = c_to_f(high_c)
-        low_f = c_to_f(low_c)
-        precip = data["precipitation_sum"][i]
-        weather_rows.append(
-            f"<tr><td>{date}</td>"
-            f'<td class="temp-high">{high_c:.1f}°C ({high_f:.0f}°F)</td>'
-            f'<td class="temp-low">{low_c:.1f}°C ({low_f:.0f}°F)</td>'
-            f"<td>{precip}mm</td></tr>"
-        )
-
-    # Build sunshine sections
+    # Build sunshine sections (16-day now includes merged weather data)
     sunshine_today_html = ""
     sunshine_16day_html = ""
     if sunshine_data:
         sunshine_today_html = build_sunshine_today_html(sunshine_data)
-        sunshine_16day_html = build_sunshine_16day_html(sunshine_data)
+        sunshine_16day_html = build_sunshine_16day_html(sunshine_data, weather_data)
 
     return HTML_TEMPLATE.format(
         updated=updated,
         sunshine_today=sunshine_today_html,
         sunshine_16day=sunshine_16day_html,
-        weather_rows="\n        ".join(weather_rows),
     )
 
 

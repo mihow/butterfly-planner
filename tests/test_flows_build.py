@@ -134,11 +134,26 @@ class TestBuildSunshineTodayHtml:
         assert "No daylight hours" in result
 
 
+class TestWmoCodeToConditions:
+    """Test WMO weather code mapping."""
+
+    def test_known_codes(self) -> None:
+        """Test known WMO codes return correct conditions."""
+        assert build.wmo_code_to_conditions(0) == "Clear"
+        assert build.wmo_code_to_conditions(3) == "Overcast"
+        assert build.wmo_code_to_conditions(61) == "Light Rain"
+        assert build.wmo_code_to_conditions(95) == "Thunderstorm"
+
+    def test_unknown_code(self) -> None:
+        """Test unknown WMO code returns fallback string."""
+        assert build.wmo_code_to_conditions(999) == "Unknown (999)"
+
+
 class TestBuildSunshine16DayHtml:
     """Test building 16-day sunshine HTML."""
 
     def test_build_sunshine_16day_html_with_data(self) -> None:
-        """Test building HTML with 16-day sunshine data."""
+        """Test building HTML with 16-day sunshine data and weather."""
         sunshine_data = {
             "daily_16day": {
                 "daily": {
@@ -148,13 +163,46 @@ class TestBuildSunshine16DayHtml:
                 }
             }
         }
+        weather_data = {
+            "data": {
+                "daily": {
+                    "time": ["2026-02-04", "2026-02-05"],
+                    "temperature_2m_max": [15.0, 8.0],
+                    "temperature_2m_min": [5.0, 2.0],
+                    "precipitation_sum": [0.0, 5.2],
+                    "weather_code": [0, 61],
+                }
+            }
+        }
 
-        result = build.build_sunshine_16day_html(sunshine_data)
+        result = build.build_sunshine_16day_html(sunshine_data, weather_data)
 
         assert "16-Day Sunshine Forecast" in result
         assert "2026-02-04" in result
         assert "4.0h" in result
-        assert "Good" in result  # Should have at least one good day
+        assert "High / Low" in result
+        assert "Precip" in result
+        assert "Clear" in result
+        assert "Light Rain" in result
+        assert "15°C" in result
+        assert "5.2mm" in result
+
+    def test_build_sunshine_16day_html_without_weather(self) -> None:
+        """Test building HTML without weather data (em-dash fallbacks)."""
+        sunshine_data = {
+            "daily_16day": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "sunshine_duration": [14400],
+                    "daylight_duration": [36000],
+                }
+            }
+        }
+
+        result = build.build_sunshine_16day_html(sunshine_data)
+
+        assert "16-Day Sunshine Forecast" in result
+        assert "\u2014" in result  # em-dash for missing weather
 
     def test_build_sunshine_16day_html_no_data(self) -> None:
         """Test with empty data."""
@@ -200,6 +248,7 @@ class TestBuildHtml:
                     "temperature_2m_max": [15.0, 18.0],
                     "temperature_2m_min": [5.0, 8.0],
                     "precipitation_sum": [0, 2.5],
+                    "weather_code": [0, 63],
                 }
             },
         }
@@ -225,9 +274,10 @@ class TestBuildHtml:
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Planner" in result
         assert "2026-02-04" in result
-        assert "15.0°C" in result
+        assert "15°C" in result
         assert "Today's Sun Breaks" in result
         assert "16-Day Sunshine Forecast" in result
+        assert "Clear" in result  # WMO code 0
 
     def test_build_html_without_sunshine(self) -> None:
         """Test building HTML without sunshine data."""
@@ -239,6 +289,7 @@ class TestBuildHtml:
                     "temperature_2m_max": [15.0],
                     "temperature_2m_min": [5.0],
                     "precipitation_sum": [0],
+                    "weather_code": [2],
                 }
             },
         }
@@ -297,6 +348,7 @@ class TestBuildAllFlow:
                     "temperature_2m_max": [15.0],
                     "temperature_2m_min": [5.0],
                     "precipitation_sum": [0],
+                    "weather_code": [0],
                 }
             },
         }
@@ -324,6 +376,7 @@ class TestBuildAllFlow:
                     "temperature_2m_max": [15.0],
                     "temperature_2m_min": [5.0],
                     "precipitation_sum": [0],
+                    "weather_code": [1],
                 }
             },
         }

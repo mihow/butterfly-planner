@@ -64,9 +64,14 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     params: dict[str, str | int | float | list[str]] = {
         "latitude": lat,
         "longitude": lon,
-        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
+        "daily": [
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "precipitation_sum",
+            "weather_code",
+        ],
         "timezone": "America/Los_Angeles",
-        "forecast_days": 7,
+        "forecast_days": 16,
     }
 
     resp = requests.get(url, params=params, timeout=30)

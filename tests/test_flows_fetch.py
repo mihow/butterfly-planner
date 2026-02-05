@@ -31,6 +31,7 @@ class TestFetchWeather:
                 "temperature_2m_max": [15.0, 18.0],
                 "temperature_2m_min": [5.0, 8.0],
                 "precipitation_sum": [0, 2.5],
+                "weather_code": [0, 61],
             }
         }
         mock_response.raise_for_status = Mock()
@@ -40,10 +41,13 @@ class TestFetchWeather:
 
         assert "daily" in result
         assert len(result["daily"]["time"]) == 2
+        assert result["daily"]["weather_code"] == [0, 61]
         mock_get.assert_called_once()
         call_kwargs = mock_get.call_args.kwargs
         assert call_kwargs["params"]["latitude"] == 45.5
         assert call_kwargs["params"]["longitude"] == -122.6
+        assert call_kwargs["params"]["forecast_days"] == 16
+        assert "weather_code" in call_kwargs["params"]["daily"]
 
 
 class TestFetchSunshine15Min:
@@ -171,6 +175,9 @@ class TestFetchAllFlow:
             "daily": {
                 "time": ["2026-02-04", "2026-02-05"],
                 "temperature_2m_max": [15.0, 18.0],
+                "temperature_2m_min": [5.0, 8.0],
+                "precipitation_sum": [0, 2.5],
+                "weather_code": [0, 61],
             }
         }
         mock_response.raise_for_status = Mock()
