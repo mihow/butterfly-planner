@@ -6,9 +6,9 @@ on:
     - cron: '0 6 * * *'
   # Manual trigger
   workflow_dispatch:
-  # Run on push to main
+  # Run on push to main or claude branches
   push:
-    branches: [main]
+    branches: [main, 'claude/*']
   # Run on pull requests (for preview deployments)
   pull_request:
     types: [opened, synchronize, reopened]
@@ -160,3 +160,26 @@ This preview will remain available even after the PR is merged or closed.`;
                 body: body,
               });
             }
+
+  # Deploy claude/* branch previews to /branch/<name>/ subdirectory
+  deploy-branch-preview:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/')
+    needs: fetch-and-build
+    runs-on: ubuntu-latest
+    environment:
+      name: branch-preview
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branch/${{ github.ref_name }}/
+    steps:
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/
+
+      - name: Deploy branch preview to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          destination_dir: branch/${{ github.ref_name }}
+          keep_files: true
