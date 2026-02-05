@@ -15,8 +15,12 @@
         .temp-high { color: #c00; }
         .temp-low { color: #00c; }
         .sunshine-bar { display: inline-block; height: 20px; background: #ffd700; border-radius: 3px; }
-        .sunshine-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; margin: 1rem 0; }
-        .sunshine-slot { height: 30px; border-radius: 2px; }
+        .timeline { margin: 1rem 0; }
+        .tl-labels { position: relative; height: 1.4em; font-size: 0.8rem; color: #666; }
+        .tl-label { position: absolute; transform: translateX(-50%); }
+        .tl-bar { display: flex; gap: 1px; border-radius: 4px; overflow: hidden; height: 32px; }
+        .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
+        .tl-seg:hover { opacity: 0.7; }
         .sunshine-none { background: #e0e0e0; }
         .sunshine-low { background: #fff9c4; }
         .sunshine-med { background: #ffeb3b; }
@@ -24,7 +28,9 @@
         .sunshine-full { background: #ff9800; }
         .good-day { background: #e8f5e9; }
         .poor-day { background: #ffebee; }
-        .legend { display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; }
+        .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
+        .hour-seg { width: 16px; height: 18px; border-radius: 2px; }
+        .legend { display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; flex-wrap: wrap; }
         .legend-item { display: flex; align-items: center; gap: 0.5rem; }
         .legend-box { width: 20px; height: 20px; border-radius: 2px; }
         .species-card { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 0.5rem; }
@@ -39,24 +45,30 @@
 </head>
 <body>
     <h1>🦋 Butterfly Planner</h1>
-    <p class="meta">Weather forecast for Portland, OR | Last updated: 2026-02-04 23:22</p>
+    <p class="meta">Weather forecast for Portland, OR | Last updated: 2026-02-05 09:27</p>
 
     
-    <h2>☀️ Today's Sun Breaks (February 04)</h2>
-    <p>Total sunshine expected: <strong>7.4 hours</strong></p>
+    <h2>☀️ Today's Sun Breaks (February 05)</h2>
+    <p>Total sunshine expected: <strong>9.0 hours</strong>
+    &mdash; Sunrise 7:30 AM, Sunset 5:15 PM</p>
     
     <div class="legend">
-        <div class="legend-item"><div class="legend-box sunshine-none"></div> None</div>
-        <div class="legend-item"><div class="legend-box sunshine-low"></div> 0-25%</div>
+        <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
+        <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
         <div class="legend-item"><div class="legend-box sunshine-med"></div> 25-50%</div>
         <div class="legend-item"><div class="legend-box sunshine-high"></div> 50-75%</div>
         <div class="legend-item"><div class="legend-box sunshine-full"></div> 75-100%</div>
     </div>
     
-    <div class="sunshine-grid">
-        <div class="sunshine-slot sunshine-none" title="07:30 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="07:45 AM: 0 min"></div><div class="sunshine-slot sunshine-low" title="08:00 AM: 1 min"></div><div class="sunshine-slot sunshine-none" title="08:15 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="08:30 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="08:45 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="09:00 AM: 0 min"></div><div class="sunshine-slot sunshine-none" title="09:15 AM: 0 min"></div><div class="sunshine-slot sunshine-med" title="09:30 AM: 5 min"></div><div class="sunshine-slot sunshine-full" title="09:45 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:00 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:15 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:30 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="10:45 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:00 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:15 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:30 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="11:45 AM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="12:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="01:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="02:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="03:45 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:00 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:15 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:30 PM: 15 min"></div><div class="sunshine-slot sunshine-full" title="04:45 PM: 15 min"></div><div class="sunshine-slot sunshine-none" title="05:00 PM: 0 min"></div><div class="sunshine-slot sunshine-low" title="05:15 PM: 3 min"></div>
+    <div class="timeline">
+        <div class="tl-labels">
+            <span class="tl-label" style="left:0.0%">7am</span><span class="tl-label" style="left:5.0%">8am</span><span class="tl-label" style="left:15.0%">9am</span><span class="tl-label" style="left:25.0%">10am</span><span class="tl-label" style="left:35.0%">11am</span><span class="tl-label" style="left:45.0%">12pm</span><span class="tl-label" style="left:55.0%">1pm</span><span class="tl-label" style="left:65.0%">2pm</span><span class="tl-label" style="left:75.0%">3pm</span><span class="tl-label" style="left:85.0%">4pm</span><span class="tl-label" style="left:95.0%">5pm</span>
+        </div>
+        <div class="tl-bar">
+            <div class="tl-seg sunshine-none" title="07:30 AM: 0 min sun"></div><div class="tl-seg sunshine-none" title="07:45 AM: 0 min sun"></div><div class="tl-seg sunshine-low" title="08:00 AM: 3 min sun"></div><div class="tl-seg sunshine-full" title="08:15 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="08:30 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="08:45 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="09:00 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="09:15 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="09:30 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="09:45 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="10:00 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="10:15 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="10:30 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="10:45 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="11:00 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="11:15 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="11:30 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="11:45 AM: 15 min sun"></div><div class="tl-seg sunshine-full" title="12:00 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="12:15 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="12:30 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="12:45 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="01:00 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="01:15 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="01:30 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="01:45 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="02:00 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="02:15 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="02:30 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="02:45 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="03:00 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="03:15 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="03:30 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="03:45 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="04:00 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="04:15 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="04:30 PM: 15 min sun"></div><div class="tl-seg sunshine-full" title="04:45 PM: 15 min sun"></div><div class="tl-seg sunshine-med" title="05:00 PM: 7 min sun"></div><div class="tl-seg sunshine-med" title="05:15 PM: 5 min sun"></div>
+        </div>
     </div>
-    <p class="meta">Each block = 15 minutes. Hover for time and duration.</p>
+    <p class="meta">Each segment = 15 minutes. Hover for exact time and duration.</p>
     
 
     
@@ -64,14 +76,16 @@
     <table>
         <tr>
             <th>Date</th>
-            <th>Sunshine</th>
-            <th>Daylight</th>
+            <th>Sun</th>
             <th>% Sunny</th>
+            <th>High / Low</th>
+            <th>Precip</th>
             <th>Conditions</th>
         </tr>
-        <tr class="good-day"><td>2026-02-04</td><td>7.8h</td><td>9.9h</td><td>78% <div class="sunshine-bar" style="width: 235px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-05</td><td>8.7h</td><td>10.0h</td><td>87% <div class="sunshine-bar" style="width: 262px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-06</td><td>8.9h</td><td>10.0h</td><td>89% <div class="sunshine-bar" style="width: 266px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-07</td><td>7.0h</td><td>10.0h</td><td>69% <div class="sunshine-bar" style="width: 207px;"></div></td><td>☀️ Good</td></tr><tr class=""><td>2026-02-08</td><td>0.0h</td><td>10.1h</td><td>0% <div class="sunshine-bar" style="width: 0px;"></div></td><td></td></tr><tr class="good-day"><td>2026-02-09</td><td>8.5h</td><td>10.1h</td><td>83% <div class="sunshine-bar" style="width: 250px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-10</td><td>7.6h</td><td>10.2h</td><td>74% <div class="sunshine-bar" style="width: 222px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-11</td><td>9.2h</td><td>10.2h</td><td>90% <div class="sunshine-bar" style="width: 269px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-12</td><td>9.2h</td><td>10.3h</td><td>89% <div class="sunshine-bar" style="width: 268px;"></div></td><td>☀️ Good</td></tr><tr class=""><td>2026-02-13</td><td>2.9h</td><td>10.3h</td><td>28% <div class="sunshine-bar" style="width: 84px;"></div></td><td></td></tr><tr class="good-day"><td>2026-02-14</td><td>9.4h</td><td>10.4h</td><td>90% <div class="sunshine-bar" style="width: 270px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-15</td><td>9.3h</td><td>10.4h</td><td>89% <div class="sunshine-bar" style="width: 268px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-16</td><td>9.5h</td><td>10.5h</td><td>90% <div class="sunshine-bar" style="width: 271px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-17</td><td>6.7h</td><td>10.5h</td><td>64% <div class="sunshine-bar" style="width: 192px;"></div></td><td>☀️ Good</td></tr><tr class="good-day"><td>2026-02-18</td><td>5.1h</td><td>10.6h</td><td>48% <div class="sunshine-bar" style="width: 144px;"></div></td><td>☀️ Good</td></tr><tr class=""><td>2026-02-19</td><td>0.3h</td><td>10.6h</td><td>3% <div class="sunshine-bar" style="width: 9px;"></div></td><td></td></tr>
+        <tr class="good-day"><td>2026-02-05</td><td>8.9h of 10.0h</td><td>89% <div class="hour-bar"><div class="hour-seg" style="background:#e0e0e0;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#ff9800;" title="08 AM: 48min sun"></div><div class="hour-seg" style="background:#ff9800;" title="09 AM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#fff9c4;" title="05 PM: 12min sun"></div></div></td><td><span class="temp-high">13°C</span> / <span class="temp-low">6°C</span></td><td>0.0mm</td><td>☁️ Overcast</td></tr><tr class="good-day"><td>2026-02-06</td><td>8.8h of 10.0h</td><td>88% <div class="hour-bar"><div class="hour-seg" style="background:#e0e0e0;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#ffc107;" title="08 AM: 44min sun"></div><div class="hour-seg" style="background:#ff9800;" title="09 AM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#ff9800;" title="04 PM: 55min sun"></div><div class="hour-seg" style="background:#fff9c4;" title="05 PM: 1min sun"></div></div></td><td><span class="temp-high">14°C</span> / <span class="temp-low">4°C</span></td><td>0.0mm</td><td>☁️ Overcast</td></tr><tr class="good-day"><td>2026-02-07</td><td>3.7h of 10.0h</td><td>36% <div class="hour-bar"><div class="hour-seg" style="background:#fff9c4;" title="07 AM: 1min sun"></div><div class="hour-seg" style="background:#ff9800;" title="08 AM: 51min sun"></div><div class="hour-seg" style="background:#ff9800;" title="09 AM: 52min sun"></div><div class="hour-seg" style="background:#ff9800;" title="10 AM: 56min sun"></div><div class="hour-seg" style="background:#ff9800;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#ffeb3b;" title="12 PM: 19min sun"></div><div class="hour-seg" style="background:#e0e0e0;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#e0e0e0;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e0e0e0;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e0e0e0;" title="04 PM: 0min sun"></div><div class="hour-seg" style="background:#e0e0e0;" title="05 PM: 0min sun"></div></div></td><td><span class="temp-high">12°C</span> / <span class="temp-low">6°C</span></td><td>1.8mm</td><td>🌦️ Drizzle</td></tr><tr class=""><td>2026-02-08</td><td>0.3h of 10.1h</td><td>3% <div class="sunshine-bar" style="width: 9px;"></div></td><td><span class="temp-high">10°C</span> / <span class="temp-low">7°C</span></td><td>26.9mm</td><td>🌦️ Light Showers</td></tr><tr class="good-day"><td>2026-02-09</td><td>5.5h of 10.1h</td><td>55% <div class="sunshine-bar" style="width: 163px;"></div></td><td><span class="temp-high">10°C</span> / <span class="temp-low">5°C</span></td><td>3.4mm</td><td>🌦️ Drizzle</td></tr><tr class="good-day"><td>2026-02-10</td><td>3.4h of 10.2h</td><td>33% <div class="sunshine-bar" style="width: 99px;"></div></td><td><span class="temp-high">8°C</span> / <span class="temp-low">5°C</span></td><td>1.8mm</td><td>🌦️ Drizzle</td></tr><tr class="good-day"><td>2026-02-11</td><td>9.2h of 10.2h</td><td>90% <div class="sunshine-bar" style="width: 269px;"></div></td><td><span class="temp-high">10°C</span> / <span class="temp-low">5°C</span></td><td>0.0mm</td><td>☁️ Overcast</td></tr><tr class="good-day"><td>2026-02-12</td><td>3.7h of 10.3h</td><td>36% <div class="sunshine-bar" style="width: 109px;"></div></td><td><span class="temp-high">8°C</span> / <span class="temp-low">5°C</span></td><td>1.4mm</td><td>🌦️ Light Drizzle</td></tr><tr class="good-day"><td>2026-02-13</td><td>9.2h of 10.3h</td><td>89% <div class="sunshine-bar" style="width: 267px;"></div></td><td><span class="temp-high">6°C</span> / <span class="temp-low">3°C</span></td><td>4.3mm</td><td>🌦️ Light Drizzle</td></tr><tr class="good-day"><td>2026-02-14</td><td>7.7h of 10.4h</td><td>75% <div class="sunshine-bar" style="width: 223px;"></div></td><td><span class="temp-high">8°C</span> / <span class="temp-low">3°C</span></td><td>1.8mm</td><td>🌦️ Light Drizzle</td></tr><tr class="good-day"><td>2026-02-15</td><td>9.4h of 10.4h</td><td>90% <div class="sunshine-bar" style="width: 270px;"></div></td><td><span class="temp-high">9°C</span> / <span class="temp-low">0°C</span></td><td>0.0mm</td><td>☁️ Overcast</td></tr><tr class="good-day"><td>2026-02-16</td><td>4.7h of 10.5h</td><td>45% <div class="sunshine-bar" style="width: 134px;"></div></td><td><span class="temp-high">5°C</span> / <span class="temp-low">0°C</span></td><td>1.3mm</td><td>🌦️ Light Drizzle</td></tr><tr class="good-day"><td>2026-02-17</td><td>9.5h of 10.5h</td><td>90% <div class="sunshine-bar" style="width: 269px;"></div></td><td><span class="temp-high">6°C</span> / <span class="temp-low">2°C</span></td><td>3.0mm</td><td>🌦️ Light Drizzle</td></tr><tr class="good-day"><td>2026-02-18</td><td>9.2h of 10.6h</td><td>87% <div class="sunshine-bar" style="width: 260px;"></div></td><td><span class="temp-high">5°C</span> / <span class="temp-low">-0°C</span></td><td>0.8mm</td><td>🌦️ Light Drizzle</td></tr><tr class="good-day"><td>2026-02-19</td><td>9.6h of 10.6h</td><td>91% <div class="sunshine-bar" style="width: 271px;"></div></td><td><span class="temp-high">7°C</span> / <span class="temp-low">-2°C</span></td><td>0.0mm</td><td>☁️ Overcast</td></tr><tr class=""><td>2026-02-20</td><td>0.0h of 10.7h</td><td>0% <div class="sunshine-bar" style="width: 0px;"></div></td><td>—</td><td>—</td><td>—</td></tr>
     </table>
-    <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).</p>
+    <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).
+    Hover over hourly bars for detail.</p>
     
 
     
@@ -83,23 +97,6 @@
     <p class="meta">Data from iNaturalist community observations.
     Observation counts reflect all years combined for February.</p>
     
-
-    <h2>7-Day Weather Forecast</h2>
-    <table>
-        <tr>
-            <th>Date</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Precip</th>
-        </tr>
-        <tr><td>2026-02-04</td><td class="temp-high">13.9°C (57°F)</td><td class="temp-low">6.3°C (43°F)</td><td>0.0mm</td></tr>
-        <tr><td>2026-02-05</td><td class="temp-high">14.5°C (58°F)</td><td class="temp-low">7.3°C (45°F)</td><td>0.0mm</td></tr>
-        <tr><td>2026-02-06</td><td class="temp-high">14.5°C (58°F)</td><td class="temp-low">4.6°C (40°F)</td><td>0.0mm</td></tr>
-        <tr><td>2026-02-07</td><td class="temp-high">13.5°C (56°F)</td><td class="temp-low">6.3°C (43°F)</td><td>0.8mm</td></tr>
-        <tr><td>2026-02-08</td><td class="temp-high">11.2°C (52°F)</td><td class="temp-low">6.6°C (44°F)</td><td>37.5mm</td></tr>
-        <tr><td>2026-02-09</td><td class="temp-high">9.3°C (49°F)</td><td class="temp-low">5.9°C (43°F)</td><td>7.3mm</td></tr>
-        <tr><td>2026-02-10</td><td class="temp-high">8.8°C (48°F)</td><td class="temp-low">4.8°C (41°F)</td><td>0.6mm</td></tr>
-    </table>
 
     <h2>About</h2>
     <p>This page shows sunshine forecasts to help plan butterfly viewing trips. Butterflies are most active during sunny periods.</p>
