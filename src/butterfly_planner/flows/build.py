@@ -46,57 +46,201 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Butterfly Planner - Weather & Sunshine</title>
+    <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
     <style>
-        body {{ font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }}
-        h1 {{ color: #2d5016; }}
-        h2 {{ color: #3d6026; margin-top: 2rem; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background: #f5f5f5; }}
-        .meta {{ color: #666; font-size: 0.9rem; }}
-        .temp-high {{ color: #c00; }}
-        .temp-low {{ color: #00c; }}
-        .sunshine-bar {{ display: inline-block; height: 20px; background: #ffd700; border-radius: 3px; }}
-        .timeline {{ margin: 1rem 0; }}
-        .tl-labels {{ position: relative; height: 1.4em; font-size: 0.8rem; color: #666; }}
+        *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            line-height: 1.7;
+            color: #222;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }}
+        a {{ color: #222; text-decoration: none; border-bottom: 1px solid #ccc; transition: border-color 0.2s; }}
+        a:hover {{ border-bottom-color: #222; }}
+
+        /* --- Header --- */
+        header {{
+            text-align: center;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #ddd;
+        }}
+        header h1 {{
+            font-size: 1.8rem;
+            font-weight: normal;
+            letter-spacing: 0.02em;
+            color: #222;
+        }}
+        header .subtitle {{
+            font-size: 1rem;
+            font-style: italic;
+            color: #555;
+            margin-top: 0.25rem;
+        }}
+        header .updated {{
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }}
+
+        /* --- Section headings --- */
+        h2 {{
+            font-size: 1.15rem;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #444;
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #eee;
+        }}
+
+        /* --- Body text --- */
+        p {{ margin: 0.8rem 0; font-size: 0.95rem; }}
+        .meta {{ color: #666; font-size: 0.85rem; font-style: italic; }}
+        strong {{ font-weight: 600; }}
+
+        /* --- Data table --- */
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }}
+        thead th {{
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #555;
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+        }}
+        tbody td {{
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }}
+        tbody tr:hover {{ background: #f8f9fa; }}
+        tbody tr.good-day {{ background: #f2f7f0; }}
+        tbody tr.good-day:hover {{ background: #e8f0e4; }}
+        .temp-high {{ color: #9a3412; font-variant-numeric: tabular-nums; }}
+        .temp-low {{ color: #1e40af; font-variant-numeric: tabular-nums; }}
+        .numeric {{ font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; }}
+
+        /* --- Sunshine timeline (today) --- */
+        .timeline {{ margin: 1.25rem 0; }}
+        .tl-labels {{ position: relative; height: 1.4em; font-size: 0.75rem; color: #888; letter-spacing: 0.02em; }}
         .tl-label {{ position: absolute; transform: translateX(-50%); }}
-        .tl-bar {{ display: flex; gap: 1px; border-radius: 4px; overflow: hidden; height: 32px; }}
+        .tl-bar {{ display: flex; gap: 1px; border-radius: 3px; overflow: hidden; height: 28px; border: 1px solid #e0e0e0; }}
         .tl-seg {{ flex: 1; min-width: 0; transition: opacity 0.15s; }}
-        .tl-seg:hover {{ opacity: 0.7; }}
-        .sunshine-none {{ background: #e0e0e0; }}
-        .sunshine-low {{ background: #fff9c4; }}
-        .sunshine-med {{ background: #ffeb3b; }}
-        .sunshine-high {{ background: #ffc107; }}
-        .sunshine-full {{ background: #ff9800; }}
-        .good-day {{ background: #e8f5e9; }}
-        .poor-day {{ background: #ffebee; }}
+        .tl-seg:hover {{ opacity: 0.65; }}
+
+        /* --- Sunshine color scale (muted, scientific palette) --- */
+        .sunshine-none {{ background: #e8e8e8; }}
+        .sunshine-low  {{ background: #f5eec2; }}
+        .sunshine-med  {{ background: #e8d44d; }}
+        .sunshine-high {{ background: #d4a017; }}
+        .sunshine-full {{ background: #b8860b; }}
+
+        /* --- Inline hourly bar (16-day table) --- */
         .hour-bar {{ display: inline-flex; gap: 1px; vertical-align: middle; }}
-        .hour-seg {{ width: 16px; height: 18px; border-radius: 2px; }}
-        .legend {{ display: flex; gap: 1rem; margin: 1rem 0; font-size: 0.85rem; flex-wrap: wrap; }}
-        .legend-item {{ display: flex; align-items: center; gap: 0.5rem; }}
-        .legend-box {{ width: 20px; height: 20px; border-radius: 2px; }}
+        .hour-seg {{ width: 14px; height: 16px; border-radius: 1px; }}
+
+        /* --- Legend --- */
+        .legend {{
+            display: flex;
+            gap: 1.25rem;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+            color: #666;
+            flex-wrap: wrap;
+        }}
+        .legend-item {{ display: flex; align-items: center; gap: 0.4rem; }}
+        .legend-box {{ width: 16px; height: 16px; border-radius: 2px; border: 1px solid #ddd; }}
+
+        /* --- Summary stats --- */
+        .summary {{
+            font-size: 0.95rem;
+            margin: 0.75rem 0;
+        }}
+        .summary strong {{
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9rem;
+        }}
+
+        /* --- About section --- */
+        .about p {{ text-align: justify; font-size: 0.92rem; }}
+        .about ul {{
+            margin: 0.75rem 0 0.75rem 1.5rem;
+            font-size: 0.92rem;
+        }}
+        .about li {{ margin: 0.3rem 0; }}
+        .criteria {{
+            font-size: 0.88rem;
+            color: #444;
+            background: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-left: 3px solid #ddd;
+            margin: 1rem 0;
+        }}
+
+        /* --- Footer --- */
+        footer {{
+            margin-top: 3rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+        }}
+
+        /* --- Print --- */
+        @media print {{
+            body {{ max-width: none; padding: 1rem; }}
+            header, footer {{ border: none; }}
+        }}
     </style>
 </head>
 <body>
-    <h1>🦋 Butterfly Planner</h1>
-    <p class="meta">Weather forecast for Portland, OR | Last updated: {updated}</p>
+    <header>
+        <h1>Butterfly Planner</h1>
+        <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
+        <div class="updated">Last updated {updated} PST</div>
+    </header>
 
+    <main>
     {sunshine_today}
 
     {sunshine_16day}
 
     <h2>About</h2>
-    <p>This page shows sunshine forecasts to help plan butterfly viewing trips. Butterflies are most active during sunny periods.</p>
-    <p><strong>Good butterfly weather:</strong> &gt;3 hours of sunshine OR &gt;40% of daylight is sunny.</p>
-    <ul>
-        <li>Butterfly hotspots by week</li>
-        <li>Species diversity maps</li>
-        <li>Drive-time isochrones</li>
-        <li>Nearby campgrounds</li>
-    </ul>
+    <div class="about">
+        <p>This page presents sunshine and weather forecasts to aid in planning
+        butterfly observation outings. Lepidoptera are most active during periods
+        of direct sunshine and warm temperatures.</p>
+        <div class="criteria">
+            <strong>Good butterfly weather</strong> is defined as &gt;3 hours of sunshine
+            <em>or</em> &gt;40% of available daylight being sunny.
+        </div>
+        <p>Planned features:</p>
+        <ul>
+            <li>Butterfly abundance hotspots by week of year</li>
+            <li>Species diversity maps for Oregon &amp; Washington</li>
+            <li>Drive-time isochrone analysis</li>
+            <li>Nearby campground locations</li>
+        </ul>
+    </div>
+    </main>
 
-    <p class="meta">Data from <a href="https://open-meteo.com">Open-Meteo</a></p>
+    <footer>
+        <p>Data provided by <a href="https://open-meteo.com">Open-Meteo</a>.
+        Forecast models may not reflect actual conditions.</p>
+    </footer>
 </body>
 </html>
 """
@@ -247,15 +391,15 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
     <div class="legend">
         <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
         <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
-        <div class="legend-item"><div class="legend-box sunshine-med"></div> 25-50%</div>
-        <div class="legend-item"><div class="legend-box sunshine-high"></div> 50-75%</div>
-        <div class="legend-item"><div class="legend-box sunshine-full"></div> 75-100%</div>
+        <div class="legend-item"><div class="legend-box sunshine-med"></div> 25&ndash;50%</div>
+        <div class="legend-item"><div class="legend-box sunshine-high"></div> 50&ndash;75%</div>
+        <div class="legend-item"><div class="legend-box sunshine-full"></div> 75&ndash;100%</div>
     </div>
     """
 
     return f"""
-    <h2>\u2600\ufe0f Today's Sun Breaks ({today_date})</h2>
-    <p>Total sunshine expected: <strong>{total_sunshine_hours:.1f} hours</strong>
+    <h2>Today's Sun Breaks &mdash; {today_date}</h2>
+    <p class="summary">Total sunshine expected: <strong>{total_sunshine_hours:.1f} hours</strong>
     &mdash; Sunrise {sunrise_str}, Sunset {sunset_str}</p>
     {legend}
     <div class="timeline">
@@ -266,7 +410,7 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
             {"".join(segments)}
         </div>
     </div>
-    <p class="meta">Each segment = 15 minutes. Hover for exact time and duration.</p>
+    <p class="meta">Each segment represents 15 minutes. Hover for exact time and duration.</p>
     """
 
 
@@ -320,15 +464,15 @@ def _build_hourly_bar(slots: list[tuple[str, int, bool]]) -> str:
         # Max possible per hour = 3600 sec (4 slots x 900 sec)
         pct = (sun_secs / 3600) * 100 if sun_secs else 0
         if pct == 0:
-            color = "#e0e0e0"
+            color = "#e8e8e8"
         elif pct < 25:
-            color = "#fff9c4"
+            color = "#f5eec2"
         elif pct < 50:
-            color = "#ffeb3b"
+            color = "#e8d44d"
         elif pct < 75:
-            color = "#ffc107"
+            color = "#d4a017"
         else:
-            color = "#ff9800"
+            color = "#b8860b"
 
         dt_hour = datetime.fromisoformat(daylight[0][0]).replace(hour=h, minute=0)
         title = f"{dt_hour.strftime('%I %p')}: {sun_secs / 60:.0f}min sun"
@@ -416,20 +560,24 @@ def build_sunshine_16day_html(
         )
 
     return f"""
-    <h2>\U0001f4c5 16-Day Sunshine Forecast</h2>
+    <h2>16-Day Sunshine Forecast</h2>
     <table>
+        <thead>
         <tr>
             <th>Date</th>
-            <th>Sun</th>
+            <th>Sunshine</th>
             <th>% Sunny</th>
             <th>High / Low</th>
             <th>Precip</th>
             <th>Conditions</th>
         </tr>
+        </thead>
+        <tbody>
         {"".join(rows)}
+        </tbody>
     </table>
-    <p class="meta">Green rows indicate good butterfly weather (&gt;3h sun or &gt;40% sunny).
-    Hover over hourly bars for detail.</p>
+    <p class="meta">Highlighted rows indicate good butterfly weather
+    (&gt;3 h sunshine or &gt;40% sunny). Hover hourly bars for detail.</p>
     """
 
 
