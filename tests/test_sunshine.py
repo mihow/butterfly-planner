@@ -147,6 +147,26 @@ class TestEnsembleSunshine:
         )
         assert ensemble.confidence_width > 0
 
+    def test_p10_single_element(self) -> None:
+        """Test p10 with single element list."""
+        ensemble = sunshine.EnsembleSunshine(time=datetime(2026, 2, 4, 12, 0), member_values=[1800])
+        assert ensemble.p10 == 1800.0
+
+    def test_p90_single_element(self) -> None:
+        """Test p90 with single element list."""
+        ensemble = sunshine.EnsembleSunshine(time=datetime(2026, 2, 4, 12, 0), member_values=[1800])
+        assert ensemble.p90 == 1800.0
+
+    def test_p10_empty_list(self) -> None:
+        """Test p10 with empty list."""
+        ensemble = sunshine.EnsembleSunshine(time=datetime(2026, 2, 4, 12, 0), member_values=[])
+        assert ensemble.p10 == 0.0
+
+    def test_p90_empty_list(self) -> None:
+        """Test p90 with empty list."""
+        ensemble = sunshine.EnsembleSunshine(time=datetime(2026, 2, 4, 12, 0), member_values=[])
+        assert ensemble.p90 == 0.0
+
 
 class TestFetchFunctions:
     """Test API fetching functions."""
@@ -301,6 +321,24 @@ class TestAnalysisFunctions:
         """Test peak window with empty list."""
         with pytest.raises(ValueError, match="Empty slots list"):
             sunshine.get_peak_sunshine_window([], window_hours=1)
+
+    def test_get_peak_sunshine_window_larger_than_slots(self) -> None:
+        """Test peak window when window is larger than available slots."""
+        # Only 2 slots (30 min total), but requesting 1 hour window
+        slots = [
+            sunshine.SunshineSlot(
+                time=datetime(2026, 2, 4, 12, 0), duration_seconds=900, is_day=True
+            ),
+            sunshine.SunshineSlot(
+                time=datetime(2026, 2, 4, 12, 15), duration_seconds=450, is_day=True
+            ),
+        ]
+
+        start_time, total_minutes = sunshine.get_peak_sunshine_window(slots, window_hours=1)
+
+        # Should return sum of all available slots
+        assert start_time == slots[0].time
+        assert total_minutes == 22.5  # 15 + 7.5 minutes
 
     def test_summarize_weekly_sunshine(self) -> None:
         """Test weekly summary statistics."""

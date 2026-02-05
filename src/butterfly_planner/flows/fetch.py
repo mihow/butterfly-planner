@@ -21,6 +21,8 @@ from typing import Any, TypeVar
 
 import requests
 
+from butterfly_planner import sunshine
+
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 # Try to import Prefect, fall back to no-op decorators if unavailable
@@ -73,58 +75,30 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     return result
 
 
-@task(name="fetch-sunshine-15min")
+@task(name="fetch-sunshine-15min", retries=2, retry_delay_seconds=5)
 def fetch_sunshine_15min(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
-    """
-    Fetch today's 15-minute sunshine forecast.
-
-    Args:
-        lat: Latitude
-        lon: Longitude
-
-    Returns:
-        Sunshine data dict with 15-minute resolution
-    """
-    url = "https://api.open-meteo.com/v1/forecast"
-    params: dict[str, str | int | float] = {
-        "latitude": lat,
-        "longitude": lon,
-        "minutely_15": "sunshine_duration,is_day",
-        "timezone": "America/Los_Angeles",
-        "forecast_days": 1,
+    """Fetch today's 15-minute sunshine forecast."""
+    slots = sunshine.fetch_today_15min_sunshine(lat, lon)
+    return {
+        "minutely_15": {
+            "time": [s.time.isoformat() for s in slots],
+            "sunshine_duration": [s.duration_seconds for s in slots],
+            "is_day": [1 if s.is_day else 0 for s in slots],
+        }
     }
 
-    resp = requests.get(url, params=params, timeout=30)
-    resp.raise_for_status()
-    result: dict[str, Any] = resp.json()
-    return result
 
-
-@task(name="fetch-sunshine-16day")
+@task(name="fetch-sunshine-16day", retries=2, retry_delay_seconds=5)
 def fetch_sunshine_16day(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
-    """
-    Fetch 16-day daily sunshine forecast.
-
-    Args:
-        lat: Latitude
-        lon: Longitude
-
-    Returns:
-        Daily sunshine data for 16 days
-    """
-    url = "https://api.open-meteo.com/v1/forecast"
-    params: dict[str, str | int | float] = {
-        "latitude": lat,
-        "longitude": lon,
-        "daily": "sunshine_duration,daylight_duration",
-        "timezone": "America/Los_Angeles",
-        "forecast_days": 16,
+    """Fetch 16-day daily sunshine forecast."""
+    forecasts = sunshine.fetch_16day_sunshine(lat, lon)
+    return {
+        "daily": {
+            "time": [f.date.isoformat() for f in forecasts],
+            "sunshine_duration": [f.sunshine_seconds for f in forecasts],
+            "daylight_duration": [f.daylight_seconds for f in forecasts],
+        }
     }
-
-    resp = requests.get(url, params=params, timeout=30)
-    resp.raise_for_status()
-    result: dict[str, Any] = resp.json()
-    return result
 
 
 @task(name="save-weather")

@@ -186,7 +186,7 @@ def build_sunshine_today_html(sunshine_data: dict[str, Any]) -> str:
     </div>
     """
 
-    today_date = datetime.fromisoformat(times[0]).strftime("%B %d")
+    today_date = datetime.fromisoformat(daylight_slots[0][0]).strftime("%B %d")
 
     return f"""
     <h2>☀️ Today's Sun Breaks ({today_date})</h2>

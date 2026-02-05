@@ -171,11 +171,6 @@ dev = [
     { name = "types-requests" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "types-requests" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
@@ -192,9 +187,6 @@ requires-dist = [
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.31.0" },
 ]
 provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "types-requests", specifier = ">=2.32.4.20260107" }]
 
 [[package]]
 name = "cachetools"

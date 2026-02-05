@@ -106,6 +106,8 @@ class EnsembleSunshine:
     @property
     def p10(self) -> float:
         """10th percentile (low estimate)."""
+        if len(self.member_values) < 2:
+            return float(self.member_values[0]) if self.member_values else 0.0
         return statistics.quantiles(self.member_values, n=10)[0]
 
     @property
@@ -116,6 +118,8 @@ class EnsembleSunshine:
     @property
     def p90(self) -> float:
         """90th percentile (high estimate)."""
+        if len(self.member_values) < 2:
+            return float(self.member_values[0]) if self.member_values else 0.0
         return statistics.quantiles(self.member_values, n=10)[8]
 
     @property
@@ -310,6 +314,12 @@ def get_peak_sunshine_window(
         raise ValueError("Empty slots list")
 
     window_slots = window_hours * 4  # 4 slots per hour (15 min each)
+
+    # Handle case where window_size > available slots
+    if window_slots > len(slots):
+        total = sum(s.duration_minutes for s in slots)
+        return slots[0].time, total
+
     best_start_time = slots[0].time
     best_total = 0.0
 

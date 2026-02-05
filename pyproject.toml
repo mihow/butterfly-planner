@@ -172,8 +172,3 @@ pretty = true
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_defs = false
-
-[dependency-groups]
-dev = [
-    "types-requests>=2.32.4.20260107",
-]

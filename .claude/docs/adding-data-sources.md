@@ -313,7 +313,7 @@ from __future__ import annotations
 
 import requests
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 
 INAT_API = "https://api.inaturalist.org/v1"
