@@ -1,0 +1,9 @@
+- Deep link to sightings for each species and/or all of them in inaturalist and/or GBIF
+- Can we add historical weather data for the locations & dates of the historical butterfly sightings? what bulk/multi queries does open metro allow?
+- Can we show +/- one week from this week rather than "the month of February" or something like that (still all years ever though)
+- Highlight observations that happened THIS exact week (this year) and even today/yesterday - either in their own component or by adding emphasis or notes in the current sightings table.
+- Going to need a map soon! A heat map and/or individual sightings. 
+- Include all observations - not just research grade or species level
+- Review inat modules in the `ebutterfly-taxonomy` repo (inat-opendata.py, inat.py and local.py)
+- Update the font & design to be more professional. See https://mihow.github.io/pelham-catalog/
+- Tell Claude to never say "comprehensive" or "production ready" or similar overstatements in generated text
