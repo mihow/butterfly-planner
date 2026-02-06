@@ -1,0 +1,31 @@
+<script>
+(function() {
+  var map = L.map("sightings-map").setView([45.5, -122.8], 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 16,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  var obs = {{ markers_json }};
+  var group = L.layerGroup();
+  for (var i = 0; i < obs.length; i++) {
+    var c = obs[i][3], ini = obs[i][4];
+    var m = L.circleMarker([obs[i][0], obs[i][1]], {
+      radius: 11, fillColor: c, color: '#fff',
+      weight: 1.5, opacity: 0.9, fillOpacity: 0.85
+    });
+    m.bindPopup(obs[i][2]);
+    m.bindTooltip(ini, {permanent: true, direction: "center",
+      className: "map-label", offset: [0, 0]});
+    group.addLayer(m);
+  }
+  group.addTo(map);
+  L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
+    color: '#555', weight: 1.5, dashArray: '6 4',
+    fill: false, opacity: 0.5
+  }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');
+  if (obs.length > 0) {
+    var bounds = L.latLngBounds(obs.map(function(o) { return [o[0], o[1]]; }));
+    map.fitBounds(bounds, {padding: [30, 30]});
+  }
+})();
+</script>

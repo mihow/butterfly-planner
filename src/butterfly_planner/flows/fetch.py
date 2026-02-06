@@ -14,7 +14,7 @@ Run with Prefect dashboard:
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -129,11 +129,11 @@ def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]
 
 @task(name="fetch-inaturalist", retries=2, retry_delay_seconds=5)
 def fetch_inaturalist() -> dict[str, Any]:
-    """Fetch butterfly species counts for the current month from iNaturalist."""
-    month = date.today().month
-    species = inaturalist.fetch_species_counts(month)
+    """Fetch butterfly species and observations for the current week ± 1."""
+    summary = inaturalist.get_current_week_species()
     return {
-        "month": month,
+        "month": summary.month,
+        "weeks": summary.weeks,
         "species": [
             {
                 "taxon_id": s.taxon_id,
@@ -144,7 +144,21 @@ def fetch_inaturalist() -> dict[str, Any]:
                 "photo_url": s.photo_url,
                 "taxon_url": s.taxon_url,
             }
-            for s in species
+            for s in summary.species
+        ],
+        "observations": [
+            {
+                "id": obs.id,
+                "species": obs.species,
+                "common_name": obs.common_name,
+                "observed_on": obs.observed_on.isoformat(),
+                "latitude": obs.latitude,
+                "longitude": obs.longitude,
+                "quality_grade": obs.quality_grade,
+                "url": obs.url,
+                "photo_url": obs.photo_url,
+            }
+            for obs in summary.observations
         ],
     }
 

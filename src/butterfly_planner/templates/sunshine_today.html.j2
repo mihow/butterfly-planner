@@ -1,0 +1,23 @@
+<h2>Today's Sun Breaks &mdash; {{ today_date }}</h2>
+<p class="summary">Total sunshine expected: <strong>{{ total_sunshine_hours }}</strong>
+&mdash; Sunrise {{ sunrise }}, Sunset {{ sunset }}</p>
+<div class="legend">
+    <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
+    <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
+    <div class="legend-item"><div class="legend-box sunshine-med"></div> 25&ndash;50%</div>
+    <div class="legend-item"><div class="legend-box sunshine-high"></div> 50&ndash;75%</div>
+    <div class="legend-item"><div class="legend-box sunshine-full"></div> 75&ndash;100%</div>
+</div>
+<div class="timeline">
+    <div class="tl-labels">
+        {% for label in labels %}
+        <span class="tl-label" style="left:{{ label.left_pct }}%">{{ label.text }}</span>
+        {% endfor %}
+    </div>
+    <div class="tl-bar">
+        {% for seg in segments %}
+        <div class="tl-seg {{ seg.color_class }}" title="{{ seg.title }}"></div>
+        {% endfor %}
+    </div>
+</div>
+<p class="meta">Each segment represents 15 minutes. Hover for exact time and duration.</p>

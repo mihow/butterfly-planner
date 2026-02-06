@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            line-height: 1.7;
+            color: #222;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        a { color: #222; text-decoration: none; border-bottom: 1px solid #ccc; transition: border-color 0.2s; }
+        a:hover { border-bottom-color: #222; }
+
+        /* --- Header --- */
+        header {
+            text-align: center;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #ddd;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: normal;
+            letter-spacing: 0.02em;
+            color: #222;
+        }
+        header .subtitle {
+            font-size: 1rem;
+            font-style: italic;
+            color: #555;
+            margin-top: 0.25rem;
+        }
+        header .updated {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        /* --- Section headings --- */
+        h2 {
+            font-size: 1.15rem;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #444;
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* --- Body text --- */
+        p { margin: 0.8rem 0; font-size: 0.95rem; }
+        .meta { color: #666; font-size: 0.85rem; font-style: italic; }
+        strong { font-weight: 600; }
+
+        /* --- Data table --- */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #555;
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+        }
+        tbody td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        tbody tr:hover { background: #f8f9fa; }
+        tbody tr.good-day { background: #f2f7f0; }
+        tbody tr.good-day:hover { background: #e8f0e4; }
+        .temp-high { color: #9a3412; font-variant-numeric: tabular-nums; }
+        .temp-low { color: #1e40af; font-variant-numeric: tabular-nums; }
+        .numeric { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; }
+
+        /* --- Sunshine timeline (today) --- */
+        .timeline { margin: 1.25rem 0; }
+        .tl-labels { position: relative; height: 1.4em; font-size: 0.75rem; color: #888; letter-spacing: 0.02em; }
+        .tl-label { position: absolute; transform: translateX(-50%); }
+        .tl-bar { display: flex; gap: 1px; border-radius: 3px; overflow: hidden; height: 28px; border: 1px solid #e0e0e0; }
+        .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
+        .tl-seg:hover { opacity: 0.65; }
+
+        /* --- Sunshine color scale (muted, scientific palette) --- */
+        .sunshine-none { background: #e8e8e8; }
+        .sunshine-low  { background: #f5eec2; }
+        .sunshine-med  { background: #e8d44d; }
+        .sunshine-high { background: #d4a017; }
+        .sunshine-full { background: #b8860b; }
+
+        /* --- Inline hourly bar (16-day table) --- */
+        .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
+        .hour-seg { width: 14px; height: 16px; border-radius: 1px; }
+
+        /* --- Legend --- */
+        .legend {
+            display: flex;
+            gap: 1.25rem;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+            color: #666;
+            flex-wrap: wrap;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+        .legend-box { width: 16px; height: 16px; border-radius: 2px; border: 1px solid #ddd; }
+
+        /* --- Summary stats --- */
+        .summary {
+            font-size: 0.95rem;
+            margin: 0.75rem 0;
+        }
+        .summary strong {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9rem;
+        }
+
+        /* --- Species sightings table --- */
+        .species-photo { width: 48px; height: 48px; border-radius: 3px; object-fit: cover; vertical-align: middle; }
+        .species-photo-placeholder { display: inline-block; width: 48px; height: 48px; border-radius: 3px; background: #f0f0f0; text-align: center; line-height: 48px; color: #aaa; font-size: 1.2rem; vertical-align: middle; }
+        td:first-child { width: 56px; }
+        td:nth-child(2) { min-width: 200px; }
+        .species-scientific { font-style: italic; display: block; padding-left: 20px; }
+        .obs-bar { display: inline-block; height: 12px; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }
+        td.obs-count { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; white-space: nowrap; }
+
+        /* --- Sightings map --- */
+        #sightings-map {
+            height: 420px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin: 1rem 0;
+        }
+        .species-dot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 0.35rem;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+        .map-label {
+            background: transparent;
+            border: none;
+            font-weight: 700;
+            font-size: 10px;
+            text-align: center;
+            line-height: 22px;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0,0,0,0.5);
+        }
+
+        /* --- About section --- */
+        .about p { text-align: justify; font-size: 0.92rem; }
+        .about ul {
+            margin: 0.75rem 0 0.75rem 1.5rem;
+            font-size: 0.92rem;
+        }
+        .about li { margin: 0.3rem 0; }
+        .criteria {
+            font-size: 0.88rem;
+            color: #444;
+            background: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-left: 3px solid #ddd;
+            margin: 1rem 0;
+        }
+
+        /* --- Footer --- */
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* --- Print --- */
+        @media print {
+            body { max-width: none; padding: 1rem; }
+            header, footer { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Butterfly Planner</h1>
+        <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
+        <div class="updated">Last updated {{ updated }} PST</div>
+    </header>
+
+    <main>
+    {{ sunshine_today }}
+
+    {{ sunshine_16day }}
+
+    {{ butterfly_map }}
+
+    {{ butterfly_sightings }}
+
+    <h2>About</h2>
+    <div class="about">
+        <p>This page presents sunshine and weather forecasts to aid in planning
+        butterfly observation outings. Lepidoptera are most active during periods
+        of direct sunshine and warm temperatures.</p>
+        <div class="criteria">
+            <strong>Good butterfly weather</strong> is defined as &gt;3 hours of sunshine
+            <em>or</em> &gt;40% of available daylight being sunny.
+        </div>
+        <p>Planned features:</p>
+        <ul>
+            <li>Butterfly abundance hotspots by week of year</li>
+            <li>Species diversity maps for Oregon &amp; Washington</li>
+            <li>Drive-time isochrone analysis</li>
+            <li>Nearby campground locations</li>
+        </ul>
+    </div>
+    </main>
+
+    <footer>
+        <p>Data provided by <a href="https://open-meteo.com">Open-Meteo</a>
+        and <a href="https://www.inaturalist.org">iNaturalist</a>.
+        Forecast models may not reflect actual conditions.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    {{ map_script }}
+</body>
+</html>

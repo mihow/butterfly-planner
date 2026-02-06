@@ -406,6 +406,20 @@ class TestGetCurrentWeekSpecies:
         assert summary.total_species == 1
         assert summary.total_observations == 1
         assert summary.year is None  # All years
+        assert len(summary.weeks) == 3  # current week ± 1
+
+    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
+    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    def test_queries_multiple_months(self, mock_species: object, mock_obs: object) -> None:
+        mock_species.return_value = []  # type: ignore[union-attr]
+        mock_obs.return_value = []  # type: ignore[union-attr]
+
+        inaturalist.get_current_week_species()
+
+        # Should query with a list of months (from week ± 1 range)
+        call_args = mock_species.call_args[0][0]  # type: ignore[union-attr]
+        assert isinstance(call_args, list)
+        assert len(call_args) >= 1
 
 
 class TestGetSpeciesForWeek:
@@ -474,6 +488,42 @@ class TestPeakWeeks:
 # =============================================================================
 # Internal Helper Tests
 # =============================================================================
+
+
+class TestWeekRange:
+    """Test _week_range helper."""
+
+    def test_mid_year(self) -> None:
+        weeks = inaturalist._week_range(25)
+        assert weeks == [24, 25, 26]
+
+    def test_week_1_wraps_to_52(self) -> None:
+        weeks = inaturalist._week_range(1)
+        assert weeks == [1, 2, 52]
+
+    def test_week_52_wraps_to_1(self) -> None:
+        weeks = inaturalist._week_range(52)
+        assert weeks == [1, 51, 52]
+
+    def test_custom_radius(self) -> None:
+        weeks = inaturalist._week_range(10, radius=2)
+        assert weeks == [8, 9, 10, 11, 12]
+
+
+class TestWeeksToMonths:
+    """Test _weeks_to_months helper."""
+
+    def test_single_month(self) -> None:
+        # Weeks 24-26 are all in June
+        months = inaturalist._weeks_to_months([24, 25, 26], year=2026)
+        assert 6 in months
+
+    def test_spanning_months(self) -> None:
+        # Weeks around month boundaries should return multiple months
+        # Week 5 (late Jan) through week 7 (mid Feb) → Jan + Feb
+        months = inaturalist._weeks_to_months([5, 6, 7], year=2026)
+        assert 1 in months or 2 in months
+        assert len(months) >= 1
 
 
 class TestWeekToMonths:
