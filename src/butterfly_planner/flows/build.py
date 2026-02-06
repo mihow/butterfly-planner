@@ -693,7 +693,7 @@ def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
         '  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {\n'
         "    maxZoom: 16,\n"
         '    attribution: \'&copy; <a href="https://www.openstreetmap.org/copyright">'
-        'OpenStreetMap</a> contributors"\n'
+        "OpenStreetMap</a> contributors'\n"
         "  }).addTo(map);\n"
         f"  var obs = [{markers_js}];\n"
         "  var markers = L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup();\n"
