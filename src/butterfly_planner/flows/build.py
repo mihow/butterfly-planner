@@ -161,8 +161,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         /* --- Species sightings table --- */
         .species-photo {{ width: 48px; height: 48px; border-radius: 3px; object-fit: cover; vertical-align: middle; }}
         .species-photo-placeholder {{ display: inline-block; width: 48px; height: 48px; border-radius: 3px; background: #f0f0f0; text-align: center; line-height: 48px; color: #aaa; font-size: 1.2rem; vertical-align: middle; }}
-        .species-scientific {{ font-style: italic; }}
-        .obs-bar {{ display: inline-block; height: 12px; background: #8faa7b; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }}
+        td:first-child {{ width: 56px; }}
+        td:nth-child(2) {{ min-width: 200px; }}
+        .species-scientific {{ font-style: italic; display: block; padding-left: 20px; }}
+        .obs-bar {{ display: inline-block; height: 12px; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }}
         td.obs-count {{ font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; white-space: nowrap; }}
 
         /* --- Sightings map --- */
@@ -717,6 +719,21 @@ def _species_initials(name: str) -> str:
     return name.upper()
 
 
+def _year_range(observations: list[dict[str, Any]]) -> str:
+    """Derive year range string from observation dates, e.g. '2014-2026'."""
+    years: set[int] = set()
+    for obs in observations:
+        observed_on = obs.get("observed_on", "")
+        if observed_on and len(observed_on) >= 4 and observed_on[:4].isdigit():
+            years.add(int(observed_on[:4]))
+    if not years:
+        return "all years"
+    min_year, max_year = min(years), max(years)
+    if min_year == max_year:
+        return str(min_year)
+    return f"{min_year}\u2013{max_year}"
+
+
 def _week_label(weeks: list[int]) -> str:
     """Human-readable label for a list of ISO weeks, e.g. 'weeks 5\u20137'."""
     if not weeks:
@@ -778,10 +795,12 @@ def build_butterfly_map_html(
 
     markers_js = ",".join(markers_js_parts)
 
+    years = _year_range(observations)
+
     map_div = f"""
-    <h2>Butterfly Sightings Map &mdash; {label.title()}</h2>
+    <h2>Butterfly Sightings Map &mdash; {label.title()} ({years})</h2>
     <p>Research-grade butterfly observations in NW Oregon / SW Washington
-    during {label}, all years combined. {len(observations)} observations shown.
+    during {label}, {years}. {len(observations)} observations shown.
     Colors match the species table below.</p>
     <div id="sightings-map"></div>
     """
@@ -833,6 +852,7 @@ def build_butterfly_sightings_html(
     """Build HTML table for butterfly species sightings from iNaturalist."""
     data = inat_data.get("data", {})
     species_list: list[dict[str, Any]] = data.get("species", [])
+    observations_list: list[dict[str, Any]] = data.get("observations", [])
     month = data.get("month", 0)
     weeks: list[int] = data.get("weeks", [])
 
@@ -842,8 +862,9 @@ def build_butterfly_sightings_html(
     if palette is None:
         palette = _build_species_palette(species_list)
 
+    years = _year_range(observations_list)
     if weeks:
-        period_label = _week_label(weeks).title()
+        period_label = f"{_week_label(weeks).title()} ({years})"
     elif 1 <= month <= 12:
         period_label = MONTH_NAMES[month]
     else:
@@ -916,7 +937,7 @@ def build_butterfly_sightings_html(
     return f"""
     <h2>Butterfly Sightings &mdash; {period_label}</h2>
     <p>Research-grade butterfly observations in NW Oregon / SW Washington
-    during {period_label} ({month_name}), all years combined
+    during {period_label}, {month_name}
     (<a href="{all_obs_url}">browse on iNaturalist</a>).</p>
     <table>
         <thead>
