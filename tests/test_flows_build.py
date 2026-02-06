@@ -484,9 +484,9 @@ class TestBuildButterflySightingsHtml:
         result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         # First species (542) should have full-width bar (200px)
-        assert 'style="width: 200px;"' in result
+        assert "width: 200px;" in result
         # Second species (318) should have proportional bar
-        assert 'style="width: 117px;"' in result
+        assert "width: 117px;" in result
 
 
 class TestBuildHtmlWithInaturalist:

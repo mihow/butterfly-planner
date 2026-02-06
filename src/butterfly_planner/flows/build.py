@@ -10,6 +10,7 @@ Run locally:
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -170,6 +171,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 4px;
             border: 1px solid #ddd;
             margin: 1rem 0;
+        }}
+        .species-dot {{
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 0.35rem;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }}
+        .map-label {{
+            background: transparent;
+            border: none;
+            font-weight: 700;
+            font-size: 10px;
+            text-align: center;
+            line-height: 22px;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0,0,0,0.5);
         }}
 
         /* --- About section --- */
@@ -630,6 +651,72 @@ def _inat_obs_url(taxon_id: int, month: int) -> str:
     )
 
 
+# Distinct, colorblind-friendly palette for species symbology (up to 15).
+_SPECIES_COLORS = [
+    "#e6194b",  # red
+    "#3cb44b",  # green
+    "#4363d8",  # blue
+    "#f58231",  # orange
+    "#911eb4",  # purple
+    "#42d4f4",  # cyan
+    "#f032e6",  # magenta
+    "#bfef45",  # lime
+    "#fabed4",  # pink
+    "#469990",  # teal
+    "#dcbeff",  # lavender
+    "#9a6324",  # brown
+    "#ffe119",  # yellow
+    "#aaffc3",  # mint
+    "#808000",  # olive
+]
+
+
+@dataclass
+class SpeciesStyle:
+    """Visual style for a species on the map and table."""
+
+    color: str
+    initials: str
+    common_name: str
+    scientific_name: str
+
+
+def _build_species_palette(species_list: list[dict[str, Any]]) -> dict[str, SpeciesStyle]:
+    """Assign a color and 2-letter abbreviation to each species.
+
+    Returns a dict keyed by scientific name.
+    """
+    palette: dict[str, SpeciesStyle] = {}
+    # Sort by observation count descending so top species get first colors
+    ranked = sorted(species_list, key=lambda s: s.get("observation_count", 0), reverse=True)
+    for i, sp in enumerate(ranked):
+        scientific = sp.get("scientific_name", "Unknown")
+        common = sp.get("common_name") or scientific
+        color = _SPECIES_COLORS[i % len(_SPECIES_COLORS)]
+        initials = _species_initials(common)
+        palette[scientific] = SpeciesStyle(
+            color=color,
+            initials=initials,
+            common_name=common,
+            scientific_name=scientific,
+        )
+    return palette
+
+
+def _species_initials(name: str) -> str:
+    """Derive a 2-letter abbreviation from a common name.
+
+    Examples: 'Painted Lady' → 'PL', 'California Tortoiseshell' → 'CT',
+    'Red Admiral' → 'RA', 'Cabbage White' → 'CW'.
+    """
+    words = name.split()
+    if len(words) >= 2:
+        return (words[0][0] + words[-1][0]).upper()
+    if len(name) >= 2:
+        return name[:2].upper()
+    return name.upper()
+
+
 def _week_label(weeks: list[int]) -> str:
     """Human-readable label for a list of ISO weeks, e.g. 'weeks 5\u20137'."""
     if not weeks:
@@ -639,7 +726,10 @@ def _week_label(weeks: list[int]) -> str:
     return f"weeks {weeks[0]}\u2013{weeks[-1]}"
 
 
-def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
+def build_butterfly_map_html(
+    inat_data: dict[str, Any],
+    palette: dict[str, SpeciesStyle] | None = None,
+) -> tuple[str, str]:
     """Build an interactive Leaflet map of butterfly observations.
 
     Returns a (map_div_html, map_script_js) tuple. The script must be placed
@@ -658,7 +748,11 @@ def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
             "",
         )
 
-    # Build JS array of observation markers
+    if palette is None:
+        species_list: list[dict[str, Any]] = data.get("species", [])
+        palette = _build_species_palette(species_list)
+
+    # Build JS array: [lat, lon, "popup", "color", "initials"]
     markers_js_parts: list[str] = []
     for obs in observations:
         lat = obs.get("latitude")
@@ -668,21 +762,27 @@ def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
         obs_date = obs.get("observed_on", "")
         url = obs.get("url", "")
         if lat is not None and lon is not None:
+            style = palette.get(species)
+            color = style.color if style else "#888"
+            initials = style.initials if style else "?"
             # Escape for JS string
             safe_name = name.replace("'", "\\'").replace('"', '\\"')
             safe_species = species.replace("'", "\\'").replace('"', '\\"')
             popup = (
+                f'<span style=\\"color:{color};font-weight:700\\">\\u25cf</span> '
                 f"<b>{safe_name}</b><br><i>{safe_species}</i><br>"
-                f'{obs_date}<br><a href=\\"{url}\\" target=\\"_blank\\">View on iNaturalist</a>'
+                f'{obs_date}<br><a href=\\"{url}\\" target=\\"_blank\\">'
+                f"View on iNaturalist</a>"
             )
-            markers_js_parts.append(f'[{lat},{lon},"{popup}"]')
+            markers_js_parts.append(f'[{lat},{lon},"{popup}","{color}","{initials}"]')
 
     markers_js = ",".join(markers_js_parts)
 
     map_div = f"""
     <h2>Butterfly Sightings Map &mdash; {label.title()}</h2>
     <p>Research-grade butterfly observations in NW Oregon / SW Washington
-    during {label}, all years combined. {len(observations)} observations shown.</p>
+    during {label}, all years combined. {len(observations)} observations shown.
+    Colors match the species table below.</p>
     <div id="sightings-map"></div>
     """
 
@@ -696,16 +796,20 @@ def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
         "OpenStreetMap</a> contributors'\n"
         "  }).addTo(map);\n"
         f"  var obs = [{markers_js}];\n"
-        "  var markers = L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup();\n"
+        "  var group = L.layerGroup();\n"
         "  for (var i = 0; i < obs.length; i++) {\n"
+        "    var c = obs[i][3], ini = obs[i][4];\n"
         "    var m = L.circleMarker([obs[i][0], obs[i][1]], {\n"
-        "      radius: 5, fillColor: '#8faa7b', color: '#5a7a4a',\n"
-        "      weight: 1, opacity: 0.8, fillOpacity: 0.6\n"
+        "      radius: 11, fillColor: c, color: '#fff',\n"
+        "      weight: 1.5, opacity: 0.9, fillOpacity: 0.85\n"
         "    });\n"
         "    m.bindPopup(obs[i][2]);\n"
-        "    markers.addLayer(m);\n"
+        # Add a text label with species initials via DivIcon tooltip
+        '    m.bindTooltip(ini, {permanent: true, direction: "center",\n'
+        '      className: "map-label", offset: [0, 0]});\n'
+        "    group.addLayer(m);\n"
         "  }\n"
-        "  markers.addTo(map);\n"
+        "  group.addTo(map);\n"
         "  if (obs.length > 0) {\n"
         "    var bounds = L.latLngBounds(obs.map(function(o) { return [o[0], o[1]]; }));\n"
         "    map.fitBounds(bounds, {padding: [30, 30]});\n"
@@ -717,7 +821,10 @@ def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
     return (map_div, map_script)
 
 
-def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
+def build_butterfly_sightings_html(
+    inat_data: dict[str, Any],
+    palette: dict[str, SpeciesStyle] | None = None,
+) -> str:
     """Build HTML table for butterfly species sightings from iNaturalist."""
     data = inat_data.get("data", {})
     species_list: list[dict[str, Any]] = data.get("species", [])
@@ -726,6 +833,9 @@ def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
 
     if not species_list:
         return "<p>No butterfly sightings data available.</p>"
+
+    if palette is None:
+        palette = _build_species_palette(species_list)
 
     if weeks:
         period_label = _week_label(weeks).title()
@@ -748,7 +858,15 @@ def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
         taxon_id = sp.get("taxon_id", 0)
         taxon_url = sp.get("taxon_url", "")
 
-        # Observation bar (scaled to max)
+        # Species color dot from palette
+        style = palette.get(scientific)
+        color = style.color if style else "#888"
+        initials = style.initials if style else "?"
+        dot_html = (
+            f'<span class="species-dot" style="background:{color};" title="{initials}"></span>'
+        )
+
+        # Observation bar (scaled to max) — colored to match map
         bar_width = int((count / max_count) * 200) if max_count > 0 else 0
 
         # Photo thumbnail linked to taxon page
@@ -763,8 +881,9 @@ def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
         else:
             photo_html = '<div class="species-photo-placeholder">&#x1f98b;</div>'
 
-        # Species name linked to taxon page
-        name_html = f'<a href="{taxon_url}">{name}</a>' if taxon_url else name
+        # Species name linked to taxon page, with color dot
+        name_link = f'<a href="{taxon_url}">{name}</a>' if taxon_url else name
+        name_html = f"{dot_html}{name_link}"
 
         # Observation count linked to search results
         obs_url = _inat_obs_url(taxon_id, month) if taxon_id and month else ""
@@ -776,7 +895,7 @@ def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
             f"<td>{name_html}<br>"
             f'<span class="species-scientific">{scientific}</span></td>'
             f'<td class="obs-count">'
-            f'<div class="obs-bar" style="width: {bar_width}px;"></div>'
+            f'<div class="obs-bar" style="width: {bar_width}px; background: {color};"></div>'
             f"{count_html}</td>"
             f"</tr>"
         )
@@ -836,8 +955,10 @@ def build_html(
     butterfly_map_html = ""
     map_script_html = ""
     if inat_data:
-        butterfly_sightings_html = build_butterfly_sightings_html(inat_data)
-        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data)
+        species_list = inat_data.get("data", {}).get("species", [])
+        palette = _build_species_palette(species_list)
+        butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette)
+        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data, palette)
 
     return HTML_TEMPLATE.format(
         updated=updated,
