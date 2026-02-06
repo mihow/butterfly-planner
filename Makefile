@@ -67,8 +67,8 @@ format: ## Format code with ruff
 format-check: ## Check formatting without changes
 	uv run ruff format --check src tests
 
-typecheck: ## Run type checker (mypy)
-	uv run mypy src
+typecheck: ## Run type checker (pyright)
+	uv run pyright src
 
 # =============================================================================
 # Combined Checks
@@ -92,7 +92,7 @@ clean: ## Clean build artifacts
 	rm -rf dist/
 	rm -rf *.egg-info/
 	rm -rf .pytest_cache/
-	rm -rf .mypy_cache/
+	rm -rf .pyright/
 	rm -rf .ruff_cache/
 	rm -rf htmlcov/
 	rm -rf .coverage

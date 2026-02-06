@@ -10,31 +10,12 @@ Run locally:
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 from zoneinfo import ZoneInfo
 
-_F = TypeVar("_F", bound=Callable[..., Any])
-
-# Try to import Prefect, fall back to no-op decorators if unavailable
-try:
-    from prefect import flow, task
-except ImportError:  # pragma: no cover
-    # Fallback: simple pass-through decorators
-    def task(**_kwargs: Any) -> Callable[[_F], _F]:  # type: ignore[no-redef]
-        def decorator(fn: _F) -> _F:
-            return fn
-
-        return decorator
-
-    def flow(**_kwargs: Any) -> Callable[[_F], _F]:  # type: ignore[misc]
-        def decorator(fn: _F) -> _F:
-            return fn
-
-        return decorator
-
+from prefect import flow, task
 
 # Directories
 DATA_DIR = Path("data")
