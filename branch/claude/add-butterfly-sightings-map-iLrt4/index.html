@@ -205,7 +205,7 @@
     <header>
         <h1>Butterfly Planner</h1>
         <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
-        <div class="updated">Last updated 2026-02-05 19:52 PST</div>
+        <div class="updated">Last updated 2026-02-05 20:00 PST</div>
     </header>
 
     <main>
@@ -332,6 +332,10 @@
     group.addLayer(m);
   }
   group.addTo(map);
+  L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
+    color: '#555', weight: 1.5, dashArray: '6 4',
+    fill: false, opacity: 0.5
+  }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');
   if (obs.length > 0) {
     var bounds = L.latLngBounds(obs.map(function(o) { return [o[0], o[1]]; }));
     map.fitBounds(bounds, {padding: [30, 30]});
