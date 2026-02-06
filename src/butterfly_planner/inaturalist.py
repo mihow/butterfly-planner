@@ -102,6 +102,7 @@ class OccurrenceSummary:
     observations: list[ButterflyObservation]
     total_species: int
     total_observations: int
+    weeks: list[int] = field(default_factory=list)
     fetched_at: datetime = field(default_factory=datetime.now)
 
     @property
@@ -296,11 +297,12 @@ def get_current_week_species(
     bbox: dict[str, float] | None = None,
 ) -> OccurrenceSummary:
     """
-    Fetch butterfly occurrence data for the current week of the year.
+    Fetch butterfly occurrence data for the current week ± 1 week.
 
-    Uses the current month to query species_counts (all years), plus
-    recent observations from the same month. This answers: "What butterflies
-    have historically been seen in this area around this time of year?"
+    Uses the current ISO week number and queries for the three-week window
+    (current week - 1 through current week + 1), converting to months for
+    the iNaturalist API. This answers: "What butterflies have historically
+    been seen in this area around this time of year?"
 
     Args:
         bbox: Bounding box. Defaults to NW Oregon / SW Washington.
@@ -309,19 +311,22 @@ def get_current_week_species(
         OccurrenceSummary with species and observations.
     """
     today = date.today()
-    month = today.month
+    current_week = today.isocalendar()[1]
+    weeks = _week_range(current_week)
+    months = _weeks_to_months(weeks)
 
-    species = fetch_species_counts(month, bbox)
-    observations = fetch_observations_for_month(month, bbox, max_pages=2)
+    species = fetch_species_counts(months, bbox)
+    observations = fetch_observations_for_month(months, bbox, max_pages=3)
 
     return OccurrenceSummary(
-        month=month,
+        month=months[0],
         year=None,
         bbox=bbox or NW_OREGON_SW_WASHINGTON,
         species=species,
         observations=observations,
         total_species=len(species),
         total_observations=len(observations),
+        weeks=weeks,
     )
 
 
@@ -400,6 +405,47 @@ def peak_weeks(histogram: list[WeeklyActivity], top_n: int = 5) -> list[WeeklyAc
 # =============================================================================
 # Internal helpers
 # =============================================================================
+
+
+def _week_range(center_week: int, *, radius: int = 1) -> list[int]:
+    """
+    Return a list of ISO week numbers centered on *center_week*.
+
+    Wraps around year boundaries (week 1 ± 1 → [52, 1, 2]).
+
+    Args:
+        center_week: The center ISO week number (1-53).
+        radius: Number of weeks on each side (default 1 → 3-week window).
+
+    Returns:
+        Sorted list of ISO week numbers.
+    """
+    weeks: list[int] = []
+    for offset in range(-radius, radius + 1):
+        w = center_week + offset
+        if w < 1:
+            w += 52
+        elif w > 52:
+            w -= 52
+        weeks.append(w)
+    return sorted(weeks)
+
+
+def _weeks_to_months(weeks: list[int], year: int | None = None) -> list[int]:
+    """
+    Determine the unique month(s) that a list of ISO weeks span.
+
+    Args:
+        weeks: List of ISO week numbers (1-53).
+        year: Reference year. Defaults to current year.
+
+    Returns:
+        Sorted list of unique month numbers (1-12).
+    """
+    months: set[int] = set()
+    for w in weeks:
+        months.update(_week_to_months(w, year))
+    return sorted(months)
 
 
 def _week_to_months(week: int, year: int | None = None) -> list[int]:

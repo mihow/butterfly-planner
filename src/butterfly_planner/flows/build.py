@@ -28,6 +28,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
     <style>
         *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{
@@ -161,6 +164,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .obs-bar {{ display: inline-block; height: 12px; background: #8faa7b; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }}
         td.obs-count {{ font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; white-space: nowrap; }}
 
+        /* --- Sightings map --- */
+        #sightings-map {{
+            height: 420px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin: 1rem 0;
+        }}
+
         /* --- About section --- */
         .about p {{ text-align: justify; font-size: 0.92rem; }}
         .about ul {{
@@ -206,6 +217,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     {sunshine_16day}
 
+    {butterfly_map}
+
     {butterfly_sightings}
 
     <h2>About</h2>
@@ -232,6 +245,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         and <a href="https://www.inaturalist.org">iNaturalist</a>.
         Forecast models may not reflect actual conditions.</p>
     </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    {map_script}
 </body>
 </html>
 """
@@ -612,15 +630,109 @@ def _inat_obs_url(taxon_id: int, month: int) -> str:
     )
 
 
+def _week_label(weeks: list[int]) -> str:
+    """Human-readable label for a list of ISO weeks, e.g. 'weeks 5\u20137'."""
+    if not weeks:
+        return "this week"
+    if len(weeks) == 1:
+        return f"week {weeks[0]}"
+    return f"weeks {weeks[0]}\u2013{weeks[-1]}"
+
+
+def build_butterfly_map_html(inat_data: dict[str, Any]) -> tuple[str, str]:
+    """Build an interactive Leaflet map of butterfly observations.
+
+    Returns a (map_div_html, map_script_js) tuple. The script must be placed
+    after the Leaflet library is loaded.
+    """
+    data = inat_data.get("data", {})
+    observations: list[dict[str, Any]] = data.get("observations", [])
+    weeks: list[int] = data.get("weeks", [])
+
+    label = _week_label(weeks)
+
+    if not observations:
+        return (
+            f"<h2>Butterfly Sightings Map &mdash; {label.title()}</h2>"
+            "<p>No observation data available for the map.</p>",
+            "",
+        )
+
+    # Build JS array of observation markers
+    markers_js_parts: list[str] = []
+    for obs in observations:
+        lat = obs.get("latitude")
+        lon = obs.get("longitude")
+        name = obs.get("common_name") or obs.get("species", "Unknown")
+        species = obs.get("species", "")
+        obs_date = obs.get("observed_on", "")
+        url = obs.get("url", "")
+        if lat is not None and lon is not None:
+            # Escape for JS string
+            safe_name = name.replace("'", "\\'").replace('"', '\\"')
+            safe_species = species.replace("'", "\\'").replace('"', '\\"')
+            popup = (
+                f"<b>{safe_name}</b><br><i>{safe_species}</i><br>"
+                f'{obs_date}<br><a href=\\"{url}\\" target=\\"_blank\\">View on iNaturalist</a>'
+            )
+            markers_js_parts.append(f'[{lat},{lon},"{popup}"]')
+
+    markers_js = ",".join(markers_js_parts)
+
+    map_div = f"""
+    <h2>Butterfly Sightings Map &mdash; {label.title()}</h2>
+    <p>Research-grade butterfly observations in NW Oregon / SW Washington
+    during {label}, all years combined. {len(observations)} observations shown.</p>
+    <div id="sightings-map"></div>
+    """
+
+    map_script = (
+        "<script>\n"
+        "(function() {\n"
+        '  var map = L.map("sightings-map").setView([45.5, -122.8], 8);\n'
+        '  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {\n'
+        "    maxZoom: 16,\n"
+        '    attribution: \'&copy; <a href="https://www.openstreetmap.org/copyright">'
+        'OpenStreetMap</a> contributors"\n'
+        "  }).addTo(map);\n"
+        f"  var obs = [{markers_js}];\n"
+        "  var markers = L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup();\n"
+        "  for (var i = 0; i < obs.length; i++) {\n"
+        "    var m = L.circleMarker([obs[i][0], obs[i][1]], {\n"
+        "      radius: 5, fillColor: '#8faa7b', color: '#5a7a4a',\n"
+        "      weight: 1, opacity: 0.8, fillOpacity: 0.6\n"
+        "    });\n"
+        "    m.bindPopup(obs[i][2]);\n"
+        "    markers.addLayer(m);\n"
+        "  }\n"
+        "  markers.addTo(map);\n"
+        "  if (obs.length > 0) {\n"
+        "    var bounds = L.latLngBounds(obs.map(function(o) { return [o[0], o[1]]; }));\n"
+        "    map.fitBounds(bounds, {padding: [30, 30]});\n"
+        "  }\n"
+        "})();\n"
+        "</script>"
+    )
+
+    return (map_div, map_script)
+
+
 def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
     """Build HTML table for butterfly species sightings from iNaturalist."""
     data = inat_data.get("data", {})
     species_list: list[dict[str, Any]] = data.get("species", [])
     month = data.get("month", 0)
+    weeks: list[int] = data.get("weeks", [])
 
     if not species_list:
         return "<p>No butterfly sightings data available.</p>"
 
+    if weeks:
+        period_label = _week_label(weeks).title()
+    elif 1 <= month <= 12:
+        period_label = MONTH_NAMES[month]
+    else:
+        period_label = "This Month"
     month_name = MONTH_NAMES[month] if 1 <= month <= 12 else "this month"
 
     # Show top 15 species
@@ -678,9 +790,9 @@ def build_butterfly_sightings_html(inat_data: dict[str, Any]) -> str:
     )
 
     return f"""
-    <h2>Butterfly Sightings &mdash; {month_name}</h2>
+    <h2>Butterfly Sightings &mdash; {period_label}</h2>
     <p>Research-grade butterfly observations in NW Oregon / SW Washington
-    during {month_name}, all years combined
+    during {period_label} ({month_name}), all years combined
     (<a href="{all_obs_url}">browse on iNaturalist</a>).</p>
     <table>
         <thead>
@@ -721,14 +833,19 @@ def build_html(
 
     # Build butterfly sightings section
     butterfly_sightings_html = ""
+    butterfly_map_html = ""
+    map_script_html = ""
     if inat_data:
         butterfly_sightings_html = build_butterfly_sightings_html(inat_data)
+        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data)
 
     return HTML_TEMPLATE.format(
         updated=updated,
         sunshine_today=sunshine_today_html,
         sunshine_16day=sunshine_16day_html,
         butterfly_sightings=butterfly_sightings_html,
+        butterfly_map=butterfly_map_html,
+        map_script=map_script_html,
     )
 
 
