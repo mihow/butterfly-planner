@@ -810,6 +810,11 @@ def build_butterfly_map_html(
         "    group.addLayer(m);\n"
         "  }\n"
         "  group.addTo(map);\n"
+        # Add bounding box rectangle showing the query area
+        "  L.rectangle([[44.5, -124.2], [46.5, -121.5]], {\n"
+        "    color: '#555', weight: 1.5, dashArray: '6 4',\n"
+        "    fill: false, opacity: 0.5\n"
+        "  }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');\n"
         "  if (obs.length > 0) {\n"
         "    var bounds = L.latLngBounds(obs.map(function(o) { return [o[0], o[1]]; }));\n"
         "    map.fitBounds(bounds, {padding: [30, 30]});\n"
