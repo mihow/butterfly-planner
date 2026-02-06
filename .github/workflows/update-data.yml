@@ -1,9 +1,9 @@
 name: Update Data & Deploy
 
 on:
-  # Run daily at 6am UTC
+  # Run daily at 6am PST (2pm UTC). PST = UTC-8.
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 14 * * *'
   # Manual trigger
   workflow_dispatch:
   # Run on push to main or claude branches
