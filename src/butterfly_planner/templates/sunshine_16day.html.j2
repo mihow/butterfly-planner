@@ -1,0 +1,27 @@
+<h2>16-Day Sunshine Forecast</h2>
+<table>
+    <thead>
+    <tr>
+        <th>Date</th>
+        <th>Sunshine</th>
+        <th>% Sunny</th>
+        <th>High / Low</th>
+        <th>Precip</th>
+        <th>Conditions</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+    <tr class="{{ row.row_class }}">
+        <td>{{ row.date }}</td>
+        <td>{{ row.sunshine_hours }}h of {{ row.daylight_hours }}h</td>
+        <td>{{ row.sunshine_pct }}% {{ row.bar }}</td>
+        <td>{{ row.temp_cell }}</td>
+        <td>{{ row.precip_cell }}</td>
+        <td>{{ row.conditions }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<p class="meta">Highlighted rows indicate good butterfly weather
+(&gt;3 h sunshine or &gt;40% sunny). Hover hourly bars for detail.</p>

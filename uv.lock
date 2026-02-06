@@ -153,6 +153,7 @@ name = "butterfly-planner"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "jinja2" },
     { name = "prefect" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -172,6 +173,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "jinja2", specifier = ">=3.1.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "prefect", specifier = ">=3.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
