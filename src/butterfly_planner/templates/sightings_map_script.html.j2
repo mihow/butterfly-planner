@@ -6,15 +6,33 @@
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
   var obs = {{ markers_json }};
+
+  function buildPopup(o) {
+    var html = '<div class="obs-popup">';
+    if (o.photo) {
+      html += '<img class="obs-popup-img" src="' + o.photo + '" alt="' + o.name + '">';
+    }
+    html += '<div class="obs-popup-body">';
+    html += '<span style="color:' + o.color + ';font-weight:700">&#9679;</span> ';
+    html += '<b>' + o.name + '</b><br><i>' + o.species + '</i>';
+    html += '<br>' + o.date;
+    if (o.weather) {
+      html += '<br><span class="obs-popup-weather">' + o.weather + '</span>';
+    }
+    html += '<br><a href="' + o.url + '" target="_blank">View on iNaturalist</a>';
+    html += '</div></div>';
+    return html;
+  }
+
   var group = L.layerGroup();
   for (var i = 0; i < obs.length; i++) {
-    var c = obs[i][3], ini = obs[i][4];
-    var m = L.circleMarker([obs[i][0], obs[i][1]], {
-      radius: 11, fillColor: c, color: '#fff',
+    var o = obs[i];
+    var m = L.circleMarker([o.lat, o.lon], {
+      radius: 11, fillColor: o.color, color: '#fff',
       weight: 1.5, opacity: 0.9, fillOpacity: 0.85
     });
-    m.bindPopup(obs[i][2]);
-    m.bindTooltip(ini, {permanent: true, direction: "center",
+    m.bindPopup(buildPopup(o), {maxWidth: 280, minWidth: 200});
+    m.bindTooltip(o.initials, {permanent: true, direction: "center",
       className: "map-label", offset: [0, 0]});
     group.addLayer(m);
   }
@@ -24,7 +42,7 @@
     fill: false, opacity: 0.5
   }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');
   if (obs.length > 0) {
-    var bounds = L.latLngBounds(obs.map(function(o) { return [o[0], o[1]]; }));
+    var bounds = L.latLngBounds(obs.map(function(o) { return [o.lat, o.lon]; }));
     map.fitBounds(bounds, {padding: [30, 30]});
   }
 })();

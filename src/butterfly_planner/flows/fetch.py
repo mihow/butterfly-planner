@@ -22,6 +22,7 @@ import requests
 from prefect import flow, task
 
 from butterfly_planner import inaturalist, sunshine
+from butterfly_planner.services import weather
 
 # Data directories
 DATA_DIR = Path("data")
@@ -183,6 +184,76 @@ def save_inaturalist(inat_data: dict[str, Any]) -> Path:
     return output_path
 
 
+@task(name="fetch-historical-weather", retries=2, retry_delay_seconds=5)
+def fetch_historical_weather(
+    observations: list[dict[str, Any]],
+    lat: float = 45.5,
+    lon: float = -122.6,
+) -> dict[str, dict[str, Any]]:
+    """
+    Fetch historical daily weather for each unique observation date.
+
+    Uses the Open-Meteo Archive API with the region centroid (all observations
+    are in roughly the same geographic area).  Batches dates into contiguous
+    year-ranges to minimise API calls.
+
+    Returns:
+        Dict keyed by date string (YYYY-MM-DD) → weather row dict.
+    """
+    dates: set[str] = set()
+    for obs in observations:
+        observed_on = obs.get("observed_on", "")
+        if observed_on:
+            dates.add(observed_on)
+
+    if not dates:
+        return {}
+
+    # Group dates by year and build contiguous ranges per year
+    by_year: dict[str, list[str]] = {}
+    for d in sorted(dates):
+        year = d[:4]
+        by_year.setdefault(year, []).append(d)
+
+    weather_by_date: dict[str, dict[str, Any]] = {}
+    for _year, year_dates in by_year.items():
+        start = min(year_dates)
+        end = max(year_dates)
+        data = weather.fetch_historical_daily(start, end, lat, lon)
+        daily = data.get("daily", {})
+        api_dates = daily.get("time", [])
+        for i, api_date in enumerate(api_dates):
+            if api_date in dates:
+                weather_by_date[api_date] = {
+                    "high_c": daily.get("temperature_2m_max", [None])[i],
+                    "low_c": daily.get("temperature_2m_min", [None])[i],
+                    "precip_mm": daily.get("precipitation_sum", [None])[i],
+                    "weather_code": daily.get("weather_code", [None])[i],
+                }
+
+    return weather_by_date
+
+
+@task(name="save-historical-weather")
+def save_historical_weather(weather_by_date: dict[str, dict[str, Any]]) -> Path:
+    """Save historical weather cache to JSON file."""
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+    output_path = RAW_DIR / "historical_weather.json"
+    with output_path.open("w") as f:
+        json.dump(
+            {
+                "fetched_at": datetime.now().isoformat(),
+                "source": "open-meteo.com (archive)",
+                "by_date": weather_by_date,
+            },
+            f,
+            indent=2,
+        )
+
+    return output_path
+
+
 @flow(name="fetch-data", log_prints=True)
 def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     """
@@ -213,14 +284,22 @@ def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     species_count = len(inat_data.get("species", []))
     print(f"Saved {species_count} butterfly species to {inat_path}")
 
+    print("Fetching historical weather for observation dates...")
+    obs_list = inat_data.get("observations", [])
+    hist_weather = fetch_historical_weather(obs_list, lat, lon)
+    hist_path = save_historical_weather(hist_weather)
+    print(f"Cached historical weather for {len(hist_weather)} dates to {hist_path}")
+
     return {
         "weather_days": days,
         "sunshine_slots": slots,
         "inat_species": species_count,
+        "historical_weather_dates": len(hist_weather),
         "outputs": {
             "weather": str(output_path),
             "sunshine": str(sunshine_path),
             "inaturalist": str(inat_path),
+            "historical_weather": str(hist_path),
         },
     }
 

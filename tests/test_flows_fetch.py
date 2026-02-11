@@ -220,9 +220,91 @@ class TestSaveInaturalist:
         assert saved_data["data"] == inat_data
 
 
+class TestFetchHistoricalWeather:
+    """Test fetching historical weather for observation dates."""
+
+    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    def test_fetch_historical_weather(self, mock_fetch: Mock) -> None:
+        """Test fetching historical weather groups by year and returns by-date dict."""
+        mock_fetch.return_value = {
+            "daily": {
+                "time": ["2024-06-15", "2024-06-16"],
+                "temperature_2m_max": [22.0, 24.0],
+                "temperature_2m_min": [10.0, 12.0],
+                "precipitation_sum": [0.0, 1.5],
+                "weather_code": [0, 3],
+            }
+        }
+
+        observations = [
+            {"observed_on": "2024-06-15", "latitude": 45.5, "longitude": -122.6},
+            {"observed_on": "2024-06-16", "latitude": 45.6, "longitude": -122.7},
+        ]
+
+        result = fetch.fetch_historical_weather(observations)
+
+        assert "2024-06-15" in result
+        assert result["2024-06-15"]["high_c"] == 22.0
+        assert result["2024-06-15"]["weather_code"] == 0
+        assert "2024-06-16" in result
+        assert result["2024-06-16"]["precip_mm"] == 1.5
+        mock_fetch.assert_called_once_with("2024-06-15", "2024-06-16", 45.5, -122.6)
+
+    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    def test_fetch_historical_weather_multiple_years(self, mock_fetch: Mock) -> None:
+        """Test that observations from different years make separate API calls."""
+        mock_fetch.return_value = {
+            "daily": {
+                "time": ["2024-06-15"],
+                "temperature_2m_max": [20.0],
+                "temperature_2m_min": [10.0],
+                "precipitation_sum": [0.0],
+                "weather_code": [1],
+            }
+        }
+
+        observations = [
+            {"observed_on": "2024-06-15"},
+            {"observed_on": "2023-06-10"},
+        ]
+
+        fetch.fetch_historical_weather(observations)
+
+        assert mock_fetch.call_count == 2
+
+    def test_fetch_historical_weather_no_observations(self) -> None:
+        """Test with empty observation list."""
+        result = fetch.fetch_historical_weather([])
+        assert result == {}
+
+
+class TestSaveHistoricalWeather:
+    """Test saving historical weather cache."""
+
+    def test_save_historical_weather(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test saving historical weather to JSON file."""
+        raw_dir = tmp_path / "data" / "raw"
+        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+
+        weather_by_date = {
+            "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
+        }
+
+        result = fetch.save_historical_weather(weather_by_date)
+
+        assert result == raw_dir / "historical_weather.json"
+        assert result.exists()
+
+        saved_data = json.loads(result.read_text())
+        assert "fetched_at" in saved_data
+        assert saved_data["source"] == "open-meteo.com (archive)"
+        assert saved_data["by_date"]["2024-06-15"]["high_c"] == 22.0
+
+
 class TestFetchAllFlow:
     """Test the main fetch flow."""
 
+    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
     @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_16day_sunshine")
@@ -233,6 +315,7 @@ class TestFetchAllFlow:
         mock_fetch_16day: Mock,
         mock_fetch_15min: Mock,
         mock_fetch_inat: Mock,
+        mock_fetch_hist: Mock,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -273,6 +356,17 @@ class TestFetchAllFlow:
             ),
         ]
 
+        # Mock historical weather (empty — no observations have dates)
+        mock_fetch_hist.return_value = {
+            "daily": {
+                "time": [],
+                "temperature_2m_max": [],
+                "temperature_2m_min": [],
+                "precipitation_sum": [],
+                "weather_code": [],
+            }
+        }
+
         result = fetch.fetch_all(lat=45.5, lon=-122.6)
 
         assert result["weather_days"] == 2
@@ -281,8 +375,10 @@ class TestFetchAllFlow:
         assert "weather" in result["outputs"]
         assert "sunshine" in result["outputs"]
         assert "inaturalist" in result["outputs"]
+        assert "historical_weather" in result["outputs"]
 
         # Verify files were created
         assert (raw_dir / "weather.json").exists()
         assert (raw_dir / "sunshine.json").exists()
         assert (raw_dir / "inaturalist.json").exists()
+        assert (raw_dir / "historical_weather.json").exists()

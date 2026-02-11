@@ -403,6 +403,51 @@ SAMPLE_INAT_DATA: dict = {
 }
 
 
+SAMPLE_INAT_DATA_WITH_OBS: dict = {
+    "fetched_at": "2026-02-04T12:00:00",
+    "source": "inaturalist.org",
+    "data": {
+        "month": 6,
+        "weeks": [23, 24, 25],
+        "species": [
+            {
+                "taxon_id": 48662,
+                "scientific_name": "Vanessa cardui",
+                "common_name": "Painted Lady",
+                "rank": "species",
+                "observation_count": 542,
+                "photo_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/123/medium.jpg",
+                "taxon_url": "https://www.inaturalist.org/taxa/48662",
+            },
+        ],
+        "observations": [
+            {
+                "id": 100001,
+                "species": "Vanessa cardui",
+                "common_name": "Painted Lady",
+                "observed_on": "2024-06-15",
+                "latitude": 45.52,
+                "longitude": -122.68,
+                "quality_grade": "research",
+                "url": "https://www.inaturalist.org/observations/100001",
+                "photo_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/456/medium.jpg",
+            },
+            {
+                "id": 100002,
+                "species": "Vanessa cardui",
+                "common_name": "Painted Lady",
+                "observed_on": "2023-06-10",
+                "latitude": 45.55,
+                "longitude": -122.70,
+                "quality_grade": "research",
+                "url": "https://www.inaturalist.org/observations/100002",
+                "photo_url": None,
+            },
+        ],
+    },
+}
+
+
 class TestLoadInaturalist:
     """Test loading iNaturalist data from file."""
 
@@ -428,6 +473,115 @@ class TestLoadInaturalist:
 
         result = build.load_inaturalist()
         assert result is None
+
+
+class TestLoadHistoricalWeather:
+    """Test loading historical weather cache."""
+
+    def test_load_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test loading historical weather when file exists."""
+        raw_dir = tmp_path / "data" / "raw"
+        raw_dir.mkdir(parents=True)
+        hw_file = raw_dir / "historical_weather.json"
+        hw_data = {
+            "fetched_at": "2026-02-04T12:00:00",
+            "source": "open-meteo.com (archive)",
+            "by_date": {
+                "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
+            },
+        }
+        hw_file.write_text(json.dumps(hw_data))
+        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+
+        result = build.load_historical_weather()
+        assert result is not None
+        assert "2024-06-15" in result
+        assert result["2024-06-15"]["high_c"] == 22.0
+
+    def test_load_not_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test loading historical weather when file doesn't exist."""
+        raw_dir = tmp_path / "data" / "raw"
+        raw_dir.mkdir(parents=True)
+        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+
+        result = build.load_historical_weather()
+        assert result is None
+
+
+class TestBuildWeatherHtml:
+    """Test the _build_weather_html helper."""
+
+    def test_full_weather(self) -> None:
+        """Test weather HTML with all fields."""
+        w = {"weather_code": 0, "high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0}
+        result = build._build_weather_html(w)
+        assert "Clear" in result
+        assert "22/10" in result
+        # No precip when 0
+        assert "mm" not in result
+
+    def test_with_precipitation(self) -> None:
+        """Test weather HTML includes precipitation when > 0."""
+        w = {"weather_code": 61, "high_c": 12.0, "low_c": 5.0, "precip_mm": 3.2}
+        result = build._build_weather_html(w)
+        assert "Light Rain" in result
+        assert "3.2mm" in result
+
+    def test_partial_weather(self) -> None:
+        """Test weather HTML with missing fields."""
+        w = {"weather_code": 3, "high_c": None, "low_c": None, "precip_mm": None}
+        result = build._build_weather_html(w)
+        assert "Overcast" in result
+        assert "\u00b0C" not in result
+
+
+class TestBuildButterflyMapHtml:
+    """Test building butterfly map with enriched popups."""
+
+    def test_map_with_photo_and_weather(self) -> None:
+        """Test map markers include photo URL and weather data."""
+        hw = {
+            "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
+        }
+        map_div, map_script = build.build_butterfly_map_html(
+            SAMPLE_INAT_DATA_WITH_OBS, historical_weather=hw
+        )
+
+        assert "Butterfly Sightings Map" in map_div
+        # Photo URL should be in marker data
+        assert "photos/456/medium.jpg" in map_script
+        # Weather should appear for the matching date
+        assert "Clear" in map_script
+        assert "22/10" in map_script
+        # Object-based markers (not array)
+        assert "lat:" in map_script
+        assert "name:" in map_script
+        assert "weather:" in map_script
+
+    def test_map_without_historical_weather(self) -> None:
+        """Test map works without historical weather data."""
+        map_div, map_script = build.build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "Butterfly Sightings Map" in map_div
+        assert "Painted Lady" in map_script
+        assert "buildPopup" in map_script
+
+    def test_map_no_observations(self) -> None:
+        """Test map with no observations returns fallback."""
+        no_obs: dict = {"data": {"observations": [], "weeks": [5, 6, 7]}}
+        map_div, map_script = build.build_butterfly_map_html(no_obs)
+
+        assert "No observation data" in map_div
+        assert map_script == ""
+
+    def test_map_popup_structure(self) -> None:
+        """Test that the JS template builds popups with obs-popup class."""
+        _, map_script = build.build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "obs-popup" in map_script
+        assert "obs-popup-img" in map_script
+        assert "obs-popup-body" in map_script
+        assert "obs-popup-weather" in map_script
 
 
 class TestBuildButterflySightingsHtml:
