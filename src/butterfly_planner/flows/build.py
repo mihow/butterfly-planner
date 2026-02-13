@@ -75,6 +75,18 @@ def load_inaturalist() -> dict[str, Any] | None:
         return result
 
 
+@task(name="load-historical-weather")
+def load_historical_weather() -> dict[str, dict[str, Any]] | None:
+    """Load cached historical weather keyed by date string."""
+    path = RAW_DIR / "historical_weather.json"
+    if not path.exists():
+        return None
+    with path.open() as f:
+        raw: dict[str, Any] = json.load(f)
+        by_date: dict[str, dict[str, Any]] = raw.get("by_date", {})
+        return by_date
+
+
 # =============================================================================
 # Utility functions
 # =============================================================================
@@ -453,11 +465,32 @@ def _inat_obs_url(taxon_id: int, month: int) -> str:
 # =============================================================================
 
 
+def _escape_js(text: str) -> str:
+    """Escape a string for safe embedding inside a JS double-quoted string."""
+    return text.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+
+
+def _build_weather_html(w: dict[str, Any]) -> str:
+    """Build a compact weather summary string for a popup."""
+    parts: list[str] = []
+    if w.get("weather_code") is not None:
+        parts.append(wmo_code_to_conditions(w["weather_code"]))
+    if w.get("high_c") is not None and w.get("low_c") is not None:
+        parts.append(f"{w['high_c']:.0f}/{w['low_c']:.0f}\u00b0C")
+    if w.get("precip_mm") is not None and w["precip_mm"] > 0:
+        parts.append(f"{w['precip_mm']:.1f}mm")
+    return " &middot; ".join(parts)
+
+
 def build_butterfly_map_html(
     inat_data: dict[str, Any],
     palette: dict[str, SpeciesStyle] | None = None,
+    historical_weather: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[str, str]:
     """Build an interactive Leaflet map of butterfly observations.
+
+    Each marker carries structured data so the JS template can build rich
+    popups with thumbnail images and weather info.
 
     Returns a (map_div_html, map_script_js) tuple.
     """
@@ -478,28 +511,45 @@ def build_butterfly_map_html(
         species_list: list[dict[str, Any]] = data.get("species", [])
         palette = _build_species_palette(species_list)
 
-    # Build JS array: [lat, lon, "popup", "color", "initials"]
+    hw = historical_weather or {}
+
+    # Build JS array of marker objects for the template.
+    # Using objects (not positional arrays) so future fields are easy to add.
     markers_js_parts: list[str] = []
     for obs in observations:
         lat = obs.get("latitude")
         lon = obs.get("longitude")
+        if lat is None or lon is None:
+            continue
+
         name = obs.get("common_name") or obs.get("species", "Unknown")
         species = obs.get("species", "")
         obs_date = obs.get("observed_on", "")
         url = obs.get("url", "")
-        if lat is not None and lon is not None:
-            style = palette.get(species)
-            color = style.color if style else "#888"
-            initials = style.initials if style else "?"
-            safe_name = name.replace("'", "\\'").replace('"', '\\"')
-            safe_species = species.replace("'", "\\'").replace('"', '\\"')
-            popup = (
-                f'<span style=\\"color:{color};font-weight:700\\">\\u25cf</span> '
-                f"<b>{safe_name}</b><br><i>{safe_species}</i><br>"
-                f'{obs_date}<br><a href=\\"{url}\\" target=\\"_blank\\">'
-                f"View on iNaturalist</a>"
-            )
-            markers_js_parts.append(f'[{lat},{lon},"{popup}","{color}","{initials}"]')
+        photo_url = obs.get("photo_url") or ""
+
+        style = palette.get(species)
+        color = style.color if style else "#888"
+        initials = style.initials if style else "?"
+
+        # Weather string for this observation's date
+        w = hw.get(obs_date)
+        weather_html = _escape_js(_build_weather_html(w)) if w else ""
+
+        marker = (
+            "{"
+            f"lat:{lat},lon:{lon},"
+            f'name:"{_escape_js(name)}",'
+            f'species:"{_escape_js(species)}",'
+            f'date:"{_escape_js(obs_date)}",'
+            f'url:"{_escape_js(url)}",'
+            f'photo:"{_escape_js(photo_url)}",'
+            f'color:"{color}",'
+            f'initials:"{_escape_js(initials)}",'
+            f'weather:"{weather_html}"'
+            "}"
+        )
+        markers_js_parts.append(marker)
 
     markers_js = "[" + ",".join(markers_js_parts) + "]"
     years = _year_range(observations)
@@ -637,7 +687,11 @@ def build_html(
         species_list = inat_data.get("data", {}).get("species", [])
         palette = _build_species_palette(species_list)
         butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette)
-        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data, palette)
+
+        hist_weather = load_historical_weather()
+        butterfly_map_html, map_script_html = build_butterfly_map_html(
+            inat_data, palette, hist_weather
+        )
 
     return _render(
         "base.html.j2",
