@@ -19,6 +19,8 @@ from zoneinfo import ZoneInfo
 import jinja2
 from prefect import flow, task
 
+from butterfly_planner import gdd
+
 # Directories
 DATA_DIR = Path("data")
 RAW_DIR = DATA_DIR / "raw"
@@ -85,6 +87,17 @@ def load_historical_weather() -> dict[str, dict[str, Any]] | None:
         raw: dict[str, Any] = json.load(f)
         by_date: dict[str, dict[str, Any]] = raw.get("by_date", {})
         return by_date
+
+
+@task(name="load-gdd")
+def load_gdd() -> dict[str, Any] | None:
+    """Load raw GDD data."""
+    path = RAW_DIR / "gdd.json"
+    if not path.exists():
+        return None
+    with path.open() as f:
+        result: dict[str, Any] = json.load(f)
+        return result
 
 
 # =============================================================================
@@ -667,8 +680,9 @@ def build_html(
     weather_data: dict[str, Any],
     sunshine_data: dict[str, Any] | None,
     inat_data: dict[str, Any] | None = None,
+    gdd_data: dict[str, Any] | None = None,
 ) -> str:
-    """Build HTML page from weather, sunshine, and iNaturalist data."""
+    """Build HTML page from weather, sunshine, iNaturalist, and GDD data."""
     fetched_dt = datetime.fromisoformat(weather_data["fetched_at"])
     pst = ZoneInfo("America/Los_Angeles")
     local_dt = fetched_dt.astimezone(pst)
@@ -693,6 +707,12 @@ def build_html(
             inat_data, palette, hist_weather
         )
 
+    gdd_today_html = ""
+    gdd_timeline_html = ""
+    if gdd_data:
+        gdd_today_html = gdd.build_gdd_today_html(gdd_data, _render)
+        gdd_timeline_html = gdd.build_gdd_timeline_html(gdd_data, _render)
+
     return _render(
         "base.html.j2",
         updated=updated,
@@ -701,6 +721,8 @@ def build_html(
         butterfly_sightings=butterfly_sightings_html,
         butterfly_map=butterfly_map_html,
         map_script=map_script_html,
+        gdd_today=gdd_today_html,
+        gdd_timeline=gdd_timeline_html,
     )
 
 
@@ -738,8 +760,13 @@ def build_all() -> dict[str, Any]:
     if not inat:
         print("Warning: No iNaturalist data found. Building without butterfly sightings.")
 
+    print("Loading GDD data...")
+    gdd_data = load_gdd()
+    if not gdd_data:
+        print("Warning: No GDD data found. Building without growing degree days.")
+
     print("Building HTML...")
-    html = build_html(weather, sunshine, inat)
+    html = build_html(weather, sunshine, inat, gdd_data)
 
     print("Writing site...")
     output_path = write_site(html)

@@ -1,0 +1,88 @@
+<h2>GDD Accumulation Timeline</h2>
+<p class="meta">Accumulated growing degree days (base {{ base_temp }}&#176;F) from January 1</p>
+
+<div class="gdd-timeline-container">
+<svg viewBox="0 0 {{ svg_width }} {{ svg_height }}" class="gdd-timeline-svg"
+     xmlns="http://www.w3.org/2000/svg">
+
+    {# Y-axis grid lines and labels #}
+    {% for tick in y_ticks %}
+    <line x1="{{ margin_left }}" y1="{{ tick.y }}"
+          x2="{{ plot_right }}" y2="{{ tick.y }}"
+          stroke="#eee" stroke-width="1" />
+    <text x="{{ margin_left - 8 }}" y="{{ tick.y + 4 }}"
+          text-anchor="end" class="gdd-axis-label">{{ tick.label }}</text>
+    {% endfor %}
+
+    {# X-axis month labels #}
+    {% for label in x_labels %}
+    <text x="{{ label.x }}" y="{{ plot_bottom + 18 }}"
+          text-anchor="middle" class="gdd-axis-label">{{ label.text }}</text>
+    {% endfor %}
+
+    {# Normal band (mean +/- 1 stddev) #}
+    {% if normal_band_points %}
+    <polygon points="{{ normal_band_points }}"
+             fill="#e8d44d" fill-opacity="0.2" stroke="none" />
+    <polyline points="{{ normal_mean_points }}"
+              fill="none" stroke="#d4a017" stroke-width="1.5"
+              stroke-dasharray="4,3" opacity="0.7" />
+    {% endif %}
+
+    {# Previous year line #}
+    {% if previous_year_points %}
+    <polyline points="{{ previous_year_points }}"
+              fill="none" stroke="#999" stroke-width="1.2" opacity="0.5" />
+    {% endif %}
+
+    {# Current year line (bold) #}
+    {% if current_year_points %}
+    <polyline points="{{ current_year_points }}"
+              fill="none" stroke="#222" stroke-width="2.5" />
+    {% endif %}
+
+    {# Today marker #}
+    {% if today_x is not none %}
+    <line x1="{{ today_x }}" y1="{{ margin_top }}"
+          x2="{{ today_x }}" y2="{{ plot_bottom }}"
+          stroke="#e6194b" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
+    <text x="{{ today_x }}" y="{{ margin_top - 6 }}"
+          text-anchor="middle" class="gdd-today-label">today</text>
+    {% endif %}
+
+    {# Species GDD threshold markers #}
+    {% for sp in species_markers %}
+    <line x1="{{ margin_left }}" y1="{{ sp.y }}"
+          x2="{{ plot_right }}" y2="{{ sp.y }}"
+          stroke="{{ sp.color }}" stroke-width="0.8"
+          stroke-dasharray="2,4" opacity="0.5" />
+    <text x="{{ plot_right + 4 }}" y="{{ sp.y + 4 }}"
+          class="gdd-species-label" fill="{{ sp.color }}">{{ sp.label }}</text>
+    {% endfor %}
+
+    {# Axes #}
+    <line x1="{{ margin_left }}" y1="{{ margin_top }}"
+          x2="{{ margin_left }}" y2="{{ plot_bottom }}"
+          stroke="#888" stroke-width="1" />
+    <line x1="{{ margin_left }}" y1="{{ plot_bottom }}"
+          x2="{{ plot_right }}" y2="{{ plot_bottom }}"
+          stroke="#888" stroke-width="1" />
+</svg>
+</div>
+
+{# Legend #}
+<div class="legend">
+    <div class="legend-item">
+        <div style="width:20px;height:3px;background:#222;"></div> {{ current_year_label }}
+    </div>
+    {% if previous_year_label %}
+    <div class="legend-item">
+        <div style="width:20px;height:2px;background:#999;opacity:0.5;"></div> {{ previous_year_label }}
+    </div>
+    {% endif %}
+    {% if normal_range %}
+    <div class="legend-item">
+        <div style="width:20px;height:2px;background:#d4a017;opacity:0.7;" class="dashed-line"></div> {{ normal_range }} normal
+    </div>
+    {% endif %}
+</div>

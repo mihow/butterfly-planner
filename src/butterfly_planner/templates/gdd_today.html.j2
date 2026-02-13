@@ -1,0 +1,35 @@
+<h2>Growing Degree Days (base {{ base_temp }}&#176;F)</h2>
+
+<div class="gdd-card">
+    <div class="gdd-stats">
+        <div class="gdd-stat gdd-stat-primary">
+            <span class="gdd-value">{{ current_gdd }}</span>
+            <span class="gdd-label">Today &mdash; {{ current_date }}</span>
+        </div>
+        {% if previous_gdd is not none %}
+        <div class="gdd-stat">
+            <span class="gdd-value">{{ previous_gdd }}</span>
+            <span class="gdd-label">Last year ({{ previous_year }})</span>
+        </div>
+        {% endif %}
+        {% if normal_gdd is not none %}
+        <div class="gdd-stat">
+            <span class="gdd-value">{{ normal_gdd }}</span>
+            <span class="gdd-label">Normal ({{ normal_range }})</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if status_text %}
+    <div class="gdd-status">
+        <div class="gdd-track">
+            <span class="gdd-track-label">early</span>
+            <div class="gdd-track-bar">
+                <div class="gdd-track-marker" style="left: {{ status_pct }}%;" title="{{ status_text }}"></div>
+            </div>
+            <span class="gdd-track-label">late</span>
+        </div>
+        <p class="gdd-status-text">{{ status_text }}</p>
+    </div>
+    {% endif %}
+</div>
