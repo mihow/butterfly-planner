@@ -14,12 +14,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import requests
+from butterfly_planner.services.http import session
 
 OPEN_METEO_API = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_HISTORICAL = "https://archive-api.open-meteo.com/v1/archive"
-
-USER_AGENT = "butterfly-planner/0.1 (https://github.com/mihow/butterfly-planner)"
 
 # Daily variables we request from the archive API
 _DAILY_VARS = [
@@ -56,8 +54,7 @@ def fetch_historical_daily(
         "daily": _DAILY_VARS,
         "timezone": "America/Los_Angeles",
     }
-    headers = {"User-Agent": USER_AGENT}
-    resp = requests.get(OPEN_METEO_HISTORICAL, params=params, headers=headers, timeout=30)
+    resp = session.get(OPEN_METEO_HISTORICAL, params=params)
     resp.raise_for_status()
     result: dict[str, Any] = resp.json()
     return result

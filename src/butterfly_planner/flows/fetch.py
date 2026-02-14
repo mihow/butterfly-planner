@@ -18,11 +18,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import requests
 from prefect import flow, task
 
 from butterfly_planner import inaturalist, sunshine
 from butterfly_planner.services import weather
+from butterfly_planner.services.http import session
 
 # Data directories
 DATA_DIR = Path("data")
@@ -55,7 +55,7 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
         "forecast_days": 16,
     }
 
-    resp = requests.get(url, params=params, timeout=30)
+    resp = session.get(url, params=params)
     resp.raise_for_status()
     result: dict[str, Any] = resp.json()
     return result
