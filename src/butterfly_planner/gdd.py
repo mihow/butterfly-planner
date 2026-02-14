@@ -590,14 +590,14 @@ def build_gdd_timeline_html(
     y_ticks = []
     for i in range(n_ticks + 1):
         val = y_max * i / n_ticks
-        y_ticks.append({"y": f"{y_for_gdd(val):.1f}", "label": f"{val:.0f}"})
+        y_ticks.append({"y": round(y_for_gdd(val), 1), "label": f"{val:.0f}"})
 
     # X-axis month labels
     x_labels = []
     for month in range(1, 13):
         # Approximate day-of-year for the 1st of each month
         doy = date(2024, month, 1).timetuple().tm_yday  # Use leap year for even spacing
-        x_labels.append({"x": f"{x_for_doy(doy):.1f}", "text": _MONTH_ABBREVS[month]})
+        x_labels.append({"x": round(x_for_doy(doy), 1), "text": _MONTH_ABBREVS[month]})
 
     # Build polyline points for current year
     current_year_points = _build_polyline(current.get("daily", []), x_for_doy, y_for_gdd)
@@ -608,7 +608,7 @@ def build_gdd_timeline_html(
     # Build normal band, today marker, and species markers
     normal_band_points, normal_mean_points = _build_normal_band(normals, x_for_doy, y_for_gdd)
     today = date.today()
-    today_x = f"{x_for_doy(today.timetuple().tm_yday):.1f}"
+    today_x = round(x_for_doy(today.timetuple().tm_yday), 1)
     species_markers = _build_species_markers(species_profiles, y_max, y_for_gdd)
 
     return render_fn(
@@ -618,8 +618,8 @@ def build_gdd_timeline_html(
         svg_height=svg_height,
         margin_left=margin_left,
         margin_top=margin_top,
-        plot_right=f"{plot_right:.0f}",
-        plot_bottom=f"{plot_bottom:.0f}",
+        plot_right=plot_right,
+        plot_bottom=plot_bottom,
         y_ticks=y_ticks,
         x_labels=x_labels,
         current_year_points=current_year_points,
@@ -686,7 +686,7 @@ def _build_species_markers(
         if profile.gdd_median <= y_max:
             markers.append(
                 {
-                    "y": f"{y_fn(profile.gdd_median):.1f}",
+                    "y": round(y_fn(profile.gdd_median), 1),
                     "label": profile.common_name,
                     "color": "#666",
                 }
