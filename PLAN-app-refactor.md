@@ -29,37 +29,36 @@ Categorically, this is a **geospatial decision-support system** — a multi-sour
 
 ### Open-Source Projects to Study
 
-The architecture doesn't map to one single project, but several are worth studying for specific patterns:
+The architecture doesn't map to one single project. We deliberately look to **well-engineered Python platforms** rather than biodiversity/ecological projects for structural guidance — bio projects tend to grow from research scripts and R codebases, optimizing for ad-hoc analysis rather than maintainable packaging. Our domain is ecological, but our engineering problems (multi-source integration, caching, derived analysis, dashboard rendering) are the same as any data platform.
 
-**For multi-source integration architecture (non-geospatial):**
+**Primary architectural references:**
 
 | Project | Stars | What to study | Link |
 |---|---|---|---|
-| **Home Assistant** | 79k+ | Integration pattern: each data source is a directory with `manifest.json`, `__init__.py`, `coordinator.py`. The `DataUpdateCoordinator` pattern (fetch with polling interval, cache, notify consumers) is very close to our `store.py` + `datasources/` design. | [home-assistant/core](https://github.com/home-assistant/core) |
+| **Home Assistant** | 79k+ | Integration pattern: each data source is a self-contained directory with `manifest.json`, `__init__.py`, `coordinator.py`. The `DataUpdateCoordinator` pattern (fetch with polling interval, cache, notify consumers) is very close to our `store.py` + `datasources/` design. | [home-assistant/core](https://github.com/home-assistant/core) |
 | **Dagster `project_fully_featured`** | — | Software-defined assets pattern: data flows from sources → assets → derived assets. Groups assets by domain (core, recommender, analytics). Multi-environment support (local=DuckDB, prod=Snowflake). Shows how an orchestrator should be thin. | [dagster examples](https://github.com/dagster-io/dagster/tree/master/examples/project_fully_featured) |
+| **Dagster `hooli-data-eng-pipelines`** | — | Realistic multi-source ETL: ingest from API → transform with dbt → serve to downstream teams. Shows asset dependencies and partitioned data (by time). | [dagster-io/hooli-data-eng-pipelines](https://github.com/dagster-io/hooli-data-eng-pipelines) |
 | **Mycodo** | 3k+ | Environmental monitoring with pluggable inputs, InfluxDB time-series storage, configurable dashboard widgets. Shows how sensor/API inputs feed through a data pipeline to dashboard rendering. | [kizniche/Mycodo](https://github.com/kizniche/Mycodo) |
 
-**For geospatial + ecological data fusion:**
+**Further research (TODO):** Evaluate the pipeline/orchestration patterns of [Dagster](https://github.com/dagster-io/dagster), [Prefect](https://github.com/PrefectHQ/prefect) (already in use), [Hamilton](https://github.com/dagworks-inc/hamilton) (DAG-based dataflow with lightweight function-level lineage), and [MLflow](https://github.com/mlflow/mlflow) (experiment tracking, artifact storage). Hamilton is particularly interesting — it models data transforms as a DAG of Python functions, which maps directly to our `datasources → analysis → renderers` pipeline without the weight of a full orchestration platform.
 
-| Project | Stars | What to study | Link |
-|---|---|---|---|
-| **elapid** | 69 | Species distribution modeling: combines species occurrence points + environmental rasters. Uses sklearn conventions, rasterio for rasters, geopandas for vectors. Good model for how `analysis/` modules should take typed inputs from different sources. | [earth-chris/elapid](https://github.com/earth-chris/elapid) |
-| **phenodata** | ~30 | Phenology data acquisition toolkit. Uses DuckDB to query pandas DataFrames, FTP caching. Closest existing project to what our flower phenology datasource will look like. | [earthobservations/phenodata](https://github.com/earthobservations/phenodata) |
-| **DDRP v3** | ~20 | Degree-day pest mapping system. Predicts phenology and climate suitability using GDD — exactly our domain. Written in R, but the data model (degree-day parameters per life stage, climate suitability grids) is directly applicable. | [bbarker505/ddrp_v3](https://github.com/bbarker505/ddrp_v3) |
-| **eBird Status & Trends** | — | Cornell Lab's species distribution pipeline. ML models combine citizen-science observations + remotely-sensed habitat variables. The API pattern and data products structure (weekly abundance estimates across the annual cycle) is what we're building toward for butterflies. | [ebird/ebirdst](https://github.com/ebird/ebirdst) |
+**Domain-specific references (for data models, not architecture):**
 
-**For the data pipeline pattern (non-geospatial):**
+These projects are useful for understanding the *domain* (GDD parameters, species phenology models, observation data structures) but should not be used as packaging or architecture references:
 
-| Project | Stars | What to study | Link |
-|---|---|---|---|
-| **Dagster `hooli-data-eng-pipelines`** | — | Realistic multi-source ETL: ingest from API → transform with dbt → serve to downstream teams. Shows asset dependencies and partitioned data (by time). | [dagster-io/hooli-data-eng-pipelines](https://github.com/dagster-io/hooli-data-eng-pipelines) |
-| **Open Sustainable Technology** | 1.7k+ | Curated directory of open-source climate/biodiversity/energy projects. Good for discovering additional data sources and seeing how other ecological projects are structured. | [protontypes/open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology) |
+| Project | What to learn (domain only) | Link |
+|---|---|---|
+| **DDRP v3** | Degree-day pest mapping data model: per-life-stage parameters, climate suitability grids | [bbarker505/ddrp_v3](https://github.com/bbarker505/ddrp_v3) |
+| **eBird Status & Trends** | Weekly abundance estimates across annual cycle, species data products API | [ebird/ebirdst](https://github.com/ebird/ebirdst) |
+| **phenodata** | Phenology data acquisition patterns, DuckDB for querying cached data | [earthobservations/phenodata](https://github.com/earthobservations/phenodata) |
+| **elapid** | How SDM tools combine occurrence points + environmental rasters | [earth-chris/elapid](https://github.com/earth-chris/elapid) |
+| **Open Sustainable Technology** | Curated directory for discovering additional data sources | [protontypes/open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology) |
 
-**Key architectural takeaways across these projects:**
+**Key architectural takeaways:**
 
-1. **Home Assistant's integration pattern** is the closest match to our `datasources/` design — self-contained directories, each with a coordinator that handles polling/caching, a manifest for metadata, and platform files for different entity types. Our `README.md` per datasource serves the same role as their `manifest.json`.
-2. **Dagster's asset graph** validates our `datasources → analysis → renderers` pipeline — derived assets (our `analysis/`) depend on upstream assets (our `datasources/`) and the framework handles staleness/recomputation.
-3. **phenodata's use of DuckDB** for querying cached data is worth exploring as a future evolution of our `store.py` (see Open Questions).
+1. **Home Assistant's integration pattern** is the closest match to our `datasources/` design — self-contained directories, each with a coordinator that handles polling/caching, a manifest for metadata, and platform files for different entity types.
+2. **Dagster's asset graph** validates our `datasources → analysis → renderers` pipeline — derived assets depend on upstream assets and the framework handles staleness/recomputation.
+3. **Hamilton's function-level DAG** is worth evaluating as a lighter-weight alternative to Prefect for the `analysis/` layer specifically — each analysis function declares its inputs as function parameters, and Hamilton auto-wires the DAG.
 
 ---
 
