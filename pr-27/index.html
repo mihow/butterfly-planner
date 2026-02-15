@@ -100,12 +100,12 @@
         .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
         .tl-seg:hover { opacity: 0.65; }
 
-        /* --- Sunshine color scale (vibrant warm palette) --- */
+        /* --- Sunshine color scale (muddy pale → bright lemon) --- */
         .sunshine-none { background: #e8e8e8; }
-        .sunshine-low  { background: #fff3b0; }
-        .sunshine-med  { background: #ffd43b; }
-        .sunshine-high { background: #ff922b; }
-        .sunshine-full { background: #ff6b2b; }
+        .sunshine-low  { background: #f5eec2; }
+        .sunshine-med  { background: #f0e068; }
+        .sunshine-high { background: #f5e642; }
+        .sunshine-full { background: #fff44f; }
 
         /* --- Inline hourly bar (16-day table) --- */
         .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
@@ -364,12 +364,12 @@
     <header>
         <h1>Butterfly Planner</h1>
         <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
-        <div class="updated">Last updated 2026-02-15 11:19 PST</div>
+        <div class="updated">Last updated 2026-02-15 12:43 PST</div>
     </header>
 
     <main>
     <h2>Today's Sun Breaks &mdash; February 15</h2>
-<p class="summary">Total sunshine expected: <strong>7.7 hours</strong>
+<p class="summary">Total sunshine expected: <strong>6.4 hours</strong>
 &mdash; Sunrise 7:15 AM, Sunset 5:30 PM</p>
 <div class="legend">
     <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
@@ -442,21 +442,21 @@
         
         <div class="tl-seg sunshine-full" title="11:30 AM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="11:45 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="11:45 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="12:00 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="12:00 PM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="12:15 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="12:15 PM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="12:30 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="12:30 PM: 0 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="12:45 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="01:00 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-med" title="01:00 PM: 6 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="01:15 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="01:30 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-med" title="01:30 PM: 4 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="01:45 PM: 15 min sun"></div>
         
@@ -486,7 +486,7 @@
         
         <div class="tl-seg sunshine-full" title="05:00 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-med" title="05:15 PM: 7 min sun"></div>
+        <div class="tl-seg sunshine-med" title="05:15 PM: 6 min sun"></div>
         
         <div class="tl-seg sunshine-low" title="05:30 PM: 3 min sun"></div>
         
@@ -510,9 +510,9 @@
     
     <tr class="good-day">
         <td>2026-02-15</td>
-        <td>8.0h of 10.4h</td>
-        <td>77% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="09 AM: 17min sun"></div><div class="hour-seg" style="background:#b8860b;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 26min sun"></div></div></td>
-        <td><span class="temp-high">10°C</span> / <span class="temp-low">4°C</span></td>
+        <td>7.5h of 10.4h</td>
+        <td>72% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="09 AM: 17min sun"></div><div class="hour-seg" style="background:#b8860b;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 45min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="12 PM: 15min sun"></div><div class="hour-seg" style="background:#d4a017;" title="01 PM: 40min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 24min sun"></div></div></td>
+        <td><span class="temp-high">9°C</span> / <span class="temp-low">4°C</span></td>
         <td>0.7mm</td>
         <td>🌦️ Light Drizzle</td>
     </tr>
@@ -522,16 +522,16 @@
         <td>0.0h of 10.5h</td>
         <td>0% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="10 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="04 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="05 PM: 0min sun"></div></div></td>
         <td><span class="temp-high">5°C</span> / <span class="temp-low">2°C</span></td>
-        <td>10.0mm</td>
-        <td>🌨️ Snow</td>
+        <td>3.0mm</td>
+        <td>🌦️ Heavy Drizzle</td>
     </tr>
     
     <tr class="good-day">
         <td>2026-02-17</td>
-        <td>8.5h of 10.5h</td>
-        <td>80% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="08 AM: 17min sun"></div><div class="hour-seg" style="background:#b8860b;" title="09 AM: 52min sun"></div><div class="hour-seg" style="background:#b8860b;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 27min sun"></div></div></td>
+        <td>8.0h of 10.5h</td>
+        <td>76% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#d4a017;" title="10 AM: 38min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 27min sun"></div></div></td>
         <td><span class="temp-high">6°C</span> / <span class="temp-low">1°C</span></td>
-        <td>6.6mm</td>
+        <td>5.3mm</td>
         <td>🌨️ Light Snow Showers</td>
     </tr>
     
