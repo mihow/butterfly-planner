@@ -6,20 +6,22 @@ References for Claude Code best practices. Updated periodically via GitHub Actio
 
 ### Claude Code Best Practices
 - **URL**: https://code.claude.com/docs/en/best-practices
-- **Last Checked**: 2025-02-01
+- **Last Checked**: 2026-02-15
 - **Key Topics**: Context management, verification, CLAUDE.md writing, subagents, hooks
 
 ### Claude Code Memory (CLAUDE.md)
 - **URL**: https://code.claude.com/docs/en/memory
-- **Last Checked**: 2025-02-01
+- **Last Checked**: 2026-02-15
 - **Key Topics**: Memory hierarchy, rules, imports, path-specific rules
 
 ### Claude Code Skills
 - **URL**: https://code.claude.com/docs/en/skills
+- **Last Checked**: 2026-02-15
 - **Key Topics**: Creating skills, SKILL.md format, workflows
 
 ### Claude Code Sub-agents
 - **URL**: https://code.claude.com/docs/en/sub-agents
+- **Last Checked**: 2026-02-15
 - **Key Topics**: Agent definitions, tool restrictions, delegation
 
 ## Key Best Practices Summary
