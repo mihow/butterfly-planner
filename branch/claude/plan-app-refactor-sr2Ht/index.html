@@ -179,6 +179,61 @@
         .obs-popup-body { font-size: 0.85rem; line-height: 1.45; }
         .obs-popup-weather { font-size: 0.8rem; color: #555; }
 
+        /* --- GDD card --- */
+        .gdd-card {
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+        }
+        .gdd-stats {
+            display: flex;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .gdd-stat { display: flex; flex-direction: column; }
+        .gdd-stat-primary .gdd-value { font-size: 1.6rem; }
+        .gdd-value {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #222;
+        }
+        .gdd-label { font-size: 0.82rem; color: #666; margin-top: 0.15rem; }
+        .gdd-status { margin-top: 1rem; }
+        .gdd-track {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .gdd-track-bar {
+            flex: 1;
+            height: 6px;
+            background: linear-gradient(to right, #4363d8, #e8d44d, #e6194b);
+            border-radius: 3px;
+            position: relative;
+        }
+        .gdd-track-marker {
+            position: absolute;
+            top: -4px;
+            width: 2px;
+            height: 14px;
+            background: #222;
+            transform: translateX(-50%);
+        }
+        .gdd-track-label { white-space: nowrap; }
+        .gdd-status-text { font-size: 0.85rem; color: #555; margin-top: 0.3rem; }
+
+        /* --- GDD timeline SVG --- */
+        .gdd-timeline-container { margin: 1rem 0; overflow-x: auto; }
+        .gdd-timeline-svg { width: 100%; height: auto; font-family: Georgia, serif; }
+        .gdd-axis-label { font-size: 11px; fill: #888; }
+        .gdd-today-label { font-size: 10px; fill: #e6194b; font-weight: 600; }
+        .gdd-species-label { font-size: 10px; }
+
         /* --- About section --- */
         .about p { text-align: justify; font-size: 0.92rem; }
         .about ul {
@@ -216,13 +271,13 @@
     <header>
         <h1>Butterfly Planner</h1>
         <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
-        <div class="updated">Last updated 2026-02-12 19:29 PST</div>
+        <div class="updated">Last updated 2026-02-15 09:31 PST</div>
     </header>
 
     <main>
-    <h2>Today's Sun Breaks &mdash; February 12</h2>
-<p class="summary">Total sunshine expected: <strong>7.0 hours</strong>
-&mdash; Sunrise 7:30 AM, Sunset 5:30 PM</p>
+    <h2>Today's Sun Breaks &mdash; February 15</h2>
+<p class="summary">Total sunshine expected: <strong>3.9 hours</strong>
+&mdash; Sunrise 7:15 AM, Sunset 5:30 PM</p>
 <div class="legend">
     <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
     <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
@@ -235,28 +290,30 @@
         
         <span class="tl-label" style="left:0.0%">7am</span>
         
-        <span class="tl-label" style="left:4.9%">8am</span>
+        <span class="tl-label" style="left:7.1%">8am</span>
         
-        <span class="tl-label" style="left:14.6%">9am</span>
+        <span class="tl-label" style="left:16.7%">9am</span>
         
-        <span class="tl-label" style="left:24.4%">10am</span>
+        <span class="tl-label" style="left:26.2%">10am</span>
         
-        <span class="tl-label" style="left:34.1%">11am</span>
+        <span class="tl-label" style="left:35.7%">11am</span>
         
-        <span class="tl-label" style="left:43.9%">12pm</span>
+        <span class="tl-label" style="left:45.2%">12pm</span>
         
-        <span class="tl-label" style="left:53.7%">1pm</span>
+        <span class="tl-label" style="left:54.8%">1pm</span>
         
-        <span class="tl-label" style="left:63.4%">2pm</span>
+        <span class="tl-label" style="left:64.3%">2pm</span>
         
-        <span class="tl-label" style="left:73.2%">3pm</span>
+        <span class="tl-label" style="left:73.8%">3pm</span>
         
-        <span class="tl-label" style="left:82.9%">4pm</span>
+        <span class="tl-label" style="left:83.3%">4pm</span>
         
-        <span class="tl-label" style="left:92.7%">5pm</span>
+        <span class="tl-label" style="left:92.9%">5pm</span>
         
     </div>
     <div class="tl-bar">
+        
+        <div class="tl-seg sunshine-none" title="07:15 AM: 0 min sun"></div>
         
         <div class="tl-seg sunshine-none" title="07:30 AM: 0 min sun"></div>
         
@@ -274,29 +331,29 @@
         
         <div class="tl-seg sunshine-none" title="09:15 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-none" title="09:30 AM: 0 min sun"></div>
+        <div class="tl-seg sunshine-low" title="09:30 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-low" title="09:45 AM: 2 min sun"></div>
+        <div class="tl-seg sunshine-high" title="09:45 AM: 10 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="10:00 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-full" title="10:00 AM: 13 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="10:15 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="10:15 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-low" title="10:30 AM: 4 min sun"></div>
+        <div class="tl-seg sunshine-none" title="10:30 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="10:45 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="10:45 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="11:00 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="11:00 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="11:15 AM: 14 min sun"></div>
+        <div class="tl-seg sunshine-none" title="11:15 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="11:30 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="11:30 AM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="11:45 AM: 15 min sun"></div>
+        <div class="tl-seg sunshine-high" title="11:45 AM: 9 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="12:00 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-med" title="12:00 PM: 7 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="12:15 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-med" title="12:15 PM: 6 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="12:30 PM: 15 min sun"></div>
         
@@ -306,39 +363,39 @@
         
         <div class="tl-seg sunshine-full" title="01:15 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="01:30 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-low" title="01:30 PM: 0 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="01:45 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="02:00 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-high" title="02:00 PM: 9 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="02:15 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="02:15 PM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="02:30 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="02:30 PM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="02:45 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="02:45 PM: 0 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="03:00 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-none" title="03:00 PM: 0 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="03:15 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="03:30 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-low" title="03:30 PM: 1 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="03:45 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-low" title="03:45 PM: 3 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="04:00 PM: 15 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="04:15 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-full" title="04:30 PM: 15 min sun"></div>
+        <div class="tl-seg sunshine-full" title="04:30 PM: 13 min sun"></div>
         
         <div class="tl-seg sunshine-full" title="04:45 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-med" title="05:00 PM: 5 min sun"></div>
+        <div class="tl-seg sunshine-full" title="05:00 PM: 15 min sun"></div>
         
-        <div class="tl-seg sunshine-low" title="05:15 PM: 3 min sun"></div>
+        <div class="tl-seg sunshine-med" title="05:15 PM: 7 min sun"></div>
         
-        <div class="tl-seg sunshine-med" title="05:30 PM: 5 min sun"></div>
+        <div class="tl-seg sunshine-low" title="05:30 PM: 3 min sun"></div>
         
     </div>
 </div>
@@ -359,83 +416,56 @@
     <tbody>
     
     <tr class="good-day">
-        <td>2026-02-12</td>
-        <td>7.5h of 10.3h</td>
-        <td>73% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="09 AM: 2min sun"></div><div class="hour-seg" style="background:#b8860b;" title="10 AM: 49min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 59min sun"></div><div class="hour-seg" style="background:#b8860b;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="05 PM: 12min sun"></div></div></td>
-        <td><span class="temp-high">12°C</span> / <span class="temp-low">2°C</span></td>
-        <td>0.0mm</td>
-        <td>☁️ Overcast</td>
-    </tr>
-    
-    <tr class="">
-        <td>2026-02-13</td>
-        <td>0.0h of 10.3h</td>
-        <td>0% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="09 AM: 5min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="10 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="04 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="05 PM: 0min sun"></div></div></td>
-        <td><span class="temp-high">10°C</span> / <span class="temp-low">4°C</span></td>
-        <td>6.3mm</td>
-        <td>🌧️ Light Rain</td>
-    </tr>
-    
-    <tr class="">
-        <td>2026-02-14</td>
-        <td>2.0h of 10.4h</td>
-        <td>19% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="10 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="12 PM: 1min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="04 PM: 24min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="05 PM: 9min sun"></div></div></td>
-        <td><span class="temp-high">8°C</span> / <span class="temp-low">5°C</span></td>
-        <td>8.0mm</td>
-        <td>🌧️ Light Rain</td>
-    </tr>
-    
-    <tr class="">
         <td>2026-02-15</td>
-        <td>0.0h of 10.4h</td>
-        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
-        <td><span class="temp-high">6°C</span> / <span class="temp-low">4°C</span></td>
-        <td>4.9mm</td>
-        <td>🌦️ Heavy Drizzle</td>
+        <td>4.0h of 10.4h</td>
+        <td>38% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="09 AM: 10min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="10 AM: 13min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="11 AM: 9min sun"></div><div class="hour-seg" style="background:#d4a017;" title="12 PM: 43min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 45min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="02 PM: 9min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="03 PM: 19min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 58min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 26min sun"></div></div></td>
+        <td><span class="temp-high">10°C</span> / <span class="temp-low">4°C</span></td>
+        <td>0.7mm</td>
+        <td>🌦️ Light Drizzle</td>
     </tr>
     
     <tr class="">
         <td>2026-02-16</td>
         <td>0.0h of 10.5h</td>
-        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
-        <td><span class="temp-high">5°C</span> / <span class="temp-low">4°C</span></td>
-        <td>9.9mm</td>
-        <td>🌦️ Light Showers</td>
+        <td>0% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="10 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="04 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="05 PM: 0min sun"></div></div></td>
+        <td><span class="temp-high">5°C</span> / <span class="temp-low">2°C</span></td>
+        <td>10.1mm</td>
+        <td>🌨️ Snow</td>
     </tr>
     
     <tr class="good-day">
         <td>2026-02-17</td>
-        <td>9.4h of 10.5h</td>
-        <td>89% <div class="sunshine-bar" style="width: 266px;"></div></td>
-        <td><span class="temp-high">8°C</span> / <span class="temp-low">3°C</span></td>
-        <td>0.3mm</td>
-        <td>🌦️ Light Drizzle</td>
+        <td>8.5h of 10.5h</td>
+        <td>80% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="08 AM: 17min sun"></div><div class="hour-seg" style="background:#b8860b;" title="09 AM: 52min sun"></div><div class="hour-seg" style="background:#b8860b;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 27min sun"></div></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">1°C</span></td>
+        <td>6.6mm</td>
+        <td>🌨️ Light Snow Showers</td>
     </tr>
     
     <tr class="good-day">
         <td>2026-02-18</td>
-        <td>9.6h of 10.6h</td>
-        <td>91% <div class="sunshine-bar" style="width: 271px;"></div></td>
-        <td><span class="temp-high">9°C</span> / <span class="temp-low">0°C</span></td>
-        <td>0.4mm</td>
-        <td>🌦️ Light Drizzle</td>
+        <td>9.3h of 10.6h</td>
+        <td>88% <div class="sunshine-bar" style="width: 264px;"></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">-1°C</span></td>
+        <td>5.4mm</td>
+        <td>🌨️ Light Snow Showers</td>
     </tr>
     
-    <tr class="">
+    <tr class="good-day">
         <td>2026-02-19</td>
-        <td>2.3h of 10.6h</td>
-        <td>22% <div class="sunshine-bar" style="width: 66px;"></div></td>
-        <td><span class="temp-high">6°C</span> / <span class="temp-low">2°C</span></td>
-        <td>1.1mm</td>
-        <td>🌦️ Light Drizzle</td>
+        <td>8.6h of 10.6h</td>
+        <td>81% <div class="sunshine-bar" style="width: 243px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">-0°C</span></td>
+        <td>4.0mm</td>
+        <td>🌨️ Light Snow</td>
     </tr>
     
-    <tr class="">
+    <tr class="good-day">
         <td>2026-02-20</td>
-        <td>1.2h of 10.7h</td>
-        <td>11% <div class="sunshine-bar" style="width: 33px;"></div></td>
-        <td><span class="temp-high">6°C</span> / <span class="temp-low">2°C</span></td>
-        <td>1.9mm</td>
+        <td>8.8h of 10.7h</td>
+        <td>83% <div class="sunshine-bar" style="width: 247px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">-0°C</span></td>
+        <td>0.2mm</td>
         <td>🌦️ Light Drizzle</td>
     </tr>
     
@@ -443,62 +473,89 @@
         <td>2026-02-21</td>
         <td>0.0h of 10.7h</td>
         <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
-        <td><span class="temp-high">7°C</span> / <span class="temp-low">4°C</span></td>
-        <td>5.6mm</td>
-        <td>🌦️ Drizzle</td>
+        <td><span class="temp-high">4°C</span> / <span class="temp-low">3°C</span></td>
+        <td>3.8mm</td>
+        <td>🌦️ Light Drizzle</td>
     </tr>
     
-    <tr class="">
+    <tr class="good-day">
         <td>2026-02-22</td>
-        <td>0.0h of 10.8h</td>
-        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
-        <td><span class="temp-high">10°C</span> / <span class="temp-low">8°C</span></td>
-        <td>10.2mm</td>
-        <td>🌦️ Drizzle</td>
+        <td>8.0h of 10.8h</td>
+        <td>74% <div class="sunshine-bar" style="width: 222px;"></div></td>
+        <td><span class="temp-high">9°C</span> / <span class="temp-low">3°C</span></td>
+        <td>0.3mm</td>
+        <td>🌦️ Light Drizzle</td>
     </tr>
     
     <tr class="">
         <td>2026-02-23</td>
         <td>0.0h of 10.8h</td>
         <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
-        <td><span class="temp-high">9°C</span> / <span class="temp-low">7°C</span></td>
-        <td>3.6mm</td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">6°C</span></td>
+        <td>8.1mm</td>
         <td>🌦️ Drizzle</td>
     </tr>
     
     <tr class="good-day">
         <td>2026-02-24</td>
-        <td>9.9h of 10.9h</td>
-        <td>91% <div class="sunshine-bar" style="width: 272px;"></div></td>
-        <td><span class="temp-high">10°C</span> / <span class="temp-low">6°C</span></td>
-        <td>2.4mm</td>
+        <td>5.7h of 10.9h</td>
+        <td>52% <div class="sunshine-bar" style="width: 157px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">3°C</span></td>
+        <td>4.2mm</td>
         <td>🌦️ Light Drizzle</td>
     </tr>
     
-    <tr class="">
+    <tr class="good-day">
         <td>2026-02-25</td>
-        <td>2.1h of 10.9h</td>
-        <td>19% <div class="sunshine-bar" style="width: 58px;"></div></td>
-        <td><span class="temp-high">7°C</span> / <span class="temp-low">4°C</span></td>
-        <td>3.4mm</td>
+        <td>9.5h of 10.9h</td>
+        <td>87% <div class="sunshine-bar" style="width: 260px;"></div></td>
+        <td><span class="temp-high">9°C</span> / <span class="temp-low">1°C</span></td>
+        <td>1.4mm</td>
         <td>🌦️ Drizzle</td>
     </tr>
     
-    <tr class="good-day">
+    <tr class="">
         <td>2026-02-26</td>
-        <td>5.1h of 11.0h</td>
-        <td>47% <div class="sunshine-bar" style="width: 140px;"></div></td>
-        <td><span class="temp-high">7°C</span> / <span class="temp-low">3°C</span></td>
-        <td>6.9mm</td>
-        <td>🌦️ Drizzle</td>
+        <td>0.0h of 11.0h</td>
+        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">2°C</span></td>
+        <td>11.5mm</td>
+        <td>🌦️ Heavy Drizzle</td>
     </tr>
     
     <tr class="good-day">
         <td>2026-02-27</td>
+        <td>9.6h of 11.1h</td>
+        <td>87% <div class="sunshine-bar" style="width: 261px;"></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">1°C</span></td>
+        <td>2.1mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-28</td>
         <td>10.1h of 11.1h</td>
         <td>91% <div class="sunshine-bar" style="width: 273px;"></div></td>
-        <td><span class="temp-high">8°C</span> / <span class="temp-low">2°C</span></td>
-        <td>1.1mm</td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">-1°C</span></td>
+        <td>0.0mm</td>
+        <td>🌫️ Fog</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-03-01</td>
+        <td>10.2h of 11.2h</td>
+        <td>91% <div class="sunshine-bar" style="width: 273px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">-0°C</span></td>
+        <td>0.0mm</td>
+        <td>🌫️ Fog</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-03-02</td>
+        <td>8.3h of 11.2h</td>
+        <td>74% <div class="sunshine-bar" style="width: 222px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">1°C</span></td>
+        <td>1.0mm</td>
         <td>🌦️ Light Drizzle</td>
     </tr>
     
@@ -507,9 +564,175 @@
 <p class="meta">Highlighted rows indicate good butterfly weather
 (&gt;3 h sunshine or &gt;40% sunny). Hover hourly bars for detail.</p>
 
+    <h2>Growing Degree Days (base 50&#176;F)</h2>
+
+<div class="gdd-card">
+    <div class="gdd-stats">
+        <div class="gdd-stat gdd-stat-primary">
+            <span class="gdd-value">38</span>
+            <span class="gdd-label">Today &mdash; February 14, 2026</span>
+        </div>
+        
+        <div class="gdd-stat">
+            <span class="gdd-value">3</span>
+            <span class="gdd-label">Last year (2025)</span>
+        </div>
+        
+        
+    </div>
+
+    
+    <div class="gdd-status">
+        <div class="gdd-track">
+            <span class="gdd-track-label">early</span>
+            <div class="gdd-track-bar">
+                <div class="gdd-track-marker" style="left: 85%;" title="+35 GDD ahead of last year"></div>
+            </div>
+            <span class="gdd-track-label">late</span>
+        </div>
+        <p class="gdd-status-text">+35 GDD ahead of last year</p>
+    </div>
+    
+</div>
+
+    <h2>GDD Accumulation Timeline</h2>
+<p class="meta">Accumulated growing degree days (base 50&#176;F) from January 1</p>
+
+<div class="gdd-timeline-container">
+<svg viewBox="0 0 760 340" class="gdd-timeline-svg"
+     xmlns="http://www.w3.org/2000/svg">
+
+    
+    
+    <line x1="55" y1="310.0"
+          x2="680" y2="310.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="314.0"
+          text-anchor="end" class="gdd-axis-label">0</text>
+    
+    <line x1="55" y1="253.0"
+          x2="680" y2="253.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="257.0"
+          text-anchor="end" class="gdd-axis-label">800</text>
+    
+    <line x1="55" y1="196.0"
+          x2="680" y2="196.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="200.0"
+          text-anchor="end" class="gdd-axis-label">1600</text>
+    
+    <line x1="55" y1="139.0"
+          x2="680" y2="139.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="143.0"
+          text-anchor="end" class="gdd-axis-label">2400</text>
+    
+    <line x1="55" y1="82.0"
+          x2="680" y2="82.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="86.0"
+          text-anchor="end" class="gdd-axis-label">3200</text>
+    
+    <line x1="55" y1="25.0"
+          x2="680" y2="25.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="29.0"
+          text-anchor="end" class="gdd-axis-label">4000</text>
+    
+
+    
+    
+    <text x="55.0" y="328"
+          text-anchor="middle" class="gdd-axis-label">Jan</text>
+    
+    <text x="108.1" y="328"
+          text-anchor="middle" class="gdd-axis-label">Feb</text>
+    
+    <text x="157.7" y="328"
+          text-anchor="middle" class="gdd-axis-label">Mar</text>
+    
+    <text x="210.8" y="328"
+          text-anchor="middle" class="gdd-axis-label">Apr</text>
+    
+    <text x="262.2" y="328"
+          text-anchor="middle" class="gdd-axis-label">May</text>
+    
+    <text x="315.3" y="328"
+          text-anchor="middle" class="gdd-axis-label">Jun</text>
+    
+    <text x="366.6" y="328"
+          text-anchor="middle" class="gdd-axis-label">Jul</text>
+    
+    <text x="419.7" y="328"
+          text-anchor="middle" class="gdd-axis-label">Aug</text>
+    
+    <text x="472.8" y="328"
+          text-anchor="middle" class="gdd-axis-label">Sep</text>
+    
+    <text x="524.2" y="328"
+          text-anchor="middle" class="gdd-axis-label">Oct</text>
+    
+    <text x="577.3" y="328"
+          text-anchor="middle" class="gdd-axis-label">Nov</text>
+    
+    <text x="628.6" y="328"
+          text-anchor="middle" class="gdd-axis-label">Dec</text>
+    
+
+    
+    
+
+    
+    
+    <polyline points="55.0,310.0 56.7,310.0 58.4,310.0 60.1,310.0 61.8,309.9 63.6,309.9 65.3,309.9 67.0,309.8 68.7,309.8 70.4,309.8 72.1,309.8 73.8,309.8 75.5,309.8 77.3,309.8 79.0,309.8 80.7,309.8 82.4,309.8 84.1,309.8 85.8,309.8 87.5,309.8 89.2,309.8 91.0,309.8 92.7,309.8 94.4,309.8 96.1,309.8 97.8,309.8 99.5,309.8 101.2,309.8 102.9,309.8 104.7,309.8 106.4,309.8 108.1,309.8 109.8,309.8 111.5,309.8 113.2,309.8 114.9,309.8 116.6,309.8 118.4,309.8 120.1,309.8 121.8,309.8 123.5,309.8 125.2,309.8 126.9,309.8 128.6,309.8 130.3,309.8 132.1,309.8 133.8,309.8 135.5,309.8 137.2,309.7 138.9,309.6 140.6,309.6 142.3,309.6 144.0,309.3 145.8,309.1 147.5,309.0 149.2,308.8 150.9,308.5 152.6,308.0 154.3,307.6 156.0,307.3 157.7,307.3 159.5,307.2 161.2,307.1 162.9,306.9 164.6,306.8 166.3,306.7 168.0,306.4 169.7,306.1 171.4,306.1 173.2,306.0 174.9,306.0 176.6,306.0 178.3,306.0 180.0,306.0 181.7,306.0 183.4,306.0 185.1,306.0 186.8,305.9 188.6,305.9 190.3,305.9 192.0,305.7 193.7,305.5 195.4,304.8 197.1,304.0 198.8,302.8 200.5,302.4 202.3,302.3 204.0,302.1 205.7,301.7 207.4,301.7 209.1,301.5 210.8,301.5 212.5,301.4 214.2,300.8 216.0,300.1 217.7,299.9 219.4,299.6 221.1,299.5 222.8,299.0 224.5,298.5 226.2,298.3 227.9,298.1 229.7,297.6 231.4,296.9 233.1,296.3 234.8,295.8 236.5,295.2 238.2,294.5 239.9,294.1 241.6,294.0 243.4,293.8 245.1,293.4 246.8,292.8 248.5,291.9 250.2,291.3 251.9,290.7 253.6,290.4 255.3,290.0 257.1,289.4 258.8,288.9 260.5,287.8 262.2,287.0 263.9,286.6 265.6,286.2 267.3,285.4 269.0,284.3 270.8,283.7 272.5,283.0 274.2,282.1 275.9,281.5 277.6,281.1 279.3,280.8 281.0,280.3 282.7,279.8 284.5,279.6 286.2,279.2 287.9,278.8 289.6,278.6 291.3,278.1 293.0,277.8 294.7,277.3 296.4,276.8 298.2,276.2 299.9,275.2 301.6,274.6 303.3,273.7 305.0,272.6 306.7,271.1 308.4,270.3 310.1,269.0 311.8,268.2 313.6,267.4 315.3,266.6 317.0,265.6 318.7,264.7 320.4,263.5 322.1,262.0 323.8,260.5 325.5,258.8 327.3,256.9 329.0,255.5 330.7,254.4 332.4,253.5 334.1,253.0 335.8,252.3 337.5,251.3 339.2,250.3 341.0,249.1 342.7,248.1 344.4,247.2 346.1,246.7 347.8,246.5 349.5,245.8 351.2,244.7 352.9,243.4 354.7,242.5 356.4,241.5 358.1,240.4 359.8,239.3 361.5,237.8 363.2,236.1 364.9,234.4 366.6,233.0 368.4,231.9 370.1,230.8 371.8,229.7 373.5,228.3 375.2,226.7 376.9,225.1 378.6,223.6 380.3,222.0 382.1,220.4 383.8,218.7 385.5,216.9 387.2,215.4 388.9,213.9 390.6,212.2 392.3,210.5 394.0,208.9 395.8,207.6 397.5,206.6 399.2,205.4 400.9,204.1 402.6,202.4 404.3,200.9 406.0,199.6 407.7,198.4 409.5,197.1 411.2,195.7 412.9,194.1 414.6,192.4 416.3,190.7 418.0,189.1 419.7,187.6 421.4,186.5 423.2,185.2 424.9,183.9 426.6,182.6 428.3,181.6 430.0,180.5 431.7,179.0 433.4,177.2 435.1,175.4 436.8,173.5 438.6,171.6 440.3,170.0 442.0,168.6 443.7,167.2 445.4,165.9 447.1,164.5 448.8,163.1 450.5,161.6 452.3,160.2 454.0,158.6 455.7,156.8 457.4,154.8 459.1,152.9 460.8,151.0 462.5,149.0 464.2,147.2 466.0,145.5 467.7,144.2 469.4,142.7 471.1,141.3 472.8,139.6 474.5,137.8 476.2,136.0 477.9,134.4 479.7,133.1 481.4,131.8 483.1,130.5 484.8,129.2 486.5,127.9 488.2,126.7 489.9,125.6 491.6,124.3 493.4,123.4 495.1,122.6 496.8,121.0 498.5,119.6 500.2,118.4 501.9,117.2 503.6,115.9 505.3,115.0 507.1,114.2 508.8,113.0 510.5,111.8 512.2,111.0 513.9,110.2 515.6,109.3 517.3,108.3 519.0,107.7 520.8,107.0 522.5,106.3 524.2,105.8 525.9,105.2 527.6,104.5 529.3,103.8 531.0,103.1 532.7,102.0 534.5,101.6 536.2,101.2 537.9,100.8 539.6,100.5 541.3,100.4 543.0,100.2 544.7,99.8 546.4,99.4 548.2,99.1 549.9,98.7 551.6,98.4 553.3,98.0 555.0,97.7 556.7,97.3 558.4,96.9 560.1,96.4 561.8,96.1 563.6,95.9 565.3,95.8 567.0,95.7 568.7,95.6 570.4,95.3 572.1,95.2 573.8,95.0 575.5,94.6 577.3,94.4 579.0,94.4 580.7,94.2 582.4,93.8 584.1,93.4 585.8,93.1 587.5,92.9 589.2,92.6 591.0,92.4 592.7,92.2 594.4,91.9 596.1,91.5 597.8,91.3 599.5,90.9 601.2,90.8 602.9,90.8 604.7,90.8 606.4,90.7 608.1,90.6 609.8,90.6 611.5,90.6 613.2,90.6 614.9,90.6 616.6,90.6 618.4,90.6 620.1,90.4 621.8,90.3 623.5,90.3 625.2,90.3 626.9,90.3 628.6,90.3 630.3,90.3 632.1,90.3 633.8,90.1 635.5,90.0 637.2,89.7 638.9,89.5 640.6,89.3 642.3,88.7 644.0,88.3 645.8,88.1 647.5,88.0 649.2,88.0 650.9,87.6 652.6,87.2 654.3,87.0 656.0,86.8 657.7,86.8 659.5,86.8 661.2,86.8 662.9,86.8 664.6,86.8 666.3,86.8 668.0,86.8 669.7,86.8 671.4,86.8 673.2,86.8 674.9,86.8 676.6,86.8 678.3,86.8"
+              fill="none" stroke="#999" stroke-width="1.2" opacity="0.5" />
+    
+
+    
+    
+    <polyline points="55.0,310.0 56.7,309.9 58.4,309.9 60.1,309.9 61.8,309.9 63.6,309.9 65.3,309.9 67.0,309.9 68.7,309.9 70.4,309.9 72.1,309.8 73.8,309.8 75.5,309.8 77.3,309.8 79.0,309.6 80.7,309.6 82.4,309.6 84.1,309.6 85.8,309.6 87.5,309.6 89.2,309.6 91.0,309.6 92.7,309.6 94.4,309.6 96.1,309.6 97.8,309.6 99.5,309.6 101.2,309.6 102.9,309.6 104.7,309.6 106.4,309.2 108.1,309.0 109.8,308.8 111.5,308.5 113.2,308.2 114.9,308.0 116.6,307.9 118.4,307.8 120.1,307.8 121.8,307.7 123.5,307.6 125.2,307.4 126.9,307.3 128.6,307.3 130.3,307.3"
+              fill="none" stroke="#222" stroke-width="2.5" />
+    
+
+    
+    
+    <line x1="132.1" y1="25"
+          x2="132.1" y2="310"
+          stroke="#e6194b" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
+    <text x="132.1" y="19"
+          text-anchor="middle" class="gdd-today-label">today</text>
+    
+
+    
+    
+
+    
+    <line x1="55" y1="25"
+          x2="55" y2="310"
+          stroke="#888" stroke-width="1" />
+    <line x1="55" y1="310"
+          x2="680" y2="310"
+          stroke="#888" stroke-width="1" />
+</svg>
+</div>
+
+
+<div class="legend">
+    <div class="legend-item">
+        <div style="width:20px;height:3px;background:#222;"></div> 2026
+    </div>
+    
+    <div class="legend-item">
+        <div style="width:20px;height:2px;background:#999;opacity:0.5;"></div> 2025
+    </div>
+    
+    
+</div>
+
     <h2>Butterfly Sightings Map &mdash; Weeks 6–8 (2010–2026)</h2>
 <p>Research-grade butterfly observations in NW Oregon / SW Washington
-during Weeks 6–8, 2010–2026. 30 observations shown.
+during Weeks 6–8, 2010–2026. 31 observations shown.
 Colors match the species table below.</p>
 <div id="sightings-map"></div>
 
@@ -545,7 +768,7 @@ during Weeks 6–8 (2010–2026), February
         <td><a href="https://www.inaturalist.org/taxa/52484"><img class="species-photo" src="https://static.inaturalist.org/photos/182618709/medium.jpeg" alt="Echo Azure"></a></td>
         <td><span class="species-dot" style="background:#4363d8;" title="EA"></span><a href="https://www.inaturalist.org/taxa/52484">Echo Azure</a><br>
         <span class="species-scientific">Celastrina echo</span></td>
-        <td class="obs-count"><div class="obs-bar" style="width: 54px; background: #4363d8;"></div><a href="https://www.inaturalist.org/observations?taxon_id=52484&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">3</a></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 72px; background: #4363d8;"></div><a href="https://www.inaturalist.org/observations?taxon_id=52484&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">4</a></td>
     </tr>
     
     <tr>
@@ -658,7 +881,7 @@ Species ranked by research-grade observation frequency.</p>
     maxZoom: 16,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
-  var obs = [{lat:46.12111,lon:-123.876981,name:"Echo Azure",species:"Celastrina echo",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716847",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063668/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.730536,lon:-122.635152,name:"Satyr Comma",species:"Polygonia satyrus",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716914",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063788/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.644969,lon:-122.6929,name:"Red Admiral",species:"Vanessa atalanta",date:"2017-02-13",url:"https://www.inaturalist.org/observations/5104303",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/6275196/square.jpg",color:"#f58231",initials:"RA",weather:"☁️ Overcast &middot; 10/2°C"},{lat:45.4050126457,lon:-122.266432276,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2010-02-20",url:"https://www.inaturalist.org/observations/15263364",photo:"https://static.inaturalist.org/photos/22836122/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/-1°C"},{lat:45.2682013856,lon:-122.7378004789,name:"Common Wood-Nymph",species:"Cercyonis pegala",date:"2018-02-05",url:"https://www.inaturalist.org/observations/31089180",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/48621728/square.jpeg",color:"#fabed4",initials:"CW",weather:"🌦️ Light Drizzle &middot; 13/6°C &middot; 0.2mm"},{lat:45.51766167,lon:-122.627005,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-18",url:"https://www.inaturalist.org/observations/38822819",photo:"https://static.inaturalist.org/photos/61759621/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 10/1°C"},{lat:45.4549032436,lon:-122.7747664711,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-22",url:"https://www.inaturalist.org/observations/39058697",photo:"https://static.inaturalist.org/photos/61975336/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 11/-0°C"},{lat:44.594605,lon:-123.30953833,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-21",url:"https://www.inaturalist.org/observations/39227688",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/62208349/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 12/-1°C"},{lat:45.3703028011,lon:-122.6211524383,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-02-08",url:"https://www.inaturalist.org/observations/69282743",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/112394546/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 8/2°C"},{lat:45.5294614182,lon:-122.4979890393,name:"Small White",species:"Pieris rapae",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106614088",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179134636/square.jpg",color:"#f032e6",initials:"SW",weather:"☀️ Clear &middot; 13/6°C"},{lat:44.6765739716,lon:-123.4619256292,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106715050",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179327617/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/6°C"},{lat:45.7328483333,lon:-122.563935,name:"Oreas Comma",species:"Polygonia oreas",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719828",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335500/square.jpg",color:"#ffe119",initials:"OC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7317883333,lon:-122.56266,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719829",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335509/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:44.5392912341,lon:-123.2541147926,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-09",url:"https://www.inaturalist.org/observations/109124179",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183861688/square.jpeg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 12/2°C"},{lat:46.1697799072,lon:-123.9359017518,name:"Red Admiral",species:"Vanessa atalanta",date:"2024-02-07",url:"https://www.inaturalist.org/observations/199008161",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/350871580/square.jpeg",color:"#f58231",initials:"RA",weather:"🌦️ Light Drizzle &middot; 9/2°C &middot; 0.8mm"},{lat:45.5124866667,lon:-123.8803916667,name:"Echo Azure",species:"Celastrina echo",date:"2024-02-23",url:"https://www.inaturalist.org/observations/200241029",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/353251089/square.jpeg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.4971173643,lon:-122.4682479799,name:"Anise Swallowtail",species:"Papilio zelicaon",date:"2014-02-10",url:"https://www.inaturalist.org/observations/227377296",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/403362365/square.jpg",color:"#42d4f4",initials:"AS",weather:"🌦️ Drizzle &middot; 5/-2°C &middot; 5.8mm"},{lat:44.8142883333,lon:-123.3784783333,name:"Green Comma",species:"Polygonia faunus",date:"2025-02-27",url:"https://www.inaturalist.org/observations/263314500",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473017957/square.jpg",color:"#9a6324",initials:"GC",weather:"☁️ Overcast &middot; 17/3°C"},{lat:44.9668464762,lon:-123.7991424483,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263422920",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473230290/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5814918887,lon:-123.3836391687,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800410",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473972789/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5842455314,lon:-123.3874628699,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800647",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473973675/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:45.8901130894,lon:-122.7701306662,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/282977710",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/508437997/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.539079794,lon:-123.3563653752,name:"California Sister",species:"Adelpha californica",date:"2019-02-10",url:"https://www.inaturalist.org/observations/309441939",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/558398316/square.jpg",color:"#dcbeff",initials:"CS",weather:"🌨️ Heavy Snow &middot; 4/-4°C &middot; 5.2mm"},{lat:45.5031847604,lon:-122.6280036703,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-03",url:"https://www.inaturalist.org/observations/337245292",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613022204/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.8529809574,lon:-122.663884638,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337358596",photo:"https://static.inaturalist.org/photos/613255291/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.517975,lon:-122.5978866667,name:"Painted Lady",species:"Vanessa cardui",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337368726",photo:"https://static.inaturalist.org/photos/613275758/square.jpg",color:"#911eb4",initials:"PL",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.5151366667,lon:-122.9471366667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337370187",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613278172/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:46.123695298,lon:-123.6889334033,name:"Echo Azure",species:"Celastrina echo",date:"2026-02-05",url:"https://www.inaturalist.org/observations/337467951",photo:"https://static.inaturalist.org/photos/613482138/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 12/5°C"},{lat:45.597545,lon:-122.7527166667,name:"Woodland Skipper",species:"Ochlodes sylvanoides",date:"2026-02-06",url:"https://www.inaturalist.org/observations/337597002",photo:"https://static.inaturalist.org/photos/613746817/square.jpg",color:"#469990",initials:"WS",weather:"☁️ Overcast &middot; 12/4°C"},{lat:45.734225,lon:-123.9453583333,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2026-02-11",url:"https://www.inaturalist.org/observations/338250214",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/615083767/square.jpg",color:"#bfef45",initials:"MC",weather:"⛅ Partly Cloudy &middot; 13/2°C"}];
+  var obs = [{lat:46.12111,lon:-123.876981,name:"Echo Azure",species:"Celastrina echo",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716847",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063668/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.730536,lon:-122.635152,name:"Satyr Comma",species:"Polygonia satyrus",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716914",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063788/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.644969,lon:-122.6929,name:"Red Admiral",species:"Vanessa atalanta",date:"2017-02-13",url:"https://www.inaturalist.org/observations/5104303",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/6275196/square.jpg",color:"#f58231",initials:"RA",weather:"☁️ Overcast &middot; 10/2°C"},{lat:45.4050126457,lon:-122.266432276,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2010-02-20",url:"https://www.inaturalist.org/observations/15263364",photo:"https://static.inaturalist.org/photos/22836122/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/-1°C"},{lat:45.2682013856,lon:-122.7378004789,name:"Common Wood-Nymph",species:"Cercyonis pegala",date:"2018-02-05",url:"https://www.inaturalist.org/observations/31089180",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/48621728/square.jpeg",color:"#fabed4",initials:"CW",weather:"🌦️ Light Drizzle &middot; 13/6°C &middot; 0.2mm"},{lat:45.51766167,lon:-122.627005,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-18",url:"https://www.inaturalist.org/observations/38822819",photo:"https://static.inaturalist.org/photos/61759621/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 10/1°C"},{lat:45.4549032436,lon:-122.7747664711,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-22",url:"https://www.inaturalist.org/observations/39058697",photo:"https://static.inaturalist.org/photos/61975336/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 11/-0°C"},{lat:44.594605,lon:-123.30953833,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-21",url:"https://www.inaturalist.org/observations/39227688",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/62208349/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 12/-1°C"},{lat:45.3703028011,lon:-122.6211524383,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-02-08",url:"https://www.inaturalist.org/observations/69282743",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/112394546/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 8/2°C"},{lat:45.5294614182,lon:-122.4979890393,name:"Small White",species:"Pieris rapae",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106614088",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179134636/square.jpg",color:"#f032e6",initials:"SW",weather:"☀️ Clear &middot; 13/6°C"},{lat:44.6765739716,lon:-123.4619256292,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106715050",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179327617/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/6°C"},{lat:45.7328483333,lon:-122.563935,name:"Oreas Comma",species:"Polygonia oreas",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719828",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335500/square.jpg",color:"#ffe119",initials:"OC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7317883333,lon:-122.56266,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719829",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335509/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:44.5392912341,lon:-123.2541147926,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-09",url:"https://www.inaturalist.org/observations/109124179",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183861688/square.jpeg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 12/2°C"},{lat:46.1697799072,lon:-123.9359017518,name:"Red Admiral",species:"Vanessa atalanta",date:"2024-02-07",url:"https://www.inaturalist.org/observations/199008161",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/350871580/square.jpeg",color:"#f58231",initials:"RA",weather:"🌦️ Light Drizzle &middot; 9/2°C &middot; 0.8mm"},{lat:45.5124866667,lon:-123.8803916667,name:"Echo Azure",species:"Celastrina echo",date:"2024-02-23",url:"https://www.inaturalist.org/observations/200241029",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/353251089/square.jpeg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.4971173643,lon:-122.4682479799,name:"Anise Swallowtail",species:"Papilio zelicaon",date:"2014-02-10",url:"https://www.inaturalist.org/observations/227377296",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/403362365/square.jpg",color:"#42d4f4",initials:"AS",weather:"🌦️ Drizzle &middot; 5/-2°C &middot; 5.8mm"},{lat:44.8142883333,lon:-123.3784783333,name:"Green Comma",species:"Polygonia faunus",date:"2025-02-27",url:"https://www.inaturalist.org/observations/263314500",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473017957/square.jpg",color:"#9a6324",initials:"GC",weather:"☁️ Overcast &middot; 17/3°C"},{lat:44.9668464762,lon:-123.7991424483,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263422920",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473230290/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5814918887,lon:-123.3836391687,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800410",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473972789/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5842455314,lon:-123.3874628699,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800647",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473973675/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:45.8901130894,lon:-122.7701306662,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/282977710",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/508437997/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.539079794,lon:-123.3563653752,name:"California Sister",species:"Adelpha californica",date:"2019-02-10",url:"https://www.inaturalist.org/observations/309441939",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/558398316/square.jpg",color:"#dcbeff",initials:"CS",weather:"🌨️ Heavy Snow &middot; 4/-4°C &middot; 5.2mm"},{lat:45.5031847604,lon:-122.6280036703,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-03",url:"https://www.inaturalist.org/observations/337245292",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613022204/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.8529809574,lon:-122.663884638,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337358596",photo:"https://static.inaturalist.org/photos/613255291/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.517975,lon:-122.5978866667,name:"Painted Lady",species:"Vanessa cardui",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337368726",photo:"https://static.inaturalist.org/photos/613275758/square.jpg",color:"#911eb4",initials:"PL",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.5151366667,lon:-122.9471366667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337370187",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613278172/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:46.123695298,lon:-123.6889334033,name:"Echo Azure",species:"Celastrina echo",date:"2026-02-05",url:"https://www.inaturalist.org/observations/337467951",photo:"https://static.inaturalist.org/photos/613482138/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 12/5°C"},{lat:45.597545,lon:-122.7527166667,name:"Woodland Skipper",species:"Ochlodes sylvanoides",date:"2026-02-06",url:"https://www.inaturalist.org/observations/337597002",photo:"https://static.inaturalist.org/photos/613746817/square.jpg",color:"#469990",initials:"WS",weather:"☁️ Overcast &middot; 12/4°C"},{lat:46.1476232685,lon:-123.5841640458,name:"Echo Azure",species:"Celastrina echo",date:"2026-02-10",url:"https://www.inaturalist.org/observations/338115204",photo:"https://static.inaturalist.org/photos/614807341/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 11/2°C"},{lat:45.734225,lon:-123.9453583333,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2026-02-11",url:"https://www.inaturalist.org/observations/338250214",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/615083767/square.jpg",color:"#bfef45",initials:"MC",weather:"⛅ Partly Cloudy &middot; 13/2°C"}];
 
   function buildPopup(o) {
     var html = '<div class="obs-popup">';
