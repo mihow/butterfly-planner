@@ -179,6 +179,61 @@
         .obs-popup-body { font-size: 0.85rem; line-height: 1.45; }
         .obs-popup-weather { font-size: 0.8rem; color: #555; }
 
+        /* --- GDD card --- */
+        .gdd-card {
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+        }
+        .gdd-stats {
+            display: flex;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .gdd-stat { display: flex; flex-direction: column; }
+        .gdd-stat-primary .gdd-value { font-size: 1.6rem; }
+        .gdd-value {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #222;
+        }
+        .gdd-label { font-size: 0.82rem; color: #666; margin-top: 0.15rem; }
+        .gdd-status { margin-top: 1rem; }
+        .gdd-track {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .gdd-track-bar {
+            flex: 1;
+            height: 6px;
+            background: linear-gradient(to right, #4363d8, #e8d44d, #e6194b);
+            border-radius: 3px;
+            position: relative;
+        }
+        .gdd-track-marker {
+            position: absolute;
+            top: -4px;
+            width: 2px;
+            height: 14px;
+            background: #222;
+            transform: translateX(-50%);
+        }
+        .gdd-track-label { white-space: nowrap; }
+        .gdd-status-text { font-size: 0.85rem; color: #555; margin-top: 0.3rem; }
+
+        /* --- GDD timeline SVG --- */
+        .gdd-timeline-container { margin: 1rem 0; overflow-x: auto; }
+        .gdd-timeline-svg { width: 100%; height: auto; font-family: Georgia, serif; }
+        .gdd-axis-label { font-size: 11px; fill: #888; }
+        .gdd-today-label { font-size: 10px; fill: #e6194b; font-weight: 600; }
+        .gdd-species-label { font-size: 10px; }
+
         /* --- About section --- */
         .about p { text-align: justify; font-size: 0.92rem; }
         .about ul {
@@ -223,6 +278,10 @@
     {{ sunshine_today }}
 
     {{ sunshine_16day }}
+
+    {{ gdd_today }}
+
+    {{ gdd_timeline }}
 
     {{ butterfly_map }}
 
