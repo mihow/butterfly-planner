@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            line-height: 1.7;
+            color: #222;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        a { color: #222; text-decoration: none; border-bottom: 1px solid #ccc; transition: border-color 0.2s; }
+        a:hover { border-bottom-color: #222; }
+
+        /* --- Header --- */
+        header {
+            text-align: center;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #ddd;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: normal;
+            letter-spacing: 0.02em;
+            color: #222;
+        }
+        header .subtitle {
+            font-size: 1rem;
+            font-style: italic;
+            color: #555;
+            margin-top: 0.25rem;
+        }
+        header .updated {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        /* --- Section headings --- */
+        h2 {
+            font-size: 1.15rem;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #444;
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* --- Body text --- */
+        p { margin: 0.8rem 0; font-size: 0.95rem; }
+        .meta { color: #666; font-size: 0.85rem; font-style: italic; }
+        strong { font-weight: 600; }
+
+        /* --- Data table --- */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #555;
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+        }
+        tbody td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        tbody tr:hover { background: #f8f9fa; }
+        tbody tr.good-day { background: #f2f7f0; }
+        tbody tr.good-day:hover { background: #e8f0e4; }
+        .temp-high { color: #9a3412; font-variant-numeric: tabular-nums; }
+        .temp-low { color: #1e40af; font-variant-numeric: tabular-nums; }
+        .numeric { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; }
+
+        /* --- Sunshine timeline (today) --- */
+        .timeline { margin: 1.25rem 0; }
+        .tl-labels { position: relative; height: 1.4em; font-size: 0.75rem; color: #888; letter-spacing: 0.02em; }
+        .tl-label { position: absolute; transform: translateX(-50%); }
+        .tl-bar { display: flex; gap: 1px; border-radius: 3px; overflow: hidden; height: 28px; border: 1px solid #e0e0e0; }
+        .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
+        .tl-seg:hover { opacity: 0.65; }
+
+        /* --- Sunshine color scale (muted, scientific palette) --- */
+        .sunshine-none { background: #e8e8e8; }
+        .sunshine-low  { background: #f5eec2; }
+        .sunshine-med  { background: #e8d44d; }
+        .sunshine-high { background: #d4a017; }
+        .sunshine-full { background: #b8860b; }
+
+        /* --- Inline hourly bar (16-day table) --- */
+        .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
+        .hour-seg { width: 14px; height: 16px; border-radius: 1px; }
+
+        /* --- Legend --- */
+        .legend {
+            display: flex;
+            gap: 1.25rem;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+            color: #666;
+            flex-wrap: wrap;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+        .legend-box { width: 16px; height: 16px; border-radius: 2px; border: 1px solid #ddd; }
+
+        /* --- Summary stats --- */
+        .summary {
+            font-size: 0.95rem;
+            margin: 0.75rem 0;
+        }
+        .summary strong {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9rem;
+        }
+
+        /* --- Species sightings table --- */
+        .species-photo { width: 48px; height: 48px; border-radius: 3px; object-fit: cover; vertical-align: middle; }
+        .species-photo-placeholder { display: inline-block; width: 48px; height: 48px; border-radius: 3px; background: #f0f0f0; text-align: center; line-height: 48px; color: #aaa; font-size: 1.2rem; vertical-align: middle; }
+        td:first-child { width: 56px; }
+        td:nth-child(2) { min-width: 200px; }
+        .species-scientific { font-style: italic; display: block; padding-left: 20px; }
+        .obs-bar { display: inline-block; height: 12px; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }
+        td.obs-count { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; white-space: nowrap; }
+
+        /* --- Sightings map --- */
+        #sightings-map {
+            height: 420px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin: 1rem 0;
+        }
+        .species-dot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 0.35rem;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+        .map-label {
+            background: transparent;
+            border: none;
+            font-weight: 700;
+            font-size: 10px;
+            text-align: center;
+            line-height: 22px;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0,0,0,0.5);
+        }
+
+        /* --- Observation popup --- */
+        .obs-popup { display: flex; gap: 0.6rem; align-items: flex-start; }
+        .obs-popup-img {
+            width: 80px; height: 80px; object-fit: cover; border-radius: 4px;
+            flex-shrink: 0; border: 1px solid #ddd;
+        }
+        .obs-popup-body { font-size: 0.85rem; line-height: 1.45; }
+        .obs-popup-weather { font-size: 0.8rem; color: #555; }
+
+        /* --- About section --- */
+        .about p { text-align: justify; font-size: 0.92rem; }
+        .about ul {
+            margin: 0.75rem 0 0.75rem 1.5rem;
+            font-size: 0.92rem;
+        }
+        .about li { margin: 0.3rem 0; }
+        .criteria {
+            font-size: 0.88rem;
+            color: #444;
+            background: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-left: 3px solid #ddd;
+            margin: 1rem 0;
+        }
+
+        /* --- Footer --- */
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* --- Print --- */
+        @media print {
+            body { max-width: none; padding: 1rem; }
+            header, footer { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Butterfly Planner</h1>
+        <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
+        <div class="updated">Last updated 2026-02-14 16:04 PST</div>
+    </header>
+
+    <main>
+    <h2>Today's Sun Breaks &mdash; February 14</h2>
+<p class="summary">Total sunshine expected: <strong>0.1 hours</strong>
+&mdash; Sunrise 7:15 AM, Sunset 5:30 PM</p>
+<div class="legend">
+    <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
+    <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
+    <div class="legend-item"><div class="legend-box sunshine-med"></div> 25&ndash;50%</div>
+    <div class="legend-item"><div class="legend-box sunshine-high"></div> 50&ndash;75%</div>
+    <div class="legend-item"><div class="legend-box sunshine-full"></div> 75&ndash;100%</div>
+</div>
+<div class="timeline">
+    <div class="tl-labels">
+        
+        <span class="tl-label" style="left:0.0%">7am</span>
+        
+        <span class="tl-label" style="left:7.1%">8am</span>
+        
+        <span class="tl-label" style="left:16.7%">9am</span>
+        
+        <span class="tl-label" style="left:26.2%">10am</span>
+        
+        <span class="tl-label" style="left:35.7%">11am</span>
+        
+        <span class="tl-label" style="left:45.2%">12pm</span>
+        
+        <span class="tl-label" style="left:54.8%">1pm</span>
+        
+        <span class="tl-label" style="left:64.3%">2pm</span>
+        
+        <span class="tl-label" style="left:73.8%">3pm</span>
+        
+        <span class="tl-label" style="left:83.3%">4pm</span>
+        
+        <span class="tl-label" style="left:92.9%">5pm</span>
+        
+    </div>
+    <div class="tl-bar">
+        
+        <div class="tl-seg sunshine-none" title="07:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="07:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="07:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:00 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="09:00 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="09:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="09:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="09:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="10:00 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="10:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="10:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="10:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="11:00 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="11:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="11:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="11:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="01:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="01:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-low" title="01:30 PM: 2 min sun"></div>
+        
+        <div class="tl-seg sunshine-low" title="01:45 PM: 3 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="02:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="02:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="02:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="02:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="04:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="04:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="04:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="04:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="05:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="05:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-low" title="05:30 PM: 2 min sun"></div>
+        
+    </div>
+</div>
+<p class="meta">Each segment represents 15 minutes. Hover for exact time and duration.</p>
+
+    <h2>16-Day Sunshine Forecast</h2>
+<table>
+    <thead>
+    <tr>
+        <th>Date</th>
+        <th>Sunshine</th>
+        <th>% Sunny</th>
+        <th>High / Low</th>
+        <th>Precip</th>
+        <th>Conditions</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    <tr class="">
+        <td>2026-02-14</td>
+        <td>0.0h of 10.4h</td>
+        <td>0% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="10 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="01 PM: 5min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="04 PM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="05 PM: 2min sun"></div></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">3°C</span></td>
+        <td>1.8mm</td>
+        <td>🌦️ Heavy Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-15</td>
+        <td>7.1h of 10.4h</td>
+        <td>68% <div class="hour-bar"><div class="hour-seg" style="background:#f5eec2;" title="07 AM: 2min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="08 AM: 22min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="10 AM: 24min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="12 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 17min sun"></div></div></td>
+        <td><span class="temp-high">10°C</span> / <span class="temp-low">3°C</span></td>
+        <td>0.5mm</td>
+        <td>🌦️ Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-16</td>
+        <td>4.5h of 10.5h</td>
+        <td>43% <div class="hour-bar"><div class="hour-seg" style="background:#f5eec2;" title="07 AM: 8min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="08 AM: 19min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#d4a017;" title="10 AM: 38min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="11 AM: 27min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 54min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="03 PM: 27min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 53min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 26min sun"></div></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">3°C</span></td>
+        <td>4.9mm</td>
+        <td>🌨️ Light Snow</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-17</td>
+        <td>9.2h of 10.5h</td>
+        <td>87% <div class="sunshine-bar" style="width: 262px;"></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">1°C</span></td>
+        <td>7.9mm</td>
+        <td>🌨️ Light Snow Showers</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-18</td>
+        <td>9.3h of 10.6h</td>
+        <td>88% <div class="sunshine-bar" style="width: 264px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">-0°C</span></td>
+        <td>2.6mm</td>
+        <td>🌨️ Light Snow Showers</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-19</td>
+        <td>9.2h of 10.6h</td>
+        <td>87% <div class="sunshine-bar" style="width: 259px;"></div></td>
+        <td><span class="temp-high">5°C</span> / <span class="temp-low">1°C</span></td>
+        <td>0.5mm</td>
+        <td>🌨️ Light Snow Showers</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-20</td>
+        <td>0.0h of 10.7h</td>
+        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
+        <td><span class="temp-high">4°C</span> / <span class="temp-low">2°C</span></td>
+        <td>2.4mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-21</td>
+        <td>2.3h of 10.7h</td>
+        <td>21% <div class="sunshine-bar" style="width: 64px;"></div></td>
+        <td><span class="temp-high">5°C</span> / <span class="temp-low">2°C</span></td>
+        <td>1.8mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-22</td>
+        <td>9.2h of 10.8h</td>
+        <td>86% <div class="sunshine-bar" style="width: 256px;"></div></td>
+        <td><span class="temp-high">15°C</span> / <span class="temp-low">4°C</span></td>
+        <td>1.4mm</td>
+        <td>🌦️ Drizzle</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-23</td>
+        <td>0.1h of 10.8h</td>
+        <td>1% <div class="sunshine-bar" style="width: 3px;"></div></td>
+        <td><span class="temp-high">9°C</span> / <span class="temp-low">6°C</span></td>
+        <td>6.3mm</td>
+        <td>🌦️ Drizzle</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-24</td>
+        <td>0.0h of 10.9h</td>
+        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">5°C</span></td>
+        <td>4.9mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-25</td>
+        <td>10.0h of 10.9h</td>
+        <td>91% <div class="sunshine-bar" style="width: 273px;"></div></td>
+        <td><span class="temp-high">9°C</span> / <span class="temp-low">4°C</span></td>
+        <td>4.0mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-26</td>
+        <td>0.0h of 11.0h</td>
+        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">3°C</span></td>
+        <td>3.3mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-27</td>
+        <td>0.0h of 11.1h</td>
+        <td>0% <div class="sunshine-bar" style="width: 0px;"></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">4°C</span></td>
+        <td>3.5mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-28</td>
+        <td>10.1h of 11.1h</td>
+        <td>91% <div class="sunshine-bar" style="width: 273px;"></div></td>
+        <td><span class="temp-high">14°C</span> / <span class="temp-low">6°C</span></td>
+        <td>0.0mm</td>
+        <td>☁️ Overcast</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-03-01</td>
+        <td>1.8h of 11.2h</td>
+        <td>16% <div class="sunshine-bar" style="width: 49px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">5°C</span></td>
+        <td>2.4mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    </tbody>
+</table>
+<p class="meta">Highlighted rows indicate good butterfly weather
+(&gt;3 h sunshine or &gt;40% sunny). Hover hourly bars for detail.</p>
+
+    <h2>Butterfly Sightings Map &mdash; Weeks 6–8 (2010–2026)</h2>
+<p>Research-grade butterfly observations in NW Oregon / SW Washington
+during Weeks 6–8, 2010–2026. 30 observations shown.
+Colors match the species table below.</p>
+<div id="sightings-map"></div>
+
+    <h2>Butterfly Sightings &mdash; Weeks 6–8 (2010–2026)</h2>
+<p>Research-grade butterfly observations in NW Oregon / SW Washington
+during Weeks 6–8 (2010–2026), February
+(<a href="https://www.inaturalist.org/observations?taxon_id=47224&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">browse on iNaturalist</a>).</p>
+<table>
+    <thead>
+    <tr>
+        <th></th>
+        <th>Species</th>
+        <th>Observations</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/49920"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/2041/medium.jpg" alt="California Tortoiseshell"></a></td>
+        <td><span class="species-dot" style="background:#e6194b;" title="CT"></span><a href="https://www.inaturalist.org/taxa/49920">California Tortoiseshell</a><br>
+        <span class="species-scientific">Nymphalis californica</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 200px; background: #e6194b;"></div><a href="https://www.inaturalist.org/observations?taxon_id=49920&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">11</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/56644"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/390722/medium.jpg" alt="Satyr Comma"></a></td>
+        <td><span class="species-dot" style="background:#3cb44b;" title="SC"></span><a href="https://www.inaturalist.org/taxa/56644">Satyr Comma</a><br>
+        <span class="species-scientific">Polygonia satyrus</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 90px; background: #3cb44b;"></div><a href="https://www.inaturalist.org/observations?taxon_id=56644&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">5</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/52484"><img class="species-photo" src="https://static.inaturalist.org/photos/182618709/medium.jpeg" alt="Echo Azure"></a></td>
+        <td><span class="species-dot" style="background:#4363d8;" title="EA"></span><a href="https://www.inaturalist.org/taxa/52484">Echo Azure</a><br>
+        <span class="species-scientific">Celastrina echo</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 54px; background: #4363d8;"></div><a href="https://www.inaturalist.org/observations?taxon_id=52484&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">3</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/49133"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/53928483/medium.jpg" alt="Red Admiral"></a></td>
+        <td><span class="species-dot" style="background:#f58231;" title="RA"></span><a href="https://www.inaturalist.org/taxa/49133">Red Admiral</a><br>
+        <span class="species-scientific">Vanessa atalanta</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 36px; background: #f58231;"></div><a href="https://www.inaturalist.org/observations?taxon_id=49133&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">2</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/48548"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/9506438/medium.jpg" alt="Painted Lady"></a></td>
+        <td><span class="species-dot" style="background:#911eb4;" title="PL"></span><a href="https://www.inaturalist.org/taxa/48548">Painted Lady</a><br>
+        <span class="species-scientific">Vanessa cardui</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #911eb4;"></div><a href="https://www.inaturalist.org/observations?taxon_id=48548&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/51097"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/2489727/medium.jpg" alt="Anise Swallowtail"></a></td>
+        <td><span class="species-dot" style="background:#42d4f4;" title="AS"></span><a href="https://www.inaturalist.org/taxa/51097">Anise Swallowtail</a><br>
+        <span class="species-scientific">Papilio zelicaon</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #42d4f4;"></div><a href="https://www.inaturalist.org/observations?taxon_id=51097&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/55626"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/28420401/medium.jpg" alt="Small White"></a></td>
+        <td><span class="species-dot" style="background:#f032e6;" title="SW"></span><a href="https://www.inaturalist.org/taxa/55626">Small White</a><br>
+        <span class="species-scientific">Pieris rapae</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #f032e6;"></div><a href="https://www.inaturalist.org/observations?taxon_id=55626&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/56832"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/11607/medium.jpg" alt="Mourning Cloak"></a></td>
+        <td><span class="species-dot" style="background:#bfef45;" title="MC"></span><a href="https://www.inaturalist.org/taxa/56832">Mourning Cloak</a><br>
+        <span class="species-scientific">Nymphalis antiopa</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #bfef45;"></div><a href="https://www.inaturalist.org/observations?taxon_id=56832&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/58606"><img class="species-photo" src="https://static.inaturalist.org/photos/128945411/medium.jpeg" alt="Common Wood-Nymph"></a></td>
+        <td><span class="species-dot" style="background:#fabed4;" title="CW"></span><a href="https://www.inaturalist.org/taxa/58606">Common Wood-Nymph</a><br>
+        <span class="species-scientific">Cercyonis pegala</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #fabed4;"></div><a href="https://www.inaturalist.org/observations?taxon_id=58606&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/59194"><img class="species-photo" src="https://static.inaturalist.org/photos/25673824/medium.jpeg" alt="Woodland Skipper"></a></td>
+        <td><span class="species-dot" style="background:#469990;" title="WS"></span><a href="https://www.inaturalist.org/taxa/59194">Woodland Skipper</a><br>
+        <span class="species-scientific">Ochlodes sylvanoides</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #469990;"></div><a href="https://www.inaturalist.org/observations?taxon_id=59194&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/67560"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/952/medium.jpg" alt="California Sister"></a></td>
+        <td><span class="species-dot" style="background:#dcbeff;" title="CS"></span><a href="https://www.inaturalist.org/taxa/67560">California Sister</a><br>
+        <span class="species-scientific">Adelpha californica</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #dcbeff;"></div><a href="https://www.inaturalist.org/observations?taxon_id=67560&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/68262"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/9955156/medium.jpeg" alt="Green Comma"></a></td>
+        <td><span class="species-dot" style="background:#9a6324;" title="GC"></span><a href="https://www.inaturalist.org/taxa/68262">Green Comma</a><br>
+        <span class="species-scientific">Polygonia faunus</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #9a6324;"></div><a href="https://www.inaturalist.org/observations?taxon_id=68262&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/117764"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/87949317/medium.jpeg" alt="Oreas Comma"></a></td>
+        <td><span class="species-dot" style="background:#ffe119;" title="OC"></span><a href="https://www.inaturalist.org/taxa/117764">Oreas Comma</a><br>
+        <span class="species-scientific">Polygonia oreas</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 18px; background: #ffe119;"></div><a href="https://www.inaturalist.org/observations?taxon_id=117764&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    </tbody>
+</table>
+<p class="meta">Observation counts are cumulative across all years for February.
+Species ranked by research-grade observation frequency.</p>
+
+    <h2>About</h2>
+    <div class="about">
+        <p>This page presents sunshine and weather forecasts to aid in planning
+        butterfly observation outings. Lepidoptera are most active during periods
+        of direct sunshine and warm temperatures.</p>
+        <div class="criteria">
+            <strong>Good butterfly weather</strong> is defined as &gt;3 hours of sunshine
+            <em>or</em> &gt;40% of available daylight being sunny.
+        </div>
+        <p>Planned features:</p>
+        <ul>
+            <li>Butterfly abundance hotspots by week of year</li>
+            <li>Species diversity maps for Oregon &amp; Washington</li>
+            <li>Drive-time isochrone analysis</li>
+            <li>Nearby campground locations</li>
+        </ul>
+    </div>
+    </main>
+
+    <footer>
+        <p>Data provided by <a href="https://open-meteo.com">Open-Meteo</a>
+        and <a href="https://www.inaturalist.org">iNaturalist</a>.
+        Forecast models may not reflect actual conditions.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script>
+(function() {
+  var map = L.map("sightings-map").setView([45.5, -122.8], 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 16,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  var obs = [{lat:46.12111,lon:-123.876981,name:"Echo Azure",species:"Celastrina echo",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716847",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063668/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.730536,lon:-122.635152,name:"Satyr Comma",species:"Polygonia satyrus",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716914",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063788/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.644969,lon:-122.6929,name:"Red Admiral",species:"Vanessa atalanta",date:"2017-02-13",url:"https://www.inaturalist.org/observations/5104303",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/6275196/square.jpg",color:"#f58231",initials:"RA",weather:"☁️ Overcast &middot; 10/2°C"},{lat:45.4050126457,lon:-122.266432276,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2010-02-20",url:"https://www.inaturalist.org/observations/15263364",photo:"https://static.inaturalist.org/photos/22836122/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/-1°C"},{lat:45.2682013856,lon:-122.7378004789,name:"Common Wood-Nymph",species:"Cercyonis pegala",date:"2018-02-05",url:"https://www.inaturalist.org/observations/31089180",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/48621728/square.jpeg",color:"#fabed4",initials:"CW",weather:"🌦️ Light Drizzle &middot; 13/6°C &middot; 0.2mm"},{lat:45.51766167,lon:-122.627005,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-18",url:"https://www.inaturalist.org/observations/38822819",photo:"https://static.inaturalist.org/photos/61759621/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 10/1°C"},{lat:45.4549032436,lon:-122.7747664711,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-22",url:"https://www.inaturalist.org/observations/39058697",photo:"https://static.inaturalist.org/photos/61975336/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 11/-0°C"},{lat:44.594605,lon:-123.30953833,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-21",url:"https://www.inaturalist.org/observations/39227688",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/62208349/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 12/-1°C"},{lat:45.3703028011,lon:-122.6211524383,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-02-08",url:"https://www.inaturalist.org/observations/69282743",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/112394546/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 8/2°C"},{lat:45.5294614182,lon:-122.4979890393,name:"Small White",species:"Pieris rapae",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106614088",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179134636/square.jpg",color:"#f032e6",initials:"SW",weather:"☀️ Clear &middot; 13/6°C"},{lat:44.6765739716,lon:-123.4619256292,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106715050",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179327617/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/6°C"},{lat:45.7328483333,lon:-122.563935,name:"Oreas Comma",species:"Polygonia oreas",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719828",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335500/square.jpg",color:"#ffe119",initials:"OC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7317883333,lon:-122.56266,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719829",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335509/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:44.5392912341,lon:-123.2541147926,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-09",url:"https://www.inaturalist.org/observations/109124179",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183861688/square.jpeg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 12/2°C"},{lat:46.1697799072,lon:-123.9359017518,name:"Red Admiral",species:"Vanessa atalanta",date:"2024-02-07",url:"https://www.inaturalist.org/observations/199008161",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/350871580/square.jpeg",color:"#f58231",initials:"RA",weather:"🌦️ Light Drizzle &middot; 9/2°C &middot; 0.8mm"},{lat:45.5124866667,lon:-123.8803916667,name:"Echo Azure",species:"Celastrina echo",date:"2024-02-23",url:"https://www.inaturalist.org/observations/200241029",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/353251089/square.jpeg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.4971173643,lon:-122.4682479799,name:"Anise Swallowtail",species:"Papilio zelicaon",date:"2014-02-10",url:"https://www.inaturalist.org/observations/227377296",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/403362365/square.jpg",color:"#42d4f4",initials:"AS",weather:"🌦️ Drizzle &middot; 5/-2°C &middot; 5.8mm"},{lat:44.8142883333,lon:-123.3784783333,name:"Green Comma",species:"Polygonia faunus",date:"2025-02-27",url:"https://www.inaturalist.org/observations/263314500",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473017957/square.jpg",color:"#9a6324",initials:"GC",weather:"☁️ Overcast &middot; 17/3°C"},{lat:44.9668464762,lon:-123.7991424483,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263422920",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473230290/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5814918887,lon:-123.3836391687,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800410",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473972789/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5842455314,lon:-123.3874628699,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800647",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473973675/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:45.8901130894,lon:-122.7701306662,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/282977710",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/508437997/square.jpg",color:"#3cb44b",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.539079794,lon:-123.3563653752,name:"California Sister",species:"Adelpha californica",date:"2019-02-10",url:"https://www.inaturalist.org/observations/309441939",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/558398316/square.jpg",color:"#dcbeff",initials:"CS",weather:"🌨️ Heavy Snow &middot; 4/-4°C &middot; 5.2mm"},{lat:45.5031847604,lon:-122.6280036703,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-03",url:"https://www.inaturalist.org/observations/337245292",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613022204/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.8529809574,lon:-122.663884638,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337358596",photo:"https://static.inaturalist.org/photos/613255291/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.517975,lon:-122.5978866667,name:"Painted Lady",species:"Vanessa cardui",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337368726",photo:"https://static.inaturalist.org/photos/613275758/square.jpg",color:"#911eb4",initials:"PL",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.5151366667,lon:-122.9471366667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337370187",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613278172/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:46.123695298,lon:-123.6889334033,name:"Echo Azure",species:"Celastrina echo",date:"2026-02-05",url:"https://www.inaturalist.org/observations/337467951",photo:"https://static.inaturalist.org/photos/613482138/square.jpg",color:"#4363d8",initials:"EA",weather:"☁️ Overcast &middot; 12/5°C"},{lat:45.597545,lon:-122.7527166667,name:"Woodland Skipper",species:"Ochlodes sylvanoides",date:"2026-02-06",url:"https://www.inaturalist.org/observations/337597002",photo:"https://static.inaturalist.org/photos/613746817/square.jpg",color:"#469990",initials:"WS",weather:"☁️ Overcast &middot; 12/4°C"},{lat:45.734225,lon:-123.9453583333,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2026-02-11",url:"https://www.inaturalist.org/observations/338250214",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/615083767/square.jpg",color:"#bfef45",initials:"MC",weather:"⛅ Partly Cloudy &middot; 13/2°C"}];
+
+  function buildPopup(o) {
+    var html = '<div class="obs-popup">';
+    if (o.photo) {
+      html += '<img class="obs-popup-img" src="' + o.photo + '" alt="' + o.name + '">';
+    }
+    html += '<div class="obs-popup-body">';
+    html += '<span style="color:' + o.color + ';font-weight:700">&#9679;</span> ';
+    html += '<b>' + o.name + '</b><br><i>' + o.species + '</i>';
+    html += '<br>' + o.date;
+    if (o.weather) {
+      html += '<br><span class="obs-popup-weather">' + o.weather + '</span>';
+    }
+    html += '<br><a href="' + o.url + '" target="_blank">View on iNaturalist</a>';
+    html += '</div></div>';
+    return html;
+  }
+
+  var group = L.layerGroup();
+  for (var i = 0; i < obs.length; i++) {
+    var o = obs[i];
+    var m = L.circleMarker([o.lat, o.lon], {
+      radius: 11, fillColor: o.color, color: '#fff',
+      weight: 1.5, opacity: 0.9, fillOpacity: 0.85
+    });
+    m.bindPopup(buildPopup(o), {maxWidth: 280, minWidth: 200});
+    m.bindTooltip(o.initials, {permanent: true, direction: "center",
+      className: "map-label", offset: [0, 0]});
+    group.addLayer(m);
+  }
+  group.addTo(map);
+  L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
+    color: '#555', weight: 1.5, dashArray: '6 4',
+    fill: false, opacity: 0.5
+  }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');
+  if (obs.length > 0) {
+    var bounds = L.latLngBounds(obs.map(function(o) { return [o.lat, o.lon]; }));
+    map.fitBounds(bounds, {padding: [30, 30]});
+  }
+})();
+</script>
+</body>
+</html>
