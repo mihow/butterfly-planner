@@ -301,16 +301,12 @@ def build_sunshine_16day_html(
     if weather_data:
         w_daily = weather_data.get("data", {}).get("daily", {})
         w_dates = w_daily.get("time", [])
-        w_temp_max = w_daily.get("temperature_2m_max", [])
-        w_temp_min = w_daily.get("temperature_2m_min", [])
-        w_precip = w_daily.get("precipitation_sum", [])
-        w_codes = w_daily.get("weather_code", [])
         for j, w_date in enumerate(w_dates):
             weather_by_date[w_date] = {
-                "high_c": w_temp_max[j] if j < len(w_temp_max) else None,
-                "low_c": w_temp_min[j] if j < len(w_temp_min) else None,
-                "precip_mm": w_precip[j] if j < len(w_precip) else None,
-                "weather_code": w_codes[j] if j < len(w_codes) else None,
+                "high_c": w_daily.get("temperature_2m_max", [None])[j],
+                "low_c": w_daily.get("temperature_2m_min", [None])[j],
+                "precip_mm": w_daily.get("precipitation_sum", [None])[j],
+                "weather_code": w_daily.get("weather_code", [None])[j],
             }
 
     slots_by_date = _group_15min_by_date(sunshine_data)
