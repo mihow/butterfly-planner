@@ -598,7 +598,7 @@ class TestBuildButterflySightingsHtml:
         assert ">542<" in result
         assert "Cabbage White" in result
         assert "inaturalist.org/taxa/48662" in result
-        assert "<table>" in result
+        assert '<table class="sightings-table">' in result
         assert "<thead>" in result
 
     def test_with_photo(self) -> None:
