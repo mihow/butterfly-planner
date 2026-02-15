@@ -20,13 +20,46 @@ Beyond code bloat, there are two structural problems:
 
 ## What This Project Is Becoming
 
-Categorically, this is a **geospatial decision-support system** — a multi-source environmental data fusion platform with a forecasting/planning UI. It mirrors:
+Categorically, this is a **geospatial decision-support system** — a multi-source environmental data fusion platform with a forecasting/planning UI. It combines patterns from several software categories:
 
 - **Spatial Data Infrastructure (SDI) / Environmental Dashboard** — like what state natural resource agencies build (USGS, NOAA Climate.gov, USA-NPN). Ingest raster and point data from many sources, compute derived layers, present composite views.
 - **ELT Data Pipeline** — the fetch→store→analyze→render flow is textbook Extract-Load-Transform. Prefect already handles orchestration. The "warehouse" is local files; the "transforms" are analysis modules.
 - **Multi-Criteria Decision Analysis (MCDA)** — the planned "viewing score" and "best day to go" features weight multiple factors (GDD, weather, bloom stage, species likelihood, drive time) to produce ranked recommendations.
+- **Integration Platform** — like Home Assistant but for environmental data instead of IoT devices. Each datasource is a self-contained integration with its own client, models, and docs.
 
-The closest analogy is a **personal-scale version of Google Earth Engine** — many raster/vector data sources, temporal alignment, composite analysis, map output — scoped to a specific domain and rendered as a static site.
+### Open-Source Projects to Study
+
+The architecture doesn't map to one single project, but several are worth studying for specific patterns:
+
+**For multi-source integration architecture (non-geospatial):**
+
+| Project | Stars | What to study | Link |
+|---|---|---|---|
+| **Home Assistant** | 79k+ | Integration pattern: each data source is a directory with `manifest.json`, `__init__.py`, `coordinator.py`. The `DataUpdateCoordinator` pattern (fetch with polling interval, cache, notify consumers) is very close to our `store.py` + `datasources/` design. | [home-assistant/core](https://github.com/home-assistant/core) |
+| **Dagster `project_fully_featured`** | — | Software-defined assets pattern: data flows from sources → assets → derived assets. Groups assets by domain (core, recommender, analytics). Multi-environment support (local=DuckDB, prod=Snowflake). Shows how an orchestrator should be thin. | [dagster examples](https://github.com/dagster-io/dagster/tree/master/examples/project_fully_featured) |
+| **Mycodo** | 3k+ | Environmental monitoring with pluggable inputs, InfluxDB time-series storage, configurable dashboard widgets. Shows how sensor/API inputs feed through a data pipeline to dashboard rendering. | [kizniche/Mycodo](https://github.com/kizniche/Mycodo) |
+
+**For geospatial + ecological data fusion:**
+
+| Project | Stars | What to study | Link |
+|---|---|---|---|
+| **elapid** | 69 | Species distribution modeling: combines species occurrence points + environmental rasters. Uses sklearn conventions, rasterio for rasters, geopandas for vectors. Good model for how `analysis/` modules should take typed inputs from different sources. | [earth-chris/elapid](https://github.com/earth-chris/elapid) |
+| **phenodata** | ~30 | Phenology data acquisition toolkit. Uses DuckDB to query pandas DataFrames, FTP caching. Closest existing project to what our flower phenology datasource will look like. | [earthobservations/phenodata](https://github.com/earthobservations/phenodata) |
+| **DDRP v3** | ~20 | Degree-day pest mapping system. Predicts phenology and climate suitability using GDD — exactly our domain. Written in R, but the data model (degree-day parameters per life stage, climate suitability grids) is directly applicable. | [bbarker505/ddrp_v3](https://github.com/bbarker505/ddrp_v3) |
+| **eBird Status & Trends** | — | Cornell Lab's species distribution pipeline. ML models combine citizen-science observations + remotely-sensed habitat variables. The API pattern and data products structure (weekly abundance estimates across the annual cycle) is what we're building toward for butterflies. | [ebird/ebirdst](https://github.com/ebird/ebirdst) |
+
+**For the data pipeline pattern (non-geospatial):**
+
+| Project | Stars | What to study | Link |
+|---|---|---|---|
+| **Dagster `hooli-data-eng-pipelines`** | — | Realistic multi-source ETL: ingest from API → transform with dbt → serve to downstream teams. Shows asset dependencies and partitioned data (by time). | [dagster-io/hooli-data-eng-pipelines](https://github.com/dagster-io/hooli-data-eng-pipelines) |
+| **Open Sustainable Technology** | 1.7k+ | Curated directory of open-source climate/biodiversity/energy projects. Good for discovering additional data sources and seeing how other ecological projects are structured. | [protontypes/open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology) |
+
+**Key architectural takeaways across these projects:**
+
+1. **Home Assistant's integration pattern** is the closest match to our `datasources/` design — self-contained directories, each with a coordinator that handles polling/caching, a manifest for metadata, and platform files for different entity types. Our `README.md` per datasource serves the same role as their `manifest.json`.
+2. **Dagster's asset graph** validates our `datasources → analysis → renderers` pipeline — derived assets (our `analysis/`) depend on upstream assets (our `datasources/`) and the framework handles staleness/recomputation.
+3. **phenodata's use of DuckDB** for querying cached data is worth exploring as a future evolution of our `store.py` (see Open Questions).
 
 ---
 
@@ -537,3 +570,9 @@ The architecture above is well-grounded for the current codebase and the next 3-
 **Data format for reference/raster data.** The plan assumes JSON for everything, which works for point data and time series. But DEMs and species range polygons are inherently spatial — GeoTIFF, GeoJSON, or GeoParquet may be more appropriate. The `DataStore` interface should be format-agnostic (read/write paths, not JSON specifically), but we haven't validated that the metadata envelope pattern works for binary raster formats. This needs a spike when we add the first raster datasource (likely elevation DEMs).
 
 **Prefect task granularity after refactor.** Currently each `@task` does fetch+save as one unit. With `store.is_fresh()` checks, the flow might skip individual fetches. We should verify that Prefect handles conditional task skipping cleanly (via `return` or Prefect's native skip/caching) rather than building our own orchestration on top of Prefect's.
+
+**DuckDB as a storage/query backend.** The [phenodata](https://github.com/earthobservations/phenodata) project uses DuckDB to query pandas DataFrames produced by its data acquisition layer. As our `analysis/` modules grow, we may hit limitations with in-memory dict joins — especially when correlating observations across multiple years of GDD data or joining species profiles against weather grids. DuckDB offers: (a) SQL-based joins across cached data without loading everything into memory, (b) native Parquet/CSV/JSON ingestion, (c) spatial extensions for GeoParquet. The spike should evaluate: replacing `store.py` JSON read/write with DuckDB tables, whether `analysis/` modules benefit from SQL vs. Python for cross-source joins, and whether the Prefect→DuckDB integration is smooth. Trigger: when total cached data exceeds ~50MB or when an `analysis/` module needs to join 3+ large datasets.
+
+**GeoParquet for spatial data.** When we add elevation DEMs, species range polygons, or GDD raster grids, GeoParquet is the likely format — it's columnar (fast queries), supports spatial indexing, and is readable by DuckDB's spatial extension, geopandas, and QGIS. The question is whether to adopt it early (for iNat observations, which have lat/lon) or wait until the first true raster datasource. Early adoption means `analysis/` modules can do spatial joins (e.g., "observations within 5km of a campground") without custom code.
+
+**Home Assistant's DataUpdateCoordinator pattern.** Home Assistant's [DataUpdateCoordinator](https://developers.home-assistant.io/docs/integration_fetching_data) handles polling, caching, and error recovery for each integration. It's essentially what our `store.py` + per-datasource fetch logic will become. Worth studying in detail before implementing Phase 7 to avoid reinventing their wheel — especially their approach to update intervals, error backoff, and notifying dependent consumers when data changes.
