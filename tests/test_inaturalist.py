@@ -574,7 +574,7 @@ class TestInatClient:
     def test_max_per_page(self) -> None:
         assert inat.MAX_PER_PAGE == 200
 
-    @patch("butterfly_planner.services.inat.requests.get")
+    @patch("butterfly_planner.services.inat.session.get")
     def test_get_observations_calls_api(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
@@ -587,7 +587,7 @@ class TestInatClient:
         assert result == {"results": [], "total_results": 0}
         mock_get.assert_called_once()  # type: ignore[union-attr]
 
-    @patch("butterfly_planner.services.inat.requests.get")
+    @patch("butterfly_planner.services.inat.session.get")
     def test_get_species_counts_calls_api(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
@@ -601,7 +601,7 @@ class TestInatClient:
         call_url = mock_get.call_args[0][0]  # type: ignore[union-attr]
         assert "species_counts" in call_url
 
-    @patch("butterfly_planner.services.inat.requests.get")
+    @patch("butterfly_planner.services.inat.session.get")
     def test_pagination_stops_on_empty(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
@@ -614,7 +614,7 @@ class TestInatClient:
         # Should stop after first empty page
         assert mock_get.call_count == 1  # type: ignore[union-attr]
 
-    @patch("butterfly_planner.services.inat.requests.get")
+    @patch("butterfly_planner.services.inat.session.get")
     def test_pagination_uses_id_above(self, mock_get: object) -> None:
         # First page returns results, second page empty
         page1 = {"results": [{"id": 100}, {"id": 200}], "total_results": 2}

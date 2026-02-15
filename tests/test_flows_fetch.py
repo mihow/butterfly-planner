@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class TestFetchWeather:
     """Test fetching weather data from API."""
 
-    @patch("butterfly_planner.flows.fetch.requests.get")
+    @patch("butterfly_planner.flows.fetch.session.get")
     def test_fetch_weather(self, mock_get: Mock) -> None:
         """Test fetching weather data from Open-Meteo."""
         mock_response = Mock()
@@ -308,7 +308,7 @@ class TestFetchAllFlow:
     @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_16day_sunshine")
-    @patch("butterfly_planner.flows.fetch.requests.get")
+    @patch("butterfly_planner.flows.fetch.session.get")
     def test_fetch_all(
         self,
         mock_get: Mock,
