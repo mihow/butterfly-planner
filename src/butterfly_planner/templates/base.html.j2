@@ -100,12 +100,12 @@
         .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
         .tl-seg:hover { opacity: 0.65; }
 
-        /* --- Sunshine color scale (muted, scientific palette) --- */
+        /* --- Sunshine color scale (vibrant warm palette) --- */
         .sunshine-none { background: #e8e8e8; }
-        .sunshine-low  { background: #f5eec2; }
-        .sunshine-med  { background: #e8d44d; }
-        .sunshine-high { background: #d4a017; }
-        .sunshine-full { background: #b8860b; }
+        .sunshine-low  { background: #fff3b0; }
+        .sunshine-med  { background: #ffd43b; }
+        .sunshine-high { background: #ff922b; }
+        .sunshine-full { background: #ff6b2b; }
 
         /* --- Inline hourly bar (16-day table) --- */
         .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
@@ -212,7 +212,7 @@
         .gdd-track-bar {
             flex: 1;
             height: 6px;
-            background: linear-gradient(to right, #4363d8, #e8d44d, #e6194b);
+            background: linear-gradient(to right, #4363d8, #ffd43b, #ff6b2b);
             border-radius: 3px;
             position: relative;
         }
@@ -258,6 +258,99 @@
             text-align: center;
             font-size: 0.85rem;
             color: #888;
+        }
+
+        /* --- Mobile responsive --- */
+        @media (max-width: 640px) {
+            body { padding: 1.5rem 0.75rem; }
+            header h1 { font-size: 1.4rem; }
+
+            /* Fat rows: stack table cells vertically on mobile */
+            table.fat-rows thead { display: none; }
+            table.fat-rows tbody tr {
+                display: block;
+                padding: 0.75rem;
+                border-bottom: 1px solid #ddd;
+                margin-bottom: 0.25rem;
+            }
+            table.fat-rows tbody td {
+                display: block;
+                border: none;
+                padding: 0.15rem 0;
+            }
+
+            /* Sightings table: photo + name side-by-side, count below */
+            table.sightings-table thead { display: none; }
+            table.sightings-table tbody tr {
+                display: grid;
+                grid-template-columns: 48px 1fr;
+                grid-template-rows: auto auto;
+                gap: 0 0.75rem;
+                padding: 0.65rem 0.5rem;
+                border-bottom: 1px solid #eee;
+                align-items: center;
+            }
+            table.sightings-table tbody td:first-child {
+                grid-row: 1 / 3;
+                width: auto;
+            }
+            table.sightings-table tbody td:nth-child(2) {
+                min-width: 0;
+                grid-column: 2;
+            }
+            table.sightings-table tbody td.obs-count {
+                grid-column: 2;
+                font-size: 0.8rem;
+                color: #666;
+            }
+            .species-scientific { padding-left: 0; font-size: 0.82rem; }
+
+            /* 16-day forecast: fat rows with labels */
+            table.forecast-table thead { display: none; }
+            table.forecast-table tbody tr {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.15rem 0.75rem;
+                padding: 0.65rem 0.5rem;
+                border-bottom: 1px solid #eee;
+            }
+            table.forecast-table tbody td {
+                border: none;
+                padding: 0.1rem 0;
+            }
+            table.forecast-table tbody td::before {
+                display: inline;
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                color: #888;
+                margin-right: 0.3rem;
+            }
+            table.forecast-table tbody td:nth-child(1) {
+                grid-column: 1 / -1;
+                font-weight: 600;
+            }
+            table.forecast-table tbody td:nth-child(2)::before { content: "Sun: "; }
+            table.forecast-table tbody td:nth-child(3)::before { content: ""; }
+            table.forecast-table tbody td:nth-child(4)::before { content: ""; }
+            table.forecast-table tbody td:nth-child(5)::before { content: "Rain: "; }
+            table.forecast-table tbody td:nth-child(6) {
+                grid-column: 1 / -1;
+                text-align: right;
+                font-size: 0.85rem;
+            }
+
+            /* Hourly bars: hide on mobile to save space */
+            .hour-bar { display: none; }
+
+            /* Map height reduction */
+            #sightings-map { height: 300px; }
+
+            /* GDD card */
+            .gdd-stats { gap: 1rem; }
+            .gdd-card { padding: 1rem; }
+
+            /* GDD timeline: allow scroll */
+            .gdd-timeline-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         }
 
         /* --- Print --- */
