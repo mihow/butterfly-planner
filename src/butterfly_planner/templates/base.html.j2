@@ -262,25 +262,13 @@
 
         /* --- Mobile responsive --- */
         @media (max-width: 640px) {
-            body { padding: 1.5rem 0.75rem; }
+            body { padding: 1.5rem 0.75rem; overflow-x: hidden; }
             header h1 { font-size: 1.4rem; }
 
-            /* Fat rows: stack table cells vertically on mobile */
-            table.fat-rows thead { display: none; }
-            table.fat-rows tbody tr {
-                display: block;
-                padding: 0.75rem;
-                border-bottom: 1px solid #ddd;
-                margin-bottom: 0.25rem;
-            }
-            table.fat-rows tbody td {
-                display: block;
-                border: none;
-                padding: 0.15rem 0;
-            }
-
             /* Sightings table: photo + name side-by-side, count below */
+            table.sightings-table { display: block; width: 100%; }
             table.sightings-table thead { display: none; }
+            table.sightings-table tbody { display: block; }
             table.sightings-table tbody tr {
                 display: grid;
                 grid-template-columns: 48px 1fr;
@@ -290,12 +278,17 @@
                 border-bottom: 1px solid #eee;
                 align-items: center;
             }
+            table.sightings-table tbody td {
+                display: block;
+                border: none;
+                padding: 0.1rem 0;
+                min-width: 0;
+                overflow: hidden;
+            }
             table.sightings-table tbody td:first-child {
                 grid-row: 1 / 3;
-                width: auto;
             }
             table.sightings-table tbody td:nth-child(2) {
-                min-width: 0;
                 grid-column: 2;
             }
             table.sightings-table tbody td.obs-count {
@@ -303,10 +296,13 @@
                 font-size: 0.8rem;
                 color: #666;
             }
+            .obs-bar { max-width: 100px; }
             .species-scientific { padding-left: 0; font-size: 0.82rem; }
 
             /* 16-day forecast: fat rows with labels */
+            table.forecast-table { display: block; width: 100%; }
             table.forecast-table thead { display: none; }
+            table.forecast-table tbody { display: block; }
             table.forecast-table tbody tr {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -315,8 +311,11 @@
                 border-bottom: 1px solid #eee;
             }
             table.forecast-table tbody td {
+                display: block;
                 border: none;
                 padding: 0.1rem 0;
+                min-width: 0;
+                overflow: hidden;
             }
             table.forecast-table tbody td::before {
                 display: inline;
