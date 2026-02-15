@@ -14,15 +14,15 @@ Run with Prefect dashboard:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-import requests
 from prefect import flow, task
 
-from butterfly_planner import inaturalist, sunshine
+from butterfly_planner import gdd, inaturalist, sunshine
 from butterfly_planner.services import weather
+from butterfly_planner.services.http import session
 
 # Data directories
 DATA_DIR = Path("data")
@@ -55,7 +55,7 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
         "forecast_days": 16,
     }
 
-    resp = requests.get(url, params=params, timeout=30)
+    resp = session.get(url, params=params)
     resp.raise_for_status()
     result: dict[str, Any] = resp.json()
     return result
@@ -254,6 +254,64 @@ def save_historical_weather(weather_by_date: dict[str, dict[str, Any]]) -> Path:
     return output_path
 
 
+@task(name="fetch-gdd", retries=2, retry_delay_seconds=5)
+def fetch_gdd(
+    lat: float = 45.5,
+    lon: float = -122.6,
+    base_temp_f: float = 50.0,
+    upper_cutoff_f: float = 86.0,
+) -> dict[str, Any]:
+    """Fetch temperature data and compute GDD for current and previous year.
+
+    Fetches daily min/max temperatures from the Open-Meteo archive API,
+    computes daily and accumulated GDD using the modified average method.
+
+    Args:
+        lat: Latitude (default: Portland, OR).
+        lon: Longitude.
+        base_temp_f: GDD base temperature in Fahrenheit.
+        upper_cutoff_f: GDD upper cutoff temperature in Fahrenheit.
+
+    Returns:
+        Dict with current_year, previous_year, and location metadata.
+    """
+    today = date.today()
+    current = gdd.fetch_year_gdd(
+        lat, lon, today.year, base_temp_f=base_temp_f, upper_cutoff_f=upper_cutoff_f
+    )
+    previous = gdd.fetch_year_gdd(
+        lat, lon, today.year - 1, base_temp_f=base_temp_f, upper_cutoff_f=upper_cutoff_f
+    )
+
+    return {
+        "location": {"lat": lat, "lon": lon},
+        "base_temp_f": base_temp_f,
+        "upper_cutoff_f": upper_cutoff_f,
+        "current_year": gdd.year_gdd_to_dict(current),
+        "previous_year": gdd.year_gdd_to_dict(previous),
+    }
+
+
+@task(name="save-gdd")
+def save_gdd(gdd_data: dict[str, Any]) -> Path:
+    """Save GDD data to JSON file."""
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+    output_path = RAW_DIR / "gdd.json"
+    with output_path.open("w") as f:
+        json.dump(
+            {
+                "fetched_at": datetime.now().isoformat(),
+                "source": "open-meteo.com (archive)",
+                "data": gdd_data,
+            },
+            f,
+            indent=2,
+        )
+
+    return output_path
+
+
 @flow(name="fetch-data", log_prints=True)
 def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     """
@@ -290,16 +348,25 @@ def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     hist_path = save_historical_weather(hist_weather)
     print(f"Cached historical weather for {len(hist_weather)} dates to {hist_path}")
 
+    print(f"Fetching GDD data for ({lat}, {lon})...")
+    gdd_data = fetch_gdd(lat, lon)
+    gdd_path = save_gdd(gdd_data)
+
+    current_gdd = gdd_data.get("current_year", {}).get("total_gdd", 0)
+    print(f"Saved GDD data ({current_gdd:.0f} accumulated) to {gdd_path}")
+
     return {
         "weather_days": days,
         "sunshine_slots": slots,
         "inat_species": species_count,
         "historical_weather_dates": len(hist_weather),
+        "current_gdd": current_gdd,
         "outputs": {
             "weather": str(output_path),
             "sunshine": str(sunshine_path),
             "inaturalist": str(inat_path),
             "historical_weather": str(hist_path),
+            "gdd": str(gdd_path),
         },
     }
 

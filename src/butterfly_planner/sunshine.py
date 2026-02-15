@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-import requests
+from butterfly_planner.services.http import session
 
 # Open-Meteo API endpoints
 FORECAST_API = "https://api.open-meteo.com/v1/forecast"
@@ -164,7 +164,7 @@ def fetch_today_15min_sunshine(
         "forecast_days": forecast_days,
     }
 
-    resp = requests.get(FORECAST_API, params=params, timeout=30)
+    resp = session.get(FORECAST_API, params=params)
     resp.raise_for_status()
     data: dict[str, Any] = resp.json()
 
@@ -204,7 +204,7 @@ def fetch_16day_sunshine(
         "forecast_days": 16,
     }
 
-    resp = requests.get(FORECAST_API, params=params, timeout=30)
+    resp = session.get(FORECAST_API, params=params)
     resp.raise_for_status()
     data: dict[str, Any] = resp.json()
 
@@ -261,7 +261,7 @@ def fetch_ensemble_sunshine(
         "forecast_days": forecast_days,
     }
 
-    resp = requests.get(ENSEMBLE_API, params=params, timeout=60)
+    resp = session.get(ENSEMBLE_API, params=params, timeout=60)
     resp.raise_for_status()
     data: dict[str, Any] = resp.json()
 

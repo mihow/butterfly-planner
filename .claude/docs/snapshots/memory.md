@@ -116,6 +116,8 @@ As Claude works, it may save things like:
 Each project gets its own memory directory at `~/.claude/projects/<project>/memory/`. The `<project>` path is derived from the git repository root, so all subdirectories within the same repo share one auto memory directory. Git worktrees get separate memory directories. Outside a git repo, the working directory is used instead.
 The directory contains a `MEMORY.md` entrypoint and optional topic files:
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -142,6 +144,8 @@ Auto memory files are markdown files you can edit at any time. Use `/memory` to 
 To ask Claude to save something specific, tell it directly: “remember that we use pnpm, not npm” or “save to memory that the API tests require a local Redis instance”.
 When neither variable is set, auto memory follows the gradual rollout. The variable name uses double-negative logic: `DISABLE=0` means “don’t disable” and forces auto memory on.
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -155,6 +159,8 @@ export CLAUDE_CODE_DISABLE_AUTO_MEMORY=0  # Force on
 -----------------------------------------
 
 CLAUDE.md files can import additional files using `@path/to/import` syntax. The following example imports 3 files:
+
+Report incorrect code
 
 Copy
 
@@ -170,6 +176,8 @@ See @README for project overview and @package.json for available npm commands fo
 Both relative and absolute paths are allowed. Relative paths resolve relative to the file containing the import, not the working directory. For private per-project preferences that shouldn’t be checked into version control, prefer `CLAUDE.local.md`: it is automatically loaded and added to `.gitignore`.
 If you work across multiple git worktrees, `CLAUDE.local.md` only exists in one. Use a home-directory import instead so all worktrees share the same personal instructions:
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -182,6 +190,8 @@ Ask AI
 The first time Claude Code encounters external imports in a project, it shows an approval dialog listing the specific files. Approve to load them; decline to skip them. This is a one-time decision per project: once declined, the dialog does not resurface and the imports remain disabled.
 
 To avoid potential collisions, imports are not evaluated inside markdown code spans and code blocks.
+
+Report incorrect code
 
 Copy
 
@@ -204,6 +214,8 @@ Claude will also discover CLAUDE.md nested in subtrees under your current workin
 The `--add-dir` flag gives Claude access to additional directories outside your main working directory. By default, CLAUDE.md files from these directories are not loaded.
 To also load memory files (CLAUDE.md, .claude/CLAUDE.md, and .claude/rules/\*.md) from additional directories, set the `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD` environment variable:
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -222,6 +234,8 @@ Use the `/memory` command during a session to open any memory file in your syste
 
 Suppose you want to set up a CLAUDE.md file to store important project information, conventions, and frequently used commands. Project memory can be stored in either `./CLAUDE.md` or `./.claude/CLAUDE.md`.
 Bootstrap a CLAUDE.md for your codebase with the following command:
+
+Report incorrect code
 
 Copy
 
@@ -247,6 +261,8 @@ For larger projects, you can organize instructions into multiple files using the
 
 Place markdown files in your project’s `.claude/rules/` directory:
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -266,6 +282,8 @@ All `.md` files in `.claude/rules/` are automatically loaded as project memory, 
 ### [​](#path-specific-rules) Path-specific rules
 
 Rules can be scoped to specific files using YAML frontmatter with the `paths` field. These conditional rules only apply when Claude is working with files matching the specified patterns.
+
+Report incorrect code
 
 Copy
 
@@ -299,6 +317,8 @@ The `paths` field supports standard glob patterns:
 
 You can specify multiple patterns:
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -313,6 +333,8 @@ paths:
 ```
 
 Brace expansion is supported for matching multiple extensions or directories:
+
+Report incorrect code
 
 Copy
 
@@ -333,6 +355,8 @@ This expands `src/**/*.{ts,tsx}` to match both `.ts` and `.tsx` files.
 ### [​](#subdirectories) Subdirectories
 
 Rules can be organized into subdirectories for better structure:
+
+Report incorrect code
 
 Copy
 
@@ -355,6 +379,8 @@ All `.md` files are discovered recursively.
 
 The `.claude/rules/` directory supports symlinks, allowing you to share common rules across multiple projects:
 
+Report incorrect code
+
 Copy
 
 Ask AI
@@ -372,6 +398,8 @@ Symlinks are resolved and their contents are loaded normally. Circular symlinks 
 ### [​](#user-level-rules) User-level rules
 
 You can create personal rules that apply to all your projects in `~/.claude/rules/`:
+
+Report incorrect code
 
 Copy
 

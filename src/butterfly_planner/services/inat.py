@@ -14,7 +14,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import requests
+from butterfly_planner.services.http import session
 
 # ---------------------------------------------------------------------------
 # Taxon IDs
@@ -32,7 +32,6 @@ WASHINGTON = 46
 # API configuration
 # ---------------------------------------------------------------------------
 API_BASE = "https://api.inaturalist.org/v1"
-USER_AGENT = "butterfly-planner/0.1 (https://github.com/mihow/butterfly-planner)"
 MAX_PER_PAGE = 200  # API maximum for /observations
 MAX_RESULTS = 10_000  # API hard ceiling per query
 
@@ -57,8 +56,7 @@ def _get(endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     """Make a rate-limited GET request to the iNaturalist API v1."""
     _rate_limit()
     url = f"{API_BASE}/{endpoint}"
-    headers = {"User-Agent": USER_AGENT}
-    resp = requests.get(url, params=params or {}, headers=headers, timeout=30)
+    resp = session.get(url, params=params or {})
     resp.raise_for_status()
     data: dict[str, Any] = resp.json()
     return data

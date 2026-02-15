@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     lat: float = Field(default=45.5, description="Latitude for weather/data queries")
     lon: float = Field(default=-122.6, description="Longitude for weather/data queries")
 
+    # GDD settings
+    gdd_base_temp_f: float = Field(
+        default=50.0, description="GDD base temperature in Fahrenheit (50°F standard for insects)"
+    )
+    gdd_upper_cutoff_f: float = Field(
+        default=86.0, description="GDD upper cutoff temperature in Fahrenheit"
+    )
+    gdd_normal_years: int = Field(
+        default=30, description="Number of historical years for GDD normal computation"
+    )
+
     # API settings (example)
     api_host: str = Field(default="0.0.0.0", description="API host")
     api_port: int = Field(default=8000, description="API port")
