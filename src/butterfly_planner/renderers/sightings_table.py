@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from butterfly_planner.reference.geography import TARGET_REGION_PARAMS
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.sightings_map import _week_label, _year_range
 from butterfly_planner.renderers.species_palette import (
@@ -23,7 +24,7 @@ def _inat_obs_url(taxon_id: int, month: int) -> str:
         f"https://www.inaturalist.org/observations"
         f"?taxon_id={taxon_id}&month={month}"
         f"&quality_grade=research&verifiable=true"
-        f"&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5"
+        f"&{TARGET_REGION_PARAMS}"
     )
 
 
@@ -103,7 +104,7 @@ def build_butterfly_sightings_html(
         f"https://www.inaturalist.org/observations"
         f"?taxon_id=47224&month={month}"
         f"&quality_grade=research&verifiable=true"
-        f"&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5"
+        f"&{TARGET_REGION_PARAMS}"
     )
 
     return render_template(
