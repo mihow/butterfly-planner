@@ -1,5 +1,5 @@
 """
-Tests for the build flow module.
+Tests for the build flow module and renderer modules.
 """
 
 from __future__ import annotations
@@ -10,6 +10,16 @@ from typing import TYPE_CHECKING
 import pytest
 
 from butterfly_planner.flows import build
+from butterfly_planner.renderers.sightings_map import (
+    _build_weather_html,
+    build_butterfly_map_html,
+)
+from butterfly_planner.renderers.sightings_table import build_butterfly_sightings_html
+from butterfly_planner.renderers.sunshine import (
+    build_sunshine_16day_html,
+    build_sunshine_today_html,
+)
+from butterfly_planner.renderers.weather_utils import c_to_f, wmo_code_to_conditions
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,7 +34,7 @@ class TestCelsiusToFahrenheit:
     )
     def test_c_to_f(self, celsius: float, fahrenheit: float) -> None:
         """Test Celsius to Fahrenheit conversion."""
-        assert build.c_to_f(celsius) == fahrenheit
+        assert c_to_f(celsius) == fahrenheit
 
 
 class TestLoadWeather:
@@ -101,7 +111,7 @@ class TestBuildSunshineTodayHtml:
             }
         }
 
-        result = build.build_sunshine_today_html(sunshine_data)
+        result = build_sunshine_today_html(sunshine_data)
 
         assert "Today's Sun Breaks" in result
         assert "February 04" in result
@@ -132,7 +142,7 @@ class TestBuildSunshineTodayHtml:
             }
         }
 
-        result = build.build_sunshine_today_html(sunshine_data)
+        result = build_sunshine_today_html(sunshine_data)
 
         assert "February 04" in result
         # 2 slots x 900 sec = 1800 sec = 0.5 hours (only day 1)
@@ -144,7 +154,7 @@ class TestBuildSunshineTodayHtml:
             "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}}
         }
 
-        result = build.build_sunshine_today_html(sunshine_data)
+        result = build_sunshine_today_html(sunshine_data)
         assert "No 15-minute sunshine data available" in result
 
     def test_build_sunshine_today_html_no_daylight(self) -> None:
@@ -159,7 +169,7 @@ class TestBuildSunshineTodayHtml:
             }
         }
 
-        result = build.build_sunshine_today_html(sunshine_data)
+        result = build_sunshine_today_html(sunshine_data)
         assert "No daylight hours" in result
 
 
@@ -168,23 +178,23 @@ class TestWmoCodeToConditions:
 
     def test_known_codes(self) -> None:
         """Test known WMO codes return correct conditions with emojis."""
-        result_clear = build.wmo_code_to_conditions(0)
+        result_clear = wmo_code_to_conditions(0)
         assert "Clear" in result_clear
         assert "\u2600" in result_clear  # sun emoji
 
-        result_overcast = build.wmo_code_to_conditions(3)
+        result_overcast = wmo_code_to_conditions(3)
         assert "Overcast" in result_overcast
         assert "\u2601" in result_overcast  # cloud emoji
 
-        result_rain = build.wmo_code_to_conditions(61)
+        result_rain = wmo_code_to_conditions(61)
         assert "Light Rain" in result_rain
 
-        result_thunder = build.wmo_code_to_conditions(95)
+        result_thunder = wmo_code_to_conditions(95)
         assert "Thunderstorm" in result_thunder
 
     def test_unknown_code(self) -> None:
         """Test unknown WMO code returns fallback string."""
-        assert build.wmo_code_to_conditions(999) == "Unknown (999)"
+        assert wmo_code_to_conditions(999) == "Unknown (999)"
 
 
 class TestBuildSunshine16DayHtml:
@@ -214,7 +224,7 @@ class TestBuildSunshine16DayHtml:
             }
         }
 
-        result = build.build_sunshine_16day_html(sunshine_data, weather_data)
+        result = build_sunshine_16day_html(sunshine_data, weather_data)
 
         assert "16-Day Sunshine Forecast" in result
         assert "2026-02-04" in result
@@ -251,7 +261,7 @@ class TestBuildSunshine16DayHtml:
             },
         }
 
-        result = build.build_sunshine_16day_html(sunshine_data)
+        result = build_sunshine_16day_html(sunshine_data)
 
         assert "hour-bar" in result
         assert "hour-seg" in result
@@ -269,7 +279,7 @@ class TestBuildSunshine16DayHtml:
             },
         }
 
-        result = build.build_sunshine_16day_html(sunshine_data)
+        result = build_sunshine_16day_html(sunshine_data)
 
         assert "16-Day Sunshine Forecast" in result
         assert "\u2014" in result  # em-dash for missing weather
@@ -287,7 +297,7 @@ class TestBuildSunshine16DayHtml:
             },
         }
 
-        result = build.build_sunshine_16day_html(sunshine_data)
+        result = build_sunshine_16day_html(sunshine_data)
         assert "No 16-day sunshine data available" in result
 
     def test_build_sunshine_16day_html_zero_daylight(self) -> None:
@@ -303,7 +313,7 @@ class TestBuildSunshine16DayHtml:
             },
         }
 
-        result = build.build_sunshine_16day_html(sunshine_data)
+        result = build_sunshine_16day_html(sunshine_data)
         assert "0%" in result
 
 
@@ -514,7 +524,7 @@ class TestBuildWeatherHtml:
     def test_full_weather(self) -> None:
         """Test weather HTML with all fields."""
         w = {"weather_code": 0, "high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0}
-        result = build._build_weather_html(w)
+        result = _build_weather_html(w)
         assert "Clear" in result
         assert "22/10" in result
         # No precip when 0
@@ -523,14 +533,14 @@ class TestBuildWeatherHtml:
     def test_with_precipitation(self) -> None:
         """Test weather HTML includes precipitation when > 0."""
         w = {"weather_code": 61, "high_c": 12.0, "low_c": 5.0, "precip_mm": 3.2}
-        result = build._build_weather_html(w)
+        result = _build_weather_html(w)
         assert "Light Rain" in result
         assert "3.2mm" in result
 
     def test_partial_weather(self) -> None:
         """Test weather HTML with missing fields."""
         w = {"weather_code": 3, "high_c": None, "low_c": None, "precip_mm": None}
-        result = build._build_weather_html(w)
+        result = _build_weather_html(w)
         assert "Overcast" in result
         assert "\u00b0C" not in result
 
@@ -543,7 +553,7 @@ class TestBuildButterflyMapHtml:
         hw = {
             "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
         }
-        map_div, map_script = build.build_butterfly_map_html(
+        map_div, map_script = build_butterfly_map_html(
             SAMPLE_INAT_DATA_WITH_OBS, historical_weather=hw
         )
 
@@ -560,7 +570,7 @@ class TestBuildButterflyMapHtml:
 
     def test_map_without_historical_weather(self) -> None:
         """Test map works without historical weather data."""
-        map_div, map_script = build.build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        map_div, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
 
         assert "Butterfly Sightings Map" in map_div
         assert "Painted Lady" in map_script
@@ -569,14 +579,14 @@ class TestBuildButterflyMapHtml:
     def test_map_no_observations(self) -> None:
         """Test map with no observations returns fallback."""
         no_obs: dict = {"data": {"observations": [], "weeks": [5, 6, 7]}}
-        map_div, map_script = build.build_butterfly_map_html(no_obs)
+        map_div, map_script = build_butterfly_map_html(no_obs)
 
         assert "No observation data" in map_div
         assert map_script == ""
 
     def test_map_popup_structure(self) -> None:
         """Test that the JS template builds popups with obs-popup class."""
-        _, map_script = build.build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
 
         assert "obs-popup" in map_script
         assert "obs-popup-img" in map_script
@@ -589,7 +599,7 @@ class TestBuildButterflySightingsHtml:
 
     def test_with_species_data(self) -> None:
         """Test building HTML with species data."""
-        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         assert "Butterfly Sightings" in result
         assert "June" in result
@@ -603,20 +613,20 @@ class TestBuildButterflySightingsHtml:
 
     def test_with_photo(self) -> None:
         """Test that photo URL renders as img tag."""
-        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         assert 'class="species-photo"' in result
         assert "photos/123/medium.jpg" in result
 
     def test_without_photo(self) -> None:
         """Test placeholder when no photo URL."""
-        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         assert "species-photo-placeholder" in result
 
     def test_deep_links(self) -> None:
         """Test that observation counts link to iNaturalist search."""
-        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         # Observation count should link to filtered search
         assert "taxon_id=48662&month=6" in result
@@ -629,13 +639,13 @@ class TestBuildButterflySightingsHtml:
     def test_empty_species(self) -> None:
         """Test with no species data."""
         empty_data: dict = {"data": {"month": 1, "species": []}}
-        result = build.build_butterfly_sightings_html(empty_data)
+        result = build_butterfly_sightings_html(empty_data)
 
         assert "No butterfly sightings data available" in result
 
     def test_observation_bar_scaling(self) -> None:
         """Test that observation bars scale relative to max count."""
-        result = build.build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
 
         # First species (542) should have full-width bar (200px)
         assert "width: 200px;" in result

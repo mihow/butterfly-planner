@@ -5,7 +5,7 @@ Covers:
 - Data structure behavior
 - Normals computation
 - Species observation correlation
-- Rendering functions
+- Rendering functions (in renderers.gdd)
 - JSON serialization helpers
 """
 
@@ -16,14 +16,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import butterfly_planner.renderers.gdd as gdd_renderer
 from butterfly_planner.gdd import (
     DailyGDD,
     DayOfYearStats,
     SpeciesGDDProfile,
     YearGDD,
-    _round_up_nice,
-    build_gdd_timeline_html,
-    build_gdd_today_html,
     compute_accumulated_gdd,
     compute_daily_gdd,
     compute_normals,
@@ -31,6 +29,11 @@ from butterfly_planner.gdd import (
     normals_to_dict,
     species_profiles_to_dict,
     year_gdd_to_dict,
+)
+from butterfly_planner.renderers.gdd import (
+    _round_up_nice,
+    build_gdd_timeline_html,
+    build_gdd_today_html,
 )
 
 # =============================================================================
@@ -438,17 +441,19 @@ class TestRendering:
         }
 
     @pytest.fixture
-    def mock_render(self) -> MagicMock:
-        """Mock render function that returns template name and kwargs."""
+    def mock_render(self, monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+        """Mock render_template in renderers.gdd module."""
 
         def _render(template_name: str, **kwargs):
             return f"<rendered:{template_name}>"
 
-        return MagicMock(side_effect=_render)
+        mock = MagicMock(side_effect=_render)
+        monkeypatch.setattr(gdd_renderer, "render_template", mock)
+        return mock
 
     def test_build_gdd_today_html_calls_template(self, sample_gdd_data, mock_render):
         """Should call the render function with the correct template."""
-        result = build_gdd_today_html(sample_gdd_data, mock_render)
+        result = build_gdd_today_html(sample_gdd_data)
         mock_render.assert_called_once()
         args = mock_render.call_args
         assert args[0][0] == "gdd_today.html.j2"
@@ -456,7 +461,7 @@ class TestRendering:
 
     def test_build_gdd_today_html_passes_values(self, sample_gdd_data, mock_render):
         """Should pass correct GDD values to the template."""
-        build_gdd_today_html(sample_gdd_data, mock_render)
+        build_gdd_today_html(sample_gdd_data)
         kwargs = mock_render.call_args[1]
         assert kwargs["base_temp"] == 50
         assert kwargs["current_gdd"] == "42"
@@ -464,7 +469,7 @@ class TestRendering:
 
     def test_build_gdd_today_html_status_comparison(self, sample_gdd_data, mock_render):
         """Should produce a status comparison against last year."""
-        build_gdd_today_html(sample_gdd_data, mock_render)
+        build_gdd_today_html(sample_gdd_data)
         kwargs = mock_render.call_args[1]
         # Status text should contain a comparison (ahead/behind/tracking)
         assert any(
@@ -473,7 +478,7 @@ class TestRendering:
 
     def test_build_gdd_timeline_html_calls_template(self, sample_gdd_data, mock_render):
         """Should call the render function with the timeline template."""
-        result = build_gdd_timeline_html(sample_gdd_data, mock_render)
+        result = build_gdd_timeline_html(sample_gdd_data)
         mock_render.assert_called_once()
         args = mock_render.call_args
         assert args[0][0] == "gdd_timeline.html.j2"
@@ -481,7 +486,7 @@ class TestRendering:
 
     def test_build_gdd_timeline_html_has_polylines(self, sample_gdd_data, mock_render):
         """Should generate polyline point strings for current and previous year."""
-        build_gdd_timeline_html(sample_gdd_data, mock_render)
+        build_gdd_timeline_html(sample_gdd_data)
         kwargs = mock_render.call_args[1]
         assert len(kwargs["current_year_points"]) > 0
         assert len(kwargs["previous_year_points"]) > 0
@@ -494,7 +499,6 @@ class TestRendering:
         ]
         build_gdd_timeline_html(
             sample_gdd_data,
-            mock_render,
             normals=normals,
             normal_year_range="1996-2025",
         )
@@ -505,7 +509,7 @@ class TestRendering:
     def test_build_gdd_today_no_data(self, mock_render):
         """Should handle missing data gracefully."""
         empty_data = {"data": {}}
-        build_gdd_today_html(empty_data, mock_render)
+        build_gdd_today_html(empty_data)
         mock_render.assert_called_once()
         kwargs = mock_render.call_args[1]
         assert kwargs["current_gdd"] == "0"
