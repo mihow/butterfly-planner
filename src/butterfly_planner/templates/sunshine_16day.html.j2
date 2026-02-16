@@ -15,8 +15,8 @@
     <tr class="{{ row.row_class }}">
         <td>{{ row.date }}</td>
         <td>{{ row.sunshine_hours }}h of {{ row.daylight_hours }}h</td>
-        <td>{{ row.sunshine_pct }}% {{ row.bar }}</td>
-        <td>{{ row.temp_cell }}</td>
+        <td>{{ row.sunshine_pct }}% {{ row.bar|safe }}</td>
+        <td>{{ row.temp_cell|safe }}</td>
         <td>{{ row.precip_cell }}</td>
         <td>{{ row.conditions }}</td>
     </tr>

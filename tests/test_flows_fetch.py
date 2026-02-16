@@ -9,9 +9,10 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
+from butterfly_planner.datasources.inaturalist import SpeciesRecord
+from butterfly_planner.datasources.sunshine import DailySunshine, SunshineSlot
 from butterfly_planner.flows import fetch
-from butterfly_planner.inaturalist import SpeciesRecord
-from butterfly_planner.sunshine import DailySunshine, SunshineSlot
+from butterfly_planner.store import DataStore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 class TestFetchWeather:
     """Test fetching weather data from API."""
 
-    @patch("butterfly_planner.flows.fetch.session.get")
+    @patch("butterfly_planner.datasources.weather.forecast.session.get")
     def test_fetch_weather(self, mock_get: Mock) -> None:
         """Test fetching weather data from Open-Meteo."""
         mock_response = Mock()
@@ -96,8 +97,7 @@ class TestSaveWeather:
 
     def test_save_weather(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test saving weather data to JSON file."""
-        raw_dir = tmp_path / "data" / "raw"
-        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+        monkeypatch.setattr(fetch, "store", DataStore(tmp_path))
 
         weather_data = {
             "daily": {
@@ -108,12 +108,13 @@ class TestSaveWeather:
 
         result = fetch.save_weather(weather_data)
 
-        assert result == raw_dir / "weather.json"
+        assert result == tmp_path / "live" / "weather.json"
         assert result.exists()
 
         saved_data = json.loads(result.read_text())
-        assert "fetched_at" in saved_data
-        assert saved_data["source"] == "open-meteo.com"
+        assert saved_data["meta"]["source"] == "open-meteo.com"
+        assert "fetched_at" in saved_data["meta"]
+        assert "valid_until" in saved_data["meta"]
         assert saved_data["data"] == weather_data
 
 
@@ -121,9 +122,8 @@ class TestSaveSunshine:
     """Test saving sunshine data to file."""
 
     def test_save_sunshine(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test saving sunshine data to JSON file."""
-        raw_dir = tmp_path / "data" / "raw"
-        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+        """Test saving 15-minute sunshine data to JSON file."""
+        monkeypatch.setattr(fetch, "store", DataStore(tmp_path))
 
         sunshine_15min = {
             "minutely_15": {
@@ -142,21 +142,27 @@ class TestSaveSunshine:
 
         result = fetch.save_sunshine(sunshine_15min, sunshine_16day)
 
-        assert result == raw_dir / "sunshine.json"
+        # Returns path to 15-min file (last write)
+        assert result == tmp_path / "live" / "sunshine_15min.json"
         assert result.exists()
 
-        saved_data = json.loads(result.read_text())
-        assert "fetched_at" in saved_data
-        assert saved_data["source"] == "open-meteo.com"
-        assert saved_data["today_15min"] == sunshine_15min
-        assert saved_data["daily_16day"] == sunshine_16day
+        saved_15 = json.loads(result.read_text())
+        assert saved_15["meta"]["source"] == "open-meteo.com"
+        assert saved_15["data"] == sunshine_15min
+
+        # Also writes 16-day file
+        path_16 = tmp_path / "live" / "sunshine_16day.json"
+        assert path_16.exists()
+        saved_16 = json.loads(path_16.read_text())
+        assert saved_16["data"] == sunshine_16day
 
 
 class TestFetchInaturalist:
     """Test fetching iNaturalist data."""
 
-    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
-    def test_fetch_inaturalist(self, mock_fetch: Mock) -> None:
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_fetch_inaturalist(self, mock_fetch: Mock, mock_obs: Mock) -> None:
         """Test fetching iNaturalist species counts."""
         mock_fetch.return_value = [
             SpeciesRecord(
@@ -169,6 +175,7 @@ class TestFetchInaturalist:
                 taxon_url="https://www.inaturalist.org/taxa/48662",
             ),
         ]
+        mock_obs.return_value = []
 
         result = fetch.fetch_inaturalist()
 
@@ -178,10 +185,12 @@ class TestFetchInaturalist:
         assert result["species"][0]["scientific_name"] == "Vanessa cardui"
         assert result["species"][0]["observation_count"] == 542
 
-    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
-    def test_fetch_inaturalist_empty(self, mock_fetch: Mock) -> None:
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_fetch_inaturalist_empty(self, mock_fetch: Mock, mock_obs: Mock) -> None:
         """Test fetching with no species found."""
         mock_fetch.return_value = []
+        mock_obs.return_value = []
 
         result = fetch.fetch_inaturalist()
 
@@ -193,8 +202,7 @@ class TestSaveInaturalist:
 
     def test_save_inaturalist(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test saving iNaturalist data to JSON file."""
-        raw_dir = tmp_path / "data" / "raw"
-        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+        monkeypatch.setattr(fetch, "store", DataStore(tmp_path))
 
         inat_data = {
             "month": 2,
@@ -211,19 +219,19 @@ class TestSaveInaturalist:
 
         result = fetch.save_inaturalist(inat_data)
 
-        assert result == raw_dir / "inaturalist.json"
+        assert result == tmp_path / "live" / "inaturalist.json"
         assert result.exists()
 
         saved_data = json.loads(result.read_text())
-        assert "fetched_at" in saved_data
-        assert saved_data["source"] == "inaturalist.org"
+        assert saved_data["meta"]["source"] == "inaturalist.org"
+        assert "fetched_at" in saved_data["meta"]
         assert saved_data["data"] == inat_data
 
 
 class TestFetchHistoricalWeather:
     """Test fetching historical weather for observation dates."""
 
-    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    @patch("butterfly_planner.flows.fetch.weather_historical.fetch_historical_daily")
     def test_fetch_historical_weather(self, mock_fetch: Mock) -> None:
         """Test fetching historical weather groups by year and returns by-date dict."""
         mock_fetch.return_value = {
@@ -250,7 +258,7 @@ class TestFetchHistoricalWeather:
         assert result["2024-06-16"]["precip_mm"] == 1.5
         mock_fetch.assert_called_once_with("2024-06-15", "2024-06-16", 45.5, -122.6)
 
-    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    @patch("butterfly_planner.flows.fetch.weather_historical.fetch_historical_daily")
     def test_fetch_historical_weather_multiple_years(self, mock_fetch: Mock) -> None:
         """Test that observations from different years make separate API calls."""
         mock_fetch.return_value = {
@@ -283,8 +291,7 @@ class TestSaveHistoricalWeather:
 
     def test_save_historical_weather(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test saving historical weather to JSON file."""
-        raw_dir = tmp_path / "data" / "raw"
-        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+        monkeypatch.setattr(fetch, "store", DataStore(tmp_path))
 
         weather_by_date = {
             "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
@@ -292,36 +299,39 @@ class TestSaveHistoricalWeather:
 
         result = fetch.save_historical_weather(weather_by_date)
 
-        assert result == raw_dir / "historical_weather.json"
+        assert result == tmp_path / "historical" / "weather" / "historical_weather.json"
         assert result.exists()
 
         saved_data = json.loads(result.read_text())
-        assert "fetched_at" in saved_data
-        assert saved_data["source"] == "open-meteo.com (archive)"
-        assert saved_data["by_date"]["2024-06-15"]["high_c"] == 22.0
+        assert saved_data["meta"]["source"] == "open-meteo.com (archive)"
+        assert "fetched_at" in saved_data["meta"]
+        assert saved_data["data"]["by_date"]["2024-06-15"]["high_c"] == 22.0
 
 
 class TestFetchAllFlow:
     """Test the main fetch flow."""
 
-    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
-    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.flows.fetch.gdd.fetch_year_gdd")
+    @patch("butterfly_planner.flows.fetch.weather_historical.fetch_historical_daily")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_16day_sunshine")
-    @patch("butterfly_planner.flows.fetch.session.get")
+    @patch("butterfly_planner.datasources.weather.forecast.session.get")
     def test_fetch_all(
         self,
         mock_get: Mock,
         mock_fetch_16day: Mock,
         mock_fetch_15min: Mock,
         mock_fetch_inat: Mock,
+        mock_fetch_inat_obs: Mock,
         mock_fetch_hist: Mock,
+        mock_fetch_gdd: Mock,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test fetching all data sources."""
-        raw_dir = tmp_path / "data" / "raw"
-        monkeypatch.setattr(fetch, "RAW_DIR", raw_dir)
+        monkeypatch.setattr(fetch, "store", DataStore(tmp_path))
 
         # Mock weather API
         mock_response = Mock()
@@ -346,6 +356,7 @@ class TestFetchAllFlow:
         ]
 
         # Mock iNaturalist
+        mock_fetch_inat_obs.return_value = []
         mock_fetch_inat.return_value = [
             SpeciesRecord(
                 taxon_id=48662,
@@ -356,7 +367,7 @@ class TestFetchAllFlow:
             ),
         ]
 
-        # Mock historical weather (empty — no observations have dates)
+        # Mock historical weather (empty -- no observations have dates)
         mock_fetch_hist.return_value = {
             "daily": {
                 "time": [],
@@ -367,18 +378,30 @@ class TestFetchAllFlow:
             }
         }
 
+        # Mock GDD fetch
+        mock_gdd_result = Mock()
+        mock_gdd_result.total_gdd = 150.0
+        mock_gdd_result.daily = []
+        mock_fetch_gdd.return_value = mock_gdd_result
+
+        # gdd.year_gdd_to_dict needs to handle the mock
+        monkeypatch.setattr(
+            fetch.gdd,
+            "year_gdd_to_dict",
+            lambda result: {"total_gdd": result.total_gdd, "daily": []},
+        )
+
         result = fetch.fetch_all(lat=45.5, lon=-122.6)
 
         assert result["weather_days"] == 2
         assert result["sunshine_slots"] == 1
         assert result["inat_species"] == 1
-        assert "weather" in result["outputs"]
-        assert "sunshine" in result["outputs"]
-        assert "inaturalist" in result["outputs"]
-        assert "historical_weather" in result["outputs"]
+        assert result["current_gdd"] == 150.0
 
-        # Verify files were created
-        assert (raw_dir / "weather.json").exists()
-        assert (raw_dir / "sunshine.json").exists()
-        assert (raw_dir / "inaturalist.json").exists()
-        assert (raw_dir / "historical_weather.json").exists()
+        # Verify files were created at tiered paths
+        assert (tmp_path / "live" / "weather.json").exists()
+        assert (tmp_path / "live" / "sunshine_15min.json").exists()
+        assert (tmp_path / "live" / "sunshine_16day.json").exists()
+        assert (tmp_path / "live" / "inaturalist.json").exists()
+        assert (tmp_path / "historical" / "weather" / "historical_weather.json").exists()
+        assert (tmp_path / "historical" / "gdd" / "gdd.json").exists()

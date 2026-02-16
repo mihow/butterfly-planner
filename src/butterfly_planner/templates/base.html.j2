@@ -275,17 +275,17 @@
     </header>
 
     <main>
-    {{ sunshine_today }}
+    {{ sunshine_today|safe }}
 
-    {{ sunshine_16day }}
+    {{ sunshine_16day|safe }}
 
-    {{ gdd_today }}
+    {{ gdd_today|safe }}
 
-    {{ gdd_timeline }}
+    {{ gdd_timeline|safe }}
 
-    {{ butterfly_map }}
+    {{ butterfly_map|safe }}
 
-    {{ butterfly_sightings }}
+    {{ butterfly_sightings|safe }}
 
     <h2>About</h2>
     <div class="about">
@@ -315,6 +315,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
-    {{ map_script }}
+    {{ map_script|safe }}
 </body>
 </html>

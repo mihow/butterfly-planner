@@ -1,20 +1,12 @@
-"""
-Prefect flows for data pipeline.
+"""Prefect flows for data pipeline orchestration.
+
+Thin orchestrators that wire together datasources, store, analysis, and renderers.
 
 Flows:
-- fetch: Download data from iNat, GBIF, weather APIs
-- build: Transform raw data into GeoJSON layers for static site
+  - fetch: Check store freshness → fetch stale sources → save via DataStore
+  - build: Load from store → render HTML → write to derived/site/
 
-Usage (local):
-    python -m butterfly_planner.flows.fetch
-    python -m butterfly_planner.flows.build
-
-Usage (Prefect):
-    prefect server start  # Optional, for dashboard
-    prefect deployment run 'fetch-data/default'
-
-In GitHub Actions:
-    pip install prefect
+Usage:
     python -m butterfly_planner.flows.fetch
     python -m butterfly_planner.flows.build
 """

@@ -1,5 +1,4 @@
-"""
-iNaturalist API client.
+"""iNaturalist API client.
 
 Low-level HTTP client for the iNaturalist API v1.
 Handles rate limiting, request building, and pagination helpers.
@@ -27,6 +26,21 @@ BUTTERFLIES = 47224  # Papilionoidea (superfamily — butterflies only)
 # ---------------------------------------------------------------------------
 OREGON = 10
 WASHINGTON = 46
+
+# ---------------------------------------------------------------------------
+# API configuration
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Default geographic area: NW Oregon / SW Washington
+# Covers Portland metro, northern Willamette Valley, Oregon coast (north),
+# Clark County WA, and SW Washington lowlands.
+# ---------------------------------------------------------------------------
+NW_OREGON_SW_WASHINGTON = {
+    "swlat": 44.5,
+    "swlng": -124.2,
+    "nelat": 46.5,
+    "nelng": -121.5,
+}
 
 # ---------------------------------------------------------------------------
 # API configuration

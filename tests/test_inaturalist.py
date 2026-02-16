@@ -7,8 +7,15 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import patch
 
-from butterfly_planner import inaturalist
-from butterfly_planner.services import inat
+from butterfly_planner.datasources import inaturalist
+from butterfly_planner.datasources.inaturalist import client as inat_client
+from butterfly_planner.datasources.inaturalist.observations import _parse_observation
+from butterfly_planner.datasources.inaturalist.species import _parse_species_record
+from butterfly_planner.datasources.inaturalist.weekly import (
+    _week_range,
+    _week_to_months,
+    _weeks_to_months,
+)
 
 # =============================================================================
 # Fixtures / Sample API Responses
@@ -213,7 +220,7 @@ class TestParseSpeciesRecord:
 
     def test_full_record(self) -> None:
         result = SAMPLE_SPECIES_COUNTS_RESPONSE["results"][0]
-        record = inaturalist._parse_species_record(result)
+        record = _parse_species_record(result)
         assert record.taxon_id == 48662
         assert record.scientific_name == "Vanessa cardui"
         assert record.common_name == "Painted Lady"
@@ -223,7 +230,7 @@ class TestParseSpeciesRecord:
 
     def test_record_without_photo(self) -> None:
         result = SAMPLE_SPECIES_COUNTS_RESPONSE["results"][2]
-        record = inaturalist._parse_species_record(result)
+        record = _parse_species_record(result)
         assert record.photo_url is None
         assert record.scientific_name == "Papilio zelicaon"
 
@@ -232,7 +239,7 @@ class TestParseObservation:
     """Test _parse_observation helper."""
 
     def test_valid_observation(self) -> None:
-        obs = inaturalist._parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[0])
+        obs = _parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[0])
         assert obs is not None
         assert obs.id == 100001
         assert obs.species == "Vanessa cardui"
@@ -243,22 +250,22 @@ class TestParseObservation:
         assert obs.photo_url is not None
 
     def test_observation_without_photo(self) -> None:
-        obs = inaturalist._parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[1])
+        obs = _parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[1])
         assert obs is not None
         assert obs.photo_url is None
 
     def test_observation_without_location_returns_none(self) -> None:
-        obs = inaturalist._parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[2])
+        obs = _parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[2])
         assert obs is None
 
     def test_observation_with_bad_location_returns_none(self) -> None:
         bad_obs = {"id": 999, "location": "invalid", "observed_on": "2025-06-15"}
-        obs = inaturalist._parse_observation(bad_obs)
+        obs = _parse_observation(bad_obs)
         assert obs is None
 
     def test_observation_without_observed_on_returns_none(self) -> None:
         bad_obs = {"id": 999, "location": "45.5,-122.6", "observed_on": None}
-        obs = inaturalist._parse_observation(bad_obs)
+        obs = _parse_observation(bad_obs)
         assert obs is None
 
 
@@ -270,7 +277,7 @@ class TestParseObservation:
 class TestFetchSpeciesCounts:
     """Test fetch_species_counts with mocked API."""
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_basic_fetch(self, mock_api: object) -> None:
         mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
 
@@ -282,12 +289,12 @@ class TestFetchSpeciesCounts:
 
         # Verify API was called with correct params
         call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
-        assert call_args["taxon_id"] == inat.BUTTERFLIES
+        assert call_args["taxon_id"] == inat_client.BUTTERFLIES
         assert call_args["month"] == "6"
         assert call_args["quality_grade"] == "research"
         assert call_args["swlat"] == 44.5
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_multiple_months(self, mock_api: object) -> None:
         mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
 
@@ -296,7 +303,7 @@ class TestFetchSpeciesCounts:
         call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["month"] == "6,7"
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_custom_bbox(self, mock_api: object) -> None:
         mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
         custom_bbox = {"swlat": 42.0, "swlng": -123.0, "nelat": 45.0, "nelng": -120.0}
@@ -306,7 +313,7 @@ class TestFetchSpeciesCounts:
         call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["swlat"] == 42.0
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_empty_results(self, mock_api: object) -> None:
         mock_api.return_value = {"total_results": 0, "results": []}  # type: ignore[union-attr]
 
@@ -317,7 +324,7 @@ class TestFetchSpeciesCounts:
 class TestFetchObservationsForMonth:
     """Test fetch_observations_for_month with mocked API."""
 
-    @patch("butterfly_planner.services.inat.get_observations_paginated")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
     def test_basic_fetch(self, mock_paginated: object) -> None:
         mock_paginated.return_value = SAMPLE_OBSERVATIONS_RESPONSE  # type: ignore[union-attr]
 
@@ -328,7 +335,7 @@ class TestFetchObservationsForMonth:
         assert obs[0].species == "Vanessa cardui"
         assert obs[1].species == "Pieris rapae"
 
-    @patch("butterfly_planner.services.inat.get_observations_paginated")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
     def test_params_passed_correctly(self, mock_paginated: object) -> None:
         mock_paginated.return_value = []  # type: ignore[union-attr]
 
@@ -336,13 +343,13 @@ class TestFetchObservationsForMonth:
 
         call_args = mock_paginated.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["month"] == "5,6"
-        assert call_args["taxon_id"] == inat.BUTTERFLIES
+        assert call_args["taxon_id"] == inat_client.BUTTERFLIES
 
 
 class TestFetchWeeklyHistogram:
     """Test fetch_weekly_histogram with mocked API."""
 
-    @patch("butterfly_planner.services.inat.get_histogram")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_histogram")
     def test_basic_fetch(self, mock_hist: object) -> None:
         mock_hist.return_value = SAMPLE_HISTOGRAM_RESPONSE  # type: ignore[union-attr]
 
@@ -356,7 +363,7 @@ class TestFetchWeeklyHistogram:
         week_30 = next(w for w in weeks if w.week == 30)
         assert week_30.count == 1200
 
-    @patch("butterfly_planner.services.inat.get_histogram")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_histogram")
     def test_params_include_bbox(self, mock_hist: object) -> None:
         mock_hist.return_value = SAMPLE_HISTOGRAM_RESPONSE  # type: ignore[union-attr]
 
@@ -365,7 +372,7 @@ class TestFetchWeeklyHistogram:
         call_args = mock_hist.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["swlat"] == 44.5
         assert call_args["interval"] == "week_of_year"
-        assert call_args["taxon_id"] == inat.BUTTERFLIES
+        assert call_args["taxon_id"] == inat_client.BUTTERFLIES
 
 
 # =============================================================================
@@ -376,8 +383,8 @@ class TestFetchWeeklyHistogram:
 class TestGetCurrentWeekSpecies:
     """Test get_current_week_species convenience function."""
 
-    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
-    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     def test_returns_summary(self, mock_species: object, mock_obs: object) -> None:
         mock_species.return_value = [  # type: ignore[union-attr]
             inaturalist.SpeciesRecord(
@@ -408,8 +415,8 @@ class TestGetCurrentWeekSpecies:
         assert summary.year is None  # All years
         assert len(summary.weeks) == 3  # current week ± 1
 
-    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
-    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     def test_queries_multiple_months(self, mock_species: object, mock_obs: object) -> None:
         mock_species.return_value = []  # type: ignore[union-attr]
         mock_obs.return_value = []  # type: ignore[union-attr]
@@ -425,8 +432,8 @@ class TestGetCurrentWeekSpecies:
 class TestGetSpeciesForWeek:
     """Test get_species_for_week function."""
 
-    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
-    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     def test_week_25(self, mock_species: object, mock_obs: object) -> None:
         mock_species.return_value = []  # type: ignore[union-attr]
         mock_obs.return_value = []  # type: ignore[union-attr]
@@ -494,19 +501,19 @@ class TestWeekRange:
     """Test _week_range helper."""
 
     def test_mid_year(self) -> None:
-        weeks = inaturalist._week_range(25)
+        weeks = _week_range(25)
         assert weeks == [24, 25, 26]
 
     def test_week_1_wraps_to_52(self) -> None:
-        weeks = inaturalist._week_range(1)
+        weeks = _week_range(1)
         assert weeks == [1, 2, 52]
 
     def test_week_52_wraps_to_1(self) -> None:
-        weeks = inaturalist._week_range(52)
+        weeks = _week_range(52)
         assert weeks == [1, 51, 52]
 
     def test_custom_radius(self) -> None:
-        weeks = inaturalist._week_range(10, radius=2)
+        weeks = _week_range(10, radius=2)
         assert weeks == [8, 9, 10, 11, 12]
 
 
@@ -515,13 +522,13 @@ class TestWeeksToMonths:
 
     def test_single_month(self) -> None:
         # Weeks 24-26 are all in June
-        months = inaturalist._weeks_to_months([24, 25, 26], year=2026)
+        months = _weeks_to_months([24, 25, 26], year=2026)
         assert 6 in months
 
     def test_spanning_months(self) -> None:
         # Weeks around month boundaries should return multiple months
         # Week 5 (late Jan) through week 7 (mid Feb) → Jan + Feb
-        months = inaturalist._weeks_to_months([5, 6, 7], year=2026)
+        months = _weeks_to_months([5, 6, 7], year=2026)
         assert 1 in months or 2 in months
         assert len(months) >= 1
 
@@ -531,28 +538,28 @@ class TestWeekToMonths:
 
     def test_mid_january(self) -> None:
         # Week 3 is mid-January
-        months = inaturalist._week_to_months(3, year=2026)
+        months = _week_to_months(3, year=2026)
         assert months == [1]
 
     def test_mid_june(self) -> None:
         # Week 25 is mid-June
-        months = inaturalist._week_to_months(25, year=2026)
+        months = _week_to_months(25, year=2026)
         assert 6 in months
 
     def test_week_spanning_two_months(self) -> None:
         # Week ~5 often spans Jan/Feb boundary
         # Find a week that actually spans two months
-        months = inaturalist._week_to_months(5, year=2026)
+        months = _week_to_months(5, year=2026)
         # Could be [1, 2] or just [1] depending on year — just check it returns valid months
         assert all(1 <= m <= 12 for m in months)
         assert len(months) >= 1
 
     def test_week_1(self) -> None:
-        months = inaturalist._week_to_months(1, year=2026)
+        months = _week_to_months(1, year=2026)
         assert 1 in months
 
     def test_week_52(self) -> None:
-        months = inaturalist._week_to_months(52, year=2026)
+        months = _week_to_months(52, year=2026)
         assert 12 in months
 
 
@@ -565,56 +572,56 @@ class TestInatClient:
     """Test low-level inat service module constants and structure."""
 
     def test_constants(self) -> None:
-        assert inat.BUTTERFLIES == 47224
-        assert inat.LEPIDOPTERA == 47157
-        assert inat.OREGON == 10
-        assert inat.WASHINGTON == 46
-        assert "v1" in inat.API_BASE
+        assert inat_client.BUTTERFLIES == 47224
+        assert inat_client.LEPIDOPTERA == 47157
+        assert inat_client.OREGON == 10
+        assert inat_client.WASHINGTON == 46
+        assert "v1" in inat_client.API_BASE
 
     def test_max_per_page(self) -> None:
-        assert inat.MAX_PER_PAGE == 200
+        assert inat_client.MAX_PER_PAGE == 200
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_get_observations_calls_api(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
         mock_resp.raise_for_status.return_value = None
 
         # Reset rate limiter for test
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        result = inat.get_observations({"taxon_id": 47224})
+        result = inat_client.get_observations({"taxon_id": 47224})
         assert result == {"results": [], "total_results": 0}
         mock_get.assert_called_once()  # type: ignore[union-attr]
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_get_species_counts_calls_api(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
         mock_resp.raise_for_status.return_value = None
 
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        result = inat.get_species_counts({"taxon_id": 47224})
+        result = inat_client.get_species_counts({"taxon_id": 47224})
         assert result == {"results": [], "total_results": 0}
 
         call_url = mock_get.call_args[0][0]  # type: ignore[union-attr]
         assert "species_counts" in call_url
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_pagination_stops_on_empty(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
         mock_resp.raise_for_status.return_value = None
 
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        results = inat.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
+        results = inat_client.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
         assert results == []
         # Should stop after first empty page
         assert mock_get.call_count == 1  # type: ignore[union-attr]
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_pagination_uses_id_above(self, mock_get: object) -> None:
         # First page returns results, second page empty
         page1 = {"results": [{"id": 100}, {"id": 200}], "total_results": 2}
@@ -624,9 +631,9 @@ class TestInatClient:
         mock_resp.json.side_effect = [page1, page2]
         mock_resp.raise_for_status.return_value = None
 
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        results = inat.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
+        results = inat_client.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
         assert len(results) == 2
 
         # Second call should include id_above=200

@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from butterfly_planner import sunshine
+from butterfly_planner.datasources import sunshine
 
 
 class TestSunshineSlot:
@@ -171,7 +171,7 @@ class TestEnsembleSunshine:
 class TestFetchFunctions:
     """Test API fetching functions."""
 
-    @patch("butterfly_planner.sunshine.session.get")
+    @patch("butterfly_planner.datasources.sunshine.today.session.get")
     def test_fetch_today_15min_sunshine(self, mock_get: Mock) -> None:
         """Test fetching 15-minute sunshine data."""
         mock_response = Mock()
@@ -200,7 +200,7 @@ class TestFetchFunctions:
         assert call_args.kwargs["params"]["longitude"] == -122.6
         assert call_args.kwargs["params"]["forecast_days"] == 1
 
-    @patch("butterfly_planner.sunshine.session.get")
+    @patch("butterfly_planner.datasources.sunshine.daily.session.get")
     def test_fetch_16day_sunshine(self, mock_get: Mock) -> None:
         """Test fetching 16-day sunshine data."""
         mock_response = Mock()
@@ -225,7 +225,7 @@ class TestFetchFunctions:
         call_args = mock_get.call_args
         assert call_args.kwargs["params"]["forecast_days"] == 16
 
-    @patch("butterfly_planner.sunshine.session.get")
+    @patch("butterfly_planner.datasources.sunshine.ensemble.session.get")
     def test_fetch_ensemble_sunshine(self, mock_get: Mock) -> None:
         """Test fetching ensemble sunshine data."""
         mock_response = Mock()

@@ -1,8 +1,20 @@
-"""
-Butterfly Planner - GIS layers for butterfly abundance and species diversity forecasting.
+"""Butterfly Planner - butterfly abundance and species diversity forecasting.
 
-This package helps create GIS layers to indicate butterfly abundance and species
-diversity by general location by week of the year, focusing on Oregon and Washington.
+Architecture::
+
+    datasources/   External APIs (iNaturalist, Open-Meteo weather/sunshine, GDD)
+    store.py       Tiered cache with TTL (reference → historical → live → derived)
+    analysis/      Cross-datasource logic (species-GDD correlation)
+    renderers/     Pure data → HTML (sunshine, sightings, GDD charts)
+    flows/         Prefect orchestration (fetch checks freshness, build renders site)
+    services/      Shared utilities (HTTP client with retry, future API stubs)
+
+Data flow: datasources → store (cache) → analysis → renderers → derived/site/
+
+Extension points — see each package's docstring for step-by-step guides:
+  - New data source:   datasources/__init__.py
+  - New analysis:      analysis/__init__.py
+  - New UI module:     renderers/__init__.py
 """
 
 __version__ = "0.1.0"
