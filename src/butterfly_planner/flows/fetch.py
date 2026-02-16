@@ -20,8 +20,8 @@ from typing import Any
 
 from prefect import flow, task
 
-from butterfly_planner import gdd, sunshine
-from butterfly_planner.datasources import inaturalist
+from butterfly_planner import gdd
+from butterfly_planner.datasources import inaturalist, sunshine
 from butterfly_planner.datasources.weather import forecast as weather_forecast
 from butterfly_planner.datasources.weather import historical as weather_historical
 
