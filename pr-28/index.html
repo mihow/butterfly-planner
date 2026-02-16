@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            line-height: 1.7;
+            color: #222;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        a { color: #222; text-decoration: none; border-bottom: 1px solid #ccc; transition: border-color 0.2s; }
+        a:hover { border-bottom-color: #222; }
+
+        /* --- Header --- */
+        header {
+            text-align: center;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #ddd;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: normal;
+            letter-spacing: 0.02em;
+            color: #222;
+        }
+        header .subtitle {
+            font-size: 1rem;
+            font-style: italic;
+            color: #555;
+            margin-top: 0.25rem;
+        }
+        header .updated {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        /* --- Section headings --- */
+        h2 {
+            font-size: 1.15rem;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #444;
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* --- Body text --- */
+        p { margin: 0.8rem 0; font-size: 0.95rem; }
+        .meta { color: #666; font-size: 0.85rem; font-style: italic; }
+        strong { font-weight: 600; }
+
+        /* --- Data table --- */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #555;
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+        }
+        tbody td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        tbody tr:hover { background: #f8f9fa; }
+        tbody tr.good-day { background: #f2f7f0; }
+        tbody tr.good-day:hover { background: #e8f0e4; }
+        .temp-high { color: #9a3412; font-variant-numeric: tabular-nums; }
+        .temp-low { color: #1e40af; font-variant-numeric: tabular-nums; }
+        .numeric { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; }
+
+        /* --- Sunshine timeline (today) --- */
+        .timeline { margin: 1.25rem 0; }
+        .tl-labels { position: relative; height: 1.4em; font-size: 0.75rem; color: #888; letter-spacing: 0.02em; }
+        .tl-label { position: absolute; transform: translateX(-50%); }
+        .tl-bar { display: flex; gap: 1px; border-radius: 3px; overflow: hidden; height: 28px; border: 1px solid #e0e0e0; }
+        .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
+        .tl-seg:hover { opacity: 0.65; }
+
+        /* --- Sunshine color scale (muted, scientific palette) --- */
+        .sunshine-none { background: #e8e8e8; }
+        .sunshine-low  { background: #f5eec2; }
+        .sunshine-med  { background: #e8d44d; }
+        .sunshine-high { background: #d4a017; }
+        .sunshine-full { background: #b8860b; }
+
+        /* --- Inline hourly bar (16-day table) --- */
+        .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
+        .hour-seg { width: 14px; height: 16px; border-radius: 1px; }
+
+        /* --- Legend --- */
+        .legend {
+            display: flex;
+            gap: 1.25rem;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+            color: #666;
+            flex-wrap: wrap;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+        .legend-box { width: 16px; height: 16px; border-radius: 2px; border: 1px solid #ddd; }
+
+        /* --- Summary stats --- */
+        .summary {
+            font-size: 0.95rem;
+            margin: 0.75rem 0;
+        }
+        .summary strong {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9rem;
+        }
+
+        /* --- Species sightings table --- */
+        .species-photo { width: 48px; height: 48px; border-radius: 3px; object-fit: cover; vertical-align: middle; }
+        .species-photo-placeholder { display: inline-block; width: 48px; height: 48px; border-radius: 3px; background: #f0f0f0; text-align: center; line-height: 48px; color: #aaa; font-size: 1.2rem; vertical-align: middle; }
+        td:first-child { width: 56px; }
+        td:nth-child(2) { min-width: 200px; }
+        .species-scientific { font-style: italic; display: block; padding-left: 20px; }
+        .obs-bar { display: inline-block; height: 12px; border-radius: 2px; margin-right: 0.4rem; vertical-align: middle; }
+        td.obs-count { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; white-space: nowrap; }
+
+        /* --- Sightings map --- */
+        #sightings-map {
+            height: 420px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin: 1rem 0;
+        }
+        .species-dot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 0.35rem;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+        .map-label {
+            background: transparent;
+            border: none;
+            font-weight: 700;
+            font-size: 10px;
+            text-align: center;
+            line-height: 22px;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0,0,0,0.5);
+        }
+
+        /* --- Observation popup --- */
+        .obs-popup { display: flex; gap: 0.6rem; align-items: flex-start; }
+        .obs-popup-img {
+            width: 80px; height: 80px; object-fit: cover; border-radius: 4px;
+            flex-shrink: 0; border: 1px solid #ddd;
+        }
+        .obs-popup-body { font-size: 0.85rem; line-height: 1.45; }
+        .obs-popup-weather { font-size: 0.8rem; color: #555; }
+
+        /* --- GDD card --- */
+        .gdd-card {
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+        }
+        .gdd-stats {
+            display: flex;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .gdd-stat { display: flex; flex-direction: column; }
+        .gdd-stat-primary .gdd-value { font-size: 1.6rem; }
+        .gdd-value {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #222;
+        }
+        .gdd-label { font-size: 0.82rem; color: #666; margin-top: 0.15rem; }
+        .gdd-status { margin-top: 1rem; }
+        .gdd-track {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .gdd-track-bar {
+            flex: 1;
+            height: 6px;
+            background: linear-gradient(to right, #4363d8, #e8d44d, #e6194b);
+            border-radius: 3px;
+            position: relative;
+        }
+        .gdd-track-marker {
+            position: absolute;
+            top: -4px;
+            width: 2px;
+            height: 14px;
+            background: #222;
+            transform: translateX(-50%);
+        }
+        .gdd-track-label { white-space: nowrap; }
+        .gdd-status-text { font-size: 0.85rem; color: #555; margin-top: 0.3rem; }
+
+        /* --- GDD timeline SVG --- */
+        .gdd-timeline-container { margin: 1rem 0; overflow-x: auto; }
+        .gdd-timeline-svg { width: 100%; height: auto; font-family: Georgia, serif; }
+        .gdd-axis-label { font-size: 11px; fill: #888; }
+        .gdd-today-label { font-size: 10px; fill: #e6194b; font-weight: 600; }
+        .gdd-species-label { font-size: 10px; }
+
+        /* --- About section --- */
+        .about p { text-align: justify; font-size: 0.92rem; }
+        .about ul {
+            margin: 0.75rem 0 0.75rem 1.5rem;
+            font-size: 0.92rem;
+        }
+        .about li { margin: 0.3rem 0; }
+        .criteria {
+            font-size: 0.88rem;
+            color: #444;
+            background: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-left: 3px solid #ddd;
+            margin: 1rem 0;
+        }
+
+        /* --- Footer --- */
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* --- Print --- */
+        @media print {
+            body { max-width: none; padding: 1rem; }
+            header, footer { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Butterfly Planner</h1>
+        <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
+        <div class="updated">Last updated 2026-02-15 19:24 PST</div>
+    </header>
+
+    <main>
+    <h2>Today's Sun Breaks &mdash; February 15</h2>
+<p class="summary">Total sunshine expected: <strong>4.0 hours</strong>
+&mdash; Sunrise 7:15 AM, Sunset 5:30 PM</p>
+<div class="legend">
+    <div class="legend-item"><div class="legend-box sunshine-none"></div> No sun</div>
+    <div class="legend-item"><div class="legend-box sunshine-low"></div> &lt;25%</div>
+    <div class="legend-item"><div class="legend-box sunshine-med"></div> 25&ndash;50%</div>
+    <div class="legend-item"><div class="legend-box sunshine-high"></div> 50&ndash;75%</div>
+    <div class="legend-item"><div class="legend-box sunshine-full"></div> 75&ndash;100%</div>
+</div>
+<div class="timeline">
+    <div class="tl-labels">
+        
+        <span class="tl-label" style="left:0.0%">7am</span>
+        
+        <span class="tl-label" style="left:7.1%">8am</span>
+        
+        <span class="tl-label" style="left:16.7%">9am</span>
+        
+        <span class="tl-label" style="left:26.2%">10am</span>
+        
+        <span class="tl-label" style="left:35.7%">11am</span>
+        
+        <span class="tl-label" style="left:45.2%">12pm</span>
+        
+        <span class="tl-label" style="left:54.8%">1pm</span>
+        
+        <span class="tl-label" style="left:64.3%">2pm</span>
+        
+        <span class="tl-label" style="left:73.8%">3pm</span>
+        
+        <span class="tl-label" style="left:83.3%">4pm</span>
+        
+        <span class="tl-label" style="left:92.9%">5pm</span>
+        
+    </div>
+    <div class="tl-bar">
+        
+        <div class="tl-seg sunshine-none" title="07:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="07:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="07:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:00 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:30 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="08:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="09:00 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="09:15 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-low" title="09:30 AM: 2 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="09:45 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="10:00 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="10:15 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="10:30 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="10:45 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="11:00 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="11:15 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="11:30 AM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="11:45 AM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="12:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="01:00 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="01:15 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="01:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="01:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="02:00 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="02:15 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="02:30 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-high" title="02:45 PM: 8 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:15 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="03:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="04:00 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-full" title="04:15 PM: 15 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="04:30 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="04:45 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-none" title="05:00 PM: 0 min sun"></div>
+        
+        <div class="tl-seg sunshine-low" title="05:15 PM: 3 min sun"></div>
+        
+        <div class="tl-seg sunshine-low" title="05:30 PM: 1 min sun"></div>
+        
+    </div>
+</div>
+<p class="meta">Each segment represents 15 minutes. Hover for exact time and duration.</p>
+
+    <h2>16-Day Sunshine Forecast</h2>
+<table>
+    <thead>
+    <tr>
+        <th>Date</th>
+        <th>Sunshine</th>
+        <th>% Sunny</th>
+        <th>High / Low</th>
+        <th>Precip</th>
+        <th>Conditions</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    <tr class="good-day">
+        <td>2026-02-15</td>
+        <td>5.4h of 10.4h</td>
+        <td>52% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="09 AM: 17min sun"></div><div class="hour-seg" style="background:#b8860b;" title="10 AM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="11 AM: 45min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#d4a017;" title="01 PM: 30min sun"></div><div class="hour-seg" style="background:#b8860b;" title="02 PM: 53min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#d4a017;" title="04 PM: 30min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="05 PM: 4min sun"></div></div></td>
+        <td><span class="temp-high">9°C</span> / <span class="temp-low">4°C</span></td>
+        <td>0.7mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-16</td>
+        <td>0.0h of 10.5h</td>
+        <td>0% <div class="hour-bar"><div class="hour-seg" style="background:#e8e8e8;" title="07 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="08 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="10 AM: 1min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="01 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="02 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="03 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="04 PM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="05 PM: 0min sun"></div></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">2°C</span></td>
+        <td>6.5mm</td>
+        <td>🌨️ Light Snow</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-17</td>
+        <td>3.7h of 10.5h</td>
+        <td>35% <div class="hour-bar"><div class="hour-seg" style="background:#f5eec2;" title="07 AM: 3min sun"></div><div class="hour-seg" style="background:#f5eec2;" title="08 AM: 4min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="09 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="10 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="11 AM: 0min sun"></div><div class="hour-seg" style="background:#e8e8e8;" title="12 PM: 0min sun"></div><div class="hour-seg" style="background:#b8860b;" title="01 PM: 60min sun"></div><div class="hour-seg" style="background:#d4a017;" title="02 PM: 41min sun"></div><div class="hour-seg" style="background:#b8860b;" title="03 PM: 60min sun"></div><div class="hour-seg" style="background:#b8860b;" title="04 PM: 60min sun"></div><div class="hour-seg" style="background:#e8d44d;" title="05 PM: 28min sun"></div></div></td>
+        <td><span class="temp-high">5°C</span> / <span class="temp-low">1°C</span></td>
+        <td>4.4mm</td>
+        <td>🌨️ Snow</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-18</td>
+        <td>6.8h of 10.6h</td>
+        <td>64% <div class="sunshine-bar" style="width: 192px;"></div></td>
+        <td><span class="temp-high">5°C</span> / <span class="temp-low">-1°C</span></td>
+        <td>2.3mm</td>
+        <td>🌦️ Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-19</td>
+        <td>7.2h of 10.6h</td>
+        <td>67% <div class="sunshine-bar" style="width: 202px;"></div></td>
+        <td><span class="temp-high">4°C</span> / <span class="temp-low">0°C</span></td>
+        <td>13.7mm</td>
+        <td>🌨️ Heavy Snow</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-20</td>
+        <td>8.5h of 10.7h</td>
+        <td>80% <div class="sunshine-bar" style="width: 239px;"></div></td>
+        <td><span class="temp-high">4°C</span> / <span class="temp-low">-1°C</span></td>
+        <td>0.0mm</td>
+        <td>☁️ Overcast</td>
+    </tr>
+    
+    <tr class="">
+        <td>2026-02-21</td>
+        <td>1.8h of 10.7h</td>
+        <td>17% <div class="sunshine-bar" style="width: 51px;"></div></td>
+        <td><span class="temp-high">6°C</span> / <span class="temp-low">2°C</span></td>
+        <td>2.1mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-22</td>
+        <td>9.7h of 10.8h</td>
+        <td>89% <div class="sunshine-bar" style="width: 268px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">3°C</span></td>
+        <td>0.5mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-23</td>
+        <td>6.7h of 10.8h</td>
+        <td>62% <div class="sunshine-bar" style="width: 185px;"></div></td>
+        <td><span class="temp-high">10°C</span> / <span class="temp-low">5°C</span></td>
+        <td>3.7mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-24</td>
+        <td>9.8h of 10.9h</td>
+        <td>90% <div class="sunshine-bar" style="width: 271px;"></div></td>
+        <td><span class="temp-high">12°C</span> / <span class="temp-low">6°C</span></td>
+        <td>0.7mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-25</td>
+        <td>7.4h of 10.9h</td>
+        <td>68% <div class="sunshine-bar" style="width: 203px;"></div></td>
+        <td><span class="temp-high">12°C</span> / <span class="temp-low">5°C</span></td>
+        <td>0.2mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-26</td>
+        <td>9.7h of 11.0h</td>
+        <td>88% <div class="sunshine-bar" style="width: 264px;"></div></td>
+        <td><span class="temp-high">12°C</span> / <span class="temp-low">2°C</span></td>
+        <td>0.0mm</td>
+        <td>☁️ Overcast</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-27</td>
+        <td>4.0h of 11.1h</td>
+        <td>36% <div class="sunshine-bar" style="width: 107px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">2°C</span></td>
+        <td>3.3mm</td>
+        <td>🌦️ Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-02-28</td>
+        <td>8.1h of 11.1h</td>
+        <td>73% <div class="sunshine-bar" style="width: 218px;"></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">2°C</span></td>
+        <td>1.8mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-03-01</td>
+        <td>3.5h of 11.2h</td>
+        <td>31% <div class="sunshine-bar" style="width: 92px;"></div></td>
+        <td><span class="temp-high">8°C</span> / <span class="temp-low">3°C</span></td>
+        <td>3.0mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    <tr class="good-day">
+        <td>2026-03-02</td>
+        <td>9.9h of 11.2h</td>
+        <td>88% <div class="sunshine-bar" style="width: 263px;"></div></td>
+        <td><span class="temp-high">7°C</span> / <span class="temp-low">2°C</span></td>
+        <td>2.4mm</td>
+        <td>🌦️ Light Drizzle</td>
+    </tr>
+    
+    </tbody>
+</table>
+<p class="meta">Highlighted rows indicate good butterfly weather
+(&gt;3 h sunshine or &gt;40% sunny). Hover hourly bars for detail.</p>
+
+    <h2>Growing Degree Days (base 50&#176;F)</h2>
+
+<div class="gdd-card">
+    <div class="gdd-stats">
+        <div class="gdd-stat gdd-stat-primary">
+            <span class="gdd-value">38</span>
+            <span class="gdd-label">Today &mdash; February 15, 2026</span>
+        </div>
+        
+        <div class="gdd-stat">
+            <span class="gdd-value">3</span>
+            <span class="gdd-label">Last year (2025)</span>
+        </div>
+        
+        
+    </div>
+
+    
+    <div class="gdd-status">
+        <div class="gdd-track">
+            <span class="gdd-track-label">early</span>
+            <div class="gdd-track-bar">
+                <div class="gdd-track-marker" style="left: 85%;" title="+35 GDD ahead of last year"></div>
+            </div>
+            <span class="gdd-track-label">late</span>
+        </div>
+        <p class="gdd-status-text">+35 GDD ahead of last year</p>
+    </div>
+    
+</div>
+
+    <h2>GDD Accumulation Timeline</h2>
+<p class="meta">Accumulated growing degree days (base 50&#176;F) from January 1</p>
+
+<div class="gdd-timeline-container">
+<svg viewBox="0 0 760 340" class="gdd-timeline-svg"
+     xmlns="http://www.w3.org/2000/svg">
+
+    
+    
+    <line x1="55" y1="310.0"
+          x2="680" y2="310.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="314.0"
+          text-anchor="end" class="gdd-axis-label">0</text>
+    
+    <line x1="55" y1="253.0"
+          x2="680" y2="253.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="257.0"
+          text-anchor="end" class="gdd-axis-label">800</text>
+    
+    <line x1="55" y1="196.0"
+          x2="680" y2="196.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="200.0"
+          text-anchor="end" class="gdd-axis-label">1600</text>
+    
+    <line x1="55" y1="139.0"
+          x2="680" y2="139.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="143.0"
+          text-anchor="end" class="gdd-axis-label">2400</text>
+    
+    <line x1="55" y1="82.0"
+          x2="680" y2="82.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="86.0"
+          text-anchor="end" class="gdd-axis-label">3200</text>
+    
+    <line x1="55" y1="25.0"
+          x2="680" y2="25.0"
+          stroke="#eee" stroke-width="1" />
+    <text x="47" y="29.0"
+          text-anchor="end" class="gdd-axis-label">4000</text>
+    
+
+    
+    
+    <text x="55.0" y="328"
+          text-anchor="middle" class="gdd-axis-label">Jan</text>
+    
+    <text x="108.1" y="328"
+          text-anchor="middle" class="gdd-axis-label">Feb</text>
+    
+    <text x="157.7" y="328"
+          text-anchor="middle" class="gdd-axis-label">Mar</text>
+    
+    <text x="210.8" y="328"
+          text-anchor="middle" class="gdd-axis-label">Apr</text>
+    
+    <text x="262.2" y="328"
+          text-anchor="middle" class="gdd-axis-label">May</text>
+    
+    <text x="315.3" y="328"
+          text-anchor="middle" class="gdd-axis-label">Jun</text>
+    
+    <text x="366.6" y="328"
+          text-anchor="middle" class="gdd-axis-label">Jul</text>
+    
+    <text x="419.7" y="328"
+          text-anchor="middle" class="gdd-axis-label">Aug</text>
+    
+    <text x="472.8" y="328"
+          text-anchor="middle" class="gdd-axis-label">Sep</text>
+    
+    <text x="524.2" y="328"
+          text-anchor="middle" class="gdd-axis-label">Oct</text>
+    
+    <text x="577.3" y="328"
+          text-anchor="middle" class="gdd-axis-label">Nov</text>
+    
+    <text x="628.6" y="328"
+          text-anchor="middle" class="gdd-axis-label">Dec</text>
+    
+
+    
+    
+
+    
+    
+    <polyline points="55.0,310.0 56.7,310.0 58.4,310.0 60.1,310.0 61.8,309.9 63.6,309.9 65.3,309.9 67.0,309.8 68.7,309.8 70.4,309.8 72.1,309.8 73.8,309.8 75.5,309.8 77.3,309.8 79.0,309.8 80.7,309.8 82.4,309.8 84.1,309.8 85.8,309.8 87.5,309.8 89.2,309.8 91.0,309.8 92.7,309.8 94.4,309.8 96.1,309.8 97.8,309.8 99.5,309.8 101.2,309.8 102.9,309.8 104.7,309.8 106.4,309.8 108.1,309.8 109.8,309.8 111.5,309.8 113.2,309.8 114.9,309.8 116.6,309.8 118.4,309.8 120.1,309.8 121.8,309.8 123.5,309.8 125.2,309.8 126.9,309.8 128.6,309.8 130.3,309.8 132.1,309.8 133.8,309.8 135.5,309.8 137.2,309.7 138.9,309.6 140.6,309.6 142.3,309.6 144.0,309.3 145.8,309.1 147.5,309.0 149.2,308.8 150.9,308.5 152.6,308.0 154.3,307.6 156.0,307.3 157.7,307.3 159.5,307.2 161.2,307.1 162.9,306.9 164.6,306.8 166.3,306.7 168.0,306.4 169.7,306.1 171.4,306.1 173.2,306.0 174.9,306.0 176.6,306.0 178.3,306.0 180.0,306.0 181.7,306.0 183.4,306.0 185.1,306.0 186.8,305.9 188.6,305.9 190.3,305.9 192.0,305.7 193.7,305.5 195.4,304.8 197.1,304.0 198.8,302.8 200.5,302.4 202.3,302.3 204.0,302.1 205.7,301.7 207.4,301.7 209.1,301.5 210.8,301.5 212.5,301.4 214.2,300.8 216.0,300.1 217.7,299.9 219.4,299.6 221.1,299.5 222.8,299.0 224.5,298.5 226.2,298.3 227.9,298.1 229.7,297.6 231.4,296.9 233.1,296.3 234.8,295.8 236.5,295.2 238.2,294.5 239.9,294.1 241.6,294.0 243.4,293.8 245.1,293.4 246.8,292.8 248.5,291.9 250.2,291.3 251.9,290.7 253.6,290.4 255.3,290.0 257.1,289.4 258.8,288.9 260.5,287.8 262.2,287.0 263.9,286.6 265.6,286.2 267.3,285.4 269.0,284.3 270.8,283.7 272.5,283.0 274.2,282.1 275.9,281.5 277.6,281.1 279.3,280.8 281.0,280.3 282.7,279.8 284.5,279.6 286.2,279.2 287.9,278.8 289.6,278.6 291.3,278.1 293.0,277.8 294.7,277.3 296.4,276.8 298.2,276.2 299.9,275.2 301.6,274.6 303.3,273.7 305.0,272.6 306.7,271.1 308.4,270.3 310.1,269.0 311.8,268.2 313.6,267.4 315.3,266.6 317.0,265.6 318.7,264.7 320.4,263.5 322.1,262.0 323.8,260.5 325.5,258.8 327.3,256.9 329.0,255.5 330.7,254.4 332.4,253.5 334.1,253.0 335.8,252.3 337.5,251.3 339.2,250.3 341.0,249.1 342.7,248.1 344.4,247.2 346.1,246.7 347.8,246.5 349.5,245.8 351.2,244.7 352.9,243.4 354.7,242.5 356.4,241.5 358.1,240.4 359.8,239.3 361.5,237.8 363.2,236.1 364.9,234.4 366.6,233.0 368.4,231.9 370.1,230.8 371.8,229.7 373.5,228.3 375.2,226.7 376.9,225.1 378.6,223.6 380.3,222.0 382.1,220.4 383.8,218.7 385.5,216.9 387.2,215.4 388.9,213.9 390.6,212.2 392.3,210.5 394.0,208.9 395.8,207.6 397.5,206.6 399.2,205.4 400.9,204.1 402.6,202.4 404.3,200.9 406.0,199.6 407.7,198.4 409.5,197.1 411.2,195.7 412.9,194.1 414.6,192.4 416.3,190.7 418.0,189.1 419.7,187.6 421.4,186.5 423.2,185.2 424.9,183.9 426.6,182.6 428.3,181.6 430.0,180.5 431.7,179.0 433.4,177.2 435.1,175.4 436.8,173.5 438.6,171.6 440.3,170.0 442.0,168.6 443.7,167.2 445.4,165.9 447.1,164.5 448.8,163.1 450.5,161.6 452.3,160.2 454.0,158.6 455.7,156.8 457.4,154.8 459.1,152.9 460.8,151.0 462.5,149.0 464.2,147.2 466.0,145.5 467.7,144.2 469.4,142.7 471.1,141.3 472.8,139.6 474.5,137.8 476.2,136.0 477.9,134.4 479.7,133.1 481.4,131.8 483.1,130.5 484.8,129.2 486.5,127.9 488.2,126.7 489.9,125.6 491.6,124.3 493.4,123.4 495.1,122.6 496.8,121.0 498.5,119.6 500.2,118.4 501.9,117.2 503.6,115.9 505.3,115.0 507.1,114.2 508.8,113.0 510.5,111.8 512.2,111.0 513.9,110.2 515.6,109.3 517.3,108.3 519.0,107.7 520.8,107.0 522.5,106.3 524.2,105.8 525.9,105.2 527.6,104.5 529.3,103.8 531.0,103.1 532.7,102.0 534.5,101.6 536.2,101.2 537.9,100.8 539.6,100.5 541.3,100.4 543.0,100.2 544.7,99.8 546.4,99.4 548.2,99.1 549.9,98.7 551.6,98.4 553.3,98.0 555.0,97.7 556.7,97.3 558.4,96.9 560.1,96.4 561.8,96.1 563.6,95.9 565.3,95.8 567.0,95.7 568.7,95.6 570.4,95.3 572.1,95.2 573.8,95.0 575.5,94.6 577.3,94.4 579.0,94.4 580.7,94.2 582.4,93.8 584.1,93.4 585.8,93.1 587.5,92.9 589.2,92.6 591.0,92.4 592.7,92.2 594.4,91.9 596.1,91.5 597.8,91.3 599.5,90.9 601.2,90.8 602.9,90.8 604.7,90.8 606.4,90.7 608.1,90.6 609.8,90.6 611.5,90.6 613.2,90.6 614.9,90.6 616.6,90.6 618.4,90.6 620.1,90.4 621.8,90.3 623.5,90.3 625.2,90.3 626.9,90.3 628.6,90.3 630.3,90.3 632.1,90.3 633.8,90.1 635.5,90.0 637.2,89.7 638.9,89.5 640.6,89.3 642.3,88.7 644.0,88.3 645.8,88.1 647.5,88.0 649.2,88.0 650.9,87.6 652.6,87.2 654.3,87.0 656.0,86.8 657.7,86.8 659.5,86.8 661.2,86.8 662.9,86.8 664.6,86.8 666.3,86.8 668.0,86.8 669.7,86.8 671.4,86.8 673.2,86.8 674.9,86.8 676.6,86.8 678.3,86.8"
+              fill="none" stroke="#999" stroke-width="1.2" opacity="0.5" />
+    
+
+    
+    
+    <polyline points="55.0,310.0 56.7,309.9 58.4,309.9 60.1,309.9 61.8,309.9 63.6,309.9 65.3,309.9 67.0,309.9 68.7,309.9 70.4,309.9 72.1,309.8 73.8,309.8 75.5,309.8 77.3,309.8 79.0,309.6 80.7,309.6 82.4,309.6 84.1,309.6 85.8,309.6 87.5,309.6 89.2,309.6 91.0,309.6 92.7,309.6 94.4,309.6 96.1,309.6 97.8,309.6 99.5,309.6 101.2,309.6 102.9,309.6 104.7,309.6 106.4,309.2 108.1,309.0 109.8,308.8 111.5,308.5 113.2,308.2 114.9,308.0 116.6,307.9 118.4,307.8 120.1,307.8 121.8,307.7 123.5,307.6 125.2,307.4 126.9,307.3 128.6,307.3 130.3,307.3 132.1,307.3"
+              fill="none" stroke="#222" stroke-width="2.5" />
+    
+
+    
+    
+    <line x1="133.8" y1="25"
+          x2="133.8" y2="310"
+          stroke="#e6194b" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
+    <text x="133.8" y="19"
+          text-anchor="middle" class="gdd-today-label">today</text>
+    
+
+    
+    
+
+    
+    <line x1="55" y1="25"
+          x2="55" y2="310"
+          stroke="#888" stroke-width="1" />
+    <line x1="55" y1="310"
+          x2="680" y2="310"
+          stroke="#888" stroke-width="1" />
+</svg>
+</div>
+
+
+<div class="legend">
+    <div class="legend-item">
+        <div style="width:20px;height:3px;background:#222;"></div> 2026
+    </div>
+    
+    <div class="legend-item">
+        <div style="width:20px;height:2px;background:#999;opacity:0.5;"></div> 2025
+    </div>
+    
+    
+</div>
+
+    <h2>Butterfly Sightings Map &mdash; Weeks 7–9 (2004–2026)</h2>
+<p>Research-grade butterfly observations in NW Oregon / SW Washington
+during Weeks 7–9, 2004–2026. 233 observations shown.
+Colors match the species table below.</p>
+<div id="sightings-map"></div>
+
+    <h2>Butterfly Sightings &mdash; Weeks 7–9 (2004–2026)</h2>
+<p>Research-grade butterfly observations in NW Oregon / SW Washington
+during Weeks 7–9 (2004–2026), February
+(<a href="https://www.inaturalist.org/observations?taxon_id=47224&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">browse on iNaturalist</a>).</p>
+<table>
+    <thead>
+    <tr>
+        <th></th>
+        <th>Species</th>
+        <th>Observations</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/49920"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/2041/medium.jpg" alt="California Tortoiseshell"></a></td>
+        <td><span class="species-dot" style="background:#e6194b;" title="CT"></span><a href="https://www.inaturalist.org/taxa/49920">California Tortoiseshell</a><br>
+        <span class="species-scientific">Nymphalis californica</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 200px; background: #e6194b;"></div><a href="https://www.inaturalist.org/observations?taxon_id=49920&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">78</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/52484"><img class="species-photo" src="https://static.inaturalist.org/photos/182618709/medium.jpeg" alt="Echo Azure"></a></td>
+        <td><span class="species-dot" style="background:#3cb44b;" title="EA"></span><a href="https://www.inaturalist.org/taxa/52484">Echo Azure</a><br>
+        <span class="species-scientific">Celastrina echo</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 115px; background: #3cb44b;"></div><a href="https://www.inaturalist.org/observations?taxon_id=52484&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">45</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/55626"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/28420401/medium.jpg" alt="Small White"></a></td>
+        <td><span class="species-dot" style="background:#4363d8;" title="SW"></span><a href="https://www.inaturalist.org/taxa/55626">Small White</a><br>
+        <span class="species-scientific">Pieris rapae</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 71px; background: #4363d8;"></div><a href="https://www.inaturalist.org/observations?taxon_id=55626&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">28</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/56832"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/11607/medium.jpg" alt="Mourning Cloak"></a></td>
+        <td><span class="species-dot" style="background:#f58231;" title="MC"></span><a href="https://www.inaturalist.org/taxa/56832">Mourning Cloak</a><br>
+        <span class="species-scientific">Nymphalis antiopa</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 48px; background: #f58231;"></div><a href="https://www.inaturalist.org/observations?taxon_id=56832&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">19</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/82481"><img class="species-photo" src="https://static.inaturalist.org/photos/302788969/medium.jpg" alt="Margined White"></a></td>
+        <td><span class="species-dot" style="background:#911eb4;" title="MW"></span><a href="https://www.inaturalist.org/taxa/82481">Margined White</a><br>
+        <span class="species-scientific">Pieris marginalis</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 43px; background: #911eb4;"></div><a href="https://www.inaturalist.org/observations?taxon_id=82481&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">17</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/56644"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/390722/medium.jpg" alt="Satyr Comma"></a></td>
+        <td><span class="species-dot" style="background:#42d4f4;" title="SC"></span><a href="https://www.inaturalist.org/taxa/56644">Satyr Comma</a><br>
+        <span class="species-scientific">Polygonia satyrus</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 35px; background: #42d4f4;"></div><a href="https://www.inaturalist.org/observations?taxon_id=56644&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">14</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/68262"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/9955156/medium.jpeg" alt="Green Comma"></a></td>
+        <td><span class="species-dot" style="background:#f032e6;" title="GC"></span><a href="https://www.inaturalist.org/taxa/68262">Green Comma</a><br>
+        <span class="species-scientific">Polygonia faunus</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 20px; background: #f032e6;"></div><a href="https://www.inaturalist.org/observations?taxon_id=68262&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">8</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/50931"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/4703357/medium.jpeg" alt="Gray Hairstreak"></a></td>
+        <td><span class="species-dot" style="background:#bfef45;" title="GH"></span><a href="https://www.inaturalist.org/taxa/50931">Gray Hairstreak</a><br>
+        <span class="species-scientific">Strymon melinus</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 15px; background: #bfef45;"></div><a href="https://www.inaturalist.org/observations?taxon_id=50931&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">6</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/49133"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/53928483/medium.jpg" alt="Red Admiral"></a></td>
+        <td><span class="species-dot" style="background:#fabed4;" title="RA"></span><a href="https://www.inaturalist.org/taxa/49133">Red Admiral</a><br>
+        <span class="species-scientific">Vanessa atalanta</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 7px; background: #fabed4;"></div><a href="https://www.inaturalist.org/observations?taxon_id=49133&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">3</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/51097"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/2489727/medium.jpg" alt="Anise Swallowtail"></a></td>
+        <td><span class="species-dot" style="background:#469990;" title="AS"></span><a href="https://www.inaturalist.org/taxa/51097">Anise Swallowtail</a><br>
+        <span class="species-scientific">Papilio zelicaon</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 7px; background: #469990;"></div><a href="https://www.inaturalist.org/observations?taxon_id=51097&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">3</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/48548"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/9506438/medium.jpg" alt="Painted Lady"></a></td>
+        <td><span class="species-dot" style="background:#dcbeff;" title="PL"></span><a href="https://www.inaturalist.org/taxa/48548">Painted Lady</a><br>
+        <span class="species-scientific">Vanessa cardui</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 5px; background: #dcbeff;"></div><a href="https://www.inaturalist.org/observations?taxon_id=48548&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">2</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/50391"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/6157618/medium.jpg" alt="Hoary Comma"></a></td>
+        <td><span class="species-dot" style="background:#9a6324;" title="HC"></span><a href="https://www.inaturalist.org/taxa/50391">Hoary Comma</a><br>
+        <span class="species-scientific">Polygonia gracilis</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 5px; background: #9a6324;"></div><a href="https://www.inaturalist.org/observations?taxon_id=50391&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">2</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/117764"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/87949317/medium.jpeg" alt="Oreas Comma"></a></td>
+        <td><span class="species-dot" style="background:#ffe119;" title="OC"></span><a href="https://www.inaturalist.org/taxa/117764">Oreas Comma</a><br>
+        <span class="species-scientific">Polygonia oreas</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 5px; background: #ffe119;"></div><a href="https://www.inaturalist.org/observations?taxon_id=117764&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">2</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/47226"><img class="species-photo" src="https://inaturalist-open-data.s3.amazonaws.com/photos/18957208/medium.jpg" alt="Western Tiger Swallowtail"></a></td>
+        <td><span class="species-dot" style="background:#aaffc3;" title="WS"></span><a href="https://www.inaturalist.org/taxa/47226">Western Tiger Swallowtail</a><br>
+        <span class="species-scientific">Papilio rutulus</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 2px; background: #aaffc3;"></div><a href="https://www.inaturalist.org/observations?taxon_id=47226&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    <tr>
+        <td><a href="https://www.inaturalist.org/taxa/50880"><img class="species-photo" src="https://static.inaturalist.org/photos/77233288/medium.jpeg" alt="Lorquin's Admiral"></a></td>
+        <td><span class="species-dot" style="background:#808000;" title="LA"></span><a href="https://www.inaturalist.org/taxa/50880">Lorquin's Admiral</a><br>
+        <span class="species-scientific">Limenitis lorquini</span></td>
+        <td class="obs-count"><div class="obs-bar" style="width: 2px; background: #808000;"></div><a href="https://www.inaturalist.org/observations?taxon_id=50880&month=2&quality_grade=research&verifiable=true&swlat=44.5&swlng=-124.2&nelat=46.5&nelng=-121.5">1</a></td>
+    </tr>
+    
+    </tbody>
+</table>
+<p class="meta">Observation counts are cumulative across all years for February.
+Species ranked by research-grade observation frequency.</p>
+
+    <h2>About</h2>
+    <div class="about">
+        <p>This page presents sunshine and weather forecasts to aid in planning
+        butterfly observation outings. Lepidoptera are most active during periods
+        of direct sunshine and warm temperatures.</p>
+        <div class="criteria">
+            <strong>Good butterfly weather</strong> is defined as &gt;3 hours of sunshine
+            <em>or</em> &gt;40% of available daylight being sunny.
+        </div>
+        <p>Planned features:</p>
+        <ul>
+            <li>Butterfly abundance hotspots by week of year</li>
+            <li>Species diversity maps for Oregon &amp; Washington</li>
+            <li>Drive-time isochrone analysis</li>
+            <li>Nearby campground locations</li>
+        </ul>
+    </div>
+    </main>
+
+    <footer>
+        <p>Data provided by <a href="https://open-meteo.com">Open-Meteo</a>
+        and <a href="https://www.inaturalist.org">iNaturalist</a>.
+        Forecast models may not reflect actual conditions.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script>
+(function() {
+  var map = L.map("sightings-map").setView([45.5, -122.8], 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 16,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  var obs = [{lat:46.122629,lon:-123.877079,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2015-03-13",url:"https://www.inaturalist.org/observations/2521151",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/2828697/square.jpg",color:"#f58231",initials:"MC",weather:"🌦️ Drizzle &middot; 20/7°C &middot; 0.6mm"},{lat:46.179783,lon:-123.817703,name:"Margined White",species:"Pieris marginalis",date:"2015-03-13",url:"https://www.inaturalist.org/observations/2578556",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/2878211/square.jpg",color:"#911eb4",initials:"MW",weather:"🌦️ Drizzle &middot; 20/7°C &middot; 0.6mm"},{lat:46.123127,lon:-123.876999,name:"Gray Hairstreak",species:"Strymon melinus",date:"2015-03-13",url:"https://www.inaturalist.org/observations/2680436",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3012064/square.jpg",color:"#bfef45",initials:"GH",weather:"🌦️ Drizzle &middot; 20/7°C &middot; 0.6mm"},{lat:46.12111,lon:-123.876981,name:"Echo Azure",species:"Celastrina echo",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716847",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063668/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.730536,lon:-122.635152,name:"Satyr Comma",species:"Polygonia satyrus",date:"2016-02-25",url:"https://www.inaturalist.org/observations/2716914",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3063788/square.jpg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.89448,lon:-123.954438,name:"Margined White",species:"Pieris marginalis",date:"2016-03-16",url:"https://www.inaturalist.org/observations/2792256",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3168630/square.jpg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 10/5°C &middot; 1.1mm"},{lat:45.89448,lon:-123.954438,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-16",url:"https://www.inaturalist.org/observations/2792258",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3168633/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌦️ Light Drizzle &middot; 10/5°C &middot; 1.1mm"},{lat:46.135297,lon:-123.882106,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-17",url:"https://www.inaturalist.org/observations/2795295",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3172773/square.jpg",color:"#3cb44b",initials:"EA",weather:"⛅ Partly Cloudy &middot; 15/-1°C"},{lat:45.716671,lon:-123.904172,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-17",url:"https://www.inaturalist.org/observations/2797686",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3175653/square.jpg",color:"#3cb44b",initials:"EA",weather:"⛅ Partly Cloudy &middot; 15/-1°C"},{lat:46.134661,lon:-123.885216,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2016-03-18",url:"https://www.inaturalist.org/observations/2800476",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3179288/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 16/7°C"},{lat:46.174931,lon:-123.963272,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-18",url:"https://www.inaturalist.org/observations/2801409",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3180767/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 16/7°C"},{lat:45.707582,lon:-122.655466,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2016-03-29",url:"https://www.inaturalist.org/observations/2849577",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3250042/square.jpg",color:"#f58231",initials:"MC",weather:"🌤️ Mostly Clear &middot; 17/3°C"},{lat:46.122704,lon:-123.876958,name:"Margined White",species:"Pieris marginalis",date:"2016-03-29",url:"https://www.inaturalist.org/observations/2849941",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3250549/square.jpg",color:"#911eb4",initials:"MW",weather:"🌤️ Mostly Clear &middot; 17/3°C"},{lat:46.122689,lon:-123.876732,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-29",url:"https://www.inaturalist.org/observations/2849942",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3250550/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌤️ Mostly Clear &middot; 17/3°C"},{lat:46.122388,lon:-123.876979,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-31",url:"https://www.inaturalist.org/observations/2860232",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/3264025/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 20/4°C"},{lat:46.101578,lon:-123.937042,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2013-03-31",url:"https://www.inaturalist.org/observations/5080054",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/6238354/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 20/7°C"},{lat:45.644969,lon:-122.6929,name:"Red Admiral",species:"Vanessa atalanta",date:"2017-02-13",url:"https://www.inaturalist.org/observations/5104303",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/6275196/square.jpg",color:"#fabed4",initials:"RA",weather:"☁️ Overcast &middot; 10/2°C"},{lat:44.6430549622,lon:-123.3213882446,name:"Echo Azure",species:"Celastrina echo",date:"2017-03-31",url:"https://www.inaturalist.org/observations/5520815",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/6809899/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 13/3°C"},{lat:45.3423396,lon:-121.5242393,name:"Anise Swallowtail",species:"Papilio zelicaon",date:"2015-03-26",url:"https://www.inaturalist.org/observations/7091051",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/9110653/square.jpeg",color:"#469990",initials:"AS",weather:"☁️ Overcast &middot; 21/7°C"},{lat:44.5862688246,lon:-123.2677935125,name:"Satyr Comma",species:"Polygonia satyrus",date:"2018-03-06",url:"https://www.inaturalist.org/observations/10120633",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/13954029/square.jpeg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 13/-1°C"},{lat:44.6165542251,lon:-123.334519427,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2018-03-28",url:"https://www.inaturalist.org/observations/10484507",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/14577975/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 12/5°C"},{lat:45.599695,lon:-122.6903083333,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2018-03-29",url:"https://www.inaturalist.org/observations/10496367",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/14598232/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/4°C"},{lat:45.6071310737,lon:-122.5098024464,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2018-03-31",url:"https://www.inaturalist.org/observations/14899926",photo:"https://static.inaturalist.org/photos/22239815/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/5°C"},{lat:45.4050126457,lon:-122.266432276,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2010-02-20",url:"https://www.inaturalist.org/observations/15263364",photo:"https://static.inaturalist.org/photos/22836122/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/-1°C"},{lat:45.5955669268,lon:-122.7872841438,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-11",url:"https://www.inaturalist.org/observations/21164505",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/32712994/square.jpeg",color:"#e6194b",initials:"CT",weather:"🌦️ Drizzle &middot; 12/-2°C &middot; 0.9mm"},{lat:44.6094111746,lon:-123.2849446891,name:"Anise Swallowtail",species:"Papilio zelicaon",date:"2018-03-20",url:"https://www.inaturalist.org/observations/21274361",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/32893307/square.jpg",color:"#469990",initials:"AS",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7025444037,lon:-122.6569511852,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-16",url:"https://www.inaturalist.org/observations/21302083",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/32940130/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/4°C"},{lat:44.8141415514,lon:-124.0612589856,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-17",url:"https://www.inaturalist.org/observations/21329777",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/32985556/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 15/3°C"},{lat:45.5163363269,lon:-122.4810527297,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-17",url:"https://www.inaturalist.org/observations/21335601",photo:"https://static.inaturalist.org/photos/32996793/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 15/3°C"},{lat:44.6101304083,lon:-122.8396378085,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-17",url:"https://www.inaturalist.org/observations/21337738",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33000025/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 15/3°C"},{lat:44.8141519481,lon:-124.0612488021,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21376928",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33065585/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:44.8141519481,lon:-124.0612488021,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21376930",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33065599/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:44.8141519481,lon:-124.0612488021,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21376934",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33065642/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:44.8141519481,lon:-124.0612488021,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21376941",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33065858/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:44.8141519481,lon:-124.0612488021,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21376942",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33065903/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:44.8141519481,lon:-124.0612488021,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21376945",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33066027/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:45.9740346563,lon:-123.9430161921,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21378470",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33068631/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:45.715301,lon:-123.919859,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/21378474",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33068641/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:46.1878841,lon:-123.8312534,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-19",url:"https://www.inaturalist.org/observations/21394125",photo:"https://static.inaturalist.org/photos/33095414/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 16/8°C"},{lat:46.1835607655,lon:-123.8290057483,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-19",url:"https://www.inaturalist.org/observations/21514060",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33292577/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 16/8°C"},{lat:45.4228677135,lon:-122.5544187688,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-24",url:"https://www.inaturalist.org/observations/21577658",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33397897/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/4°C"},{lat:45.4852513393,lon:-122.3022048019,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-17",url:"https://www.inaturalist.org/observations/21583252",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33408176/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 15/3°C"},{lat:45.9312170745,lon:-123.9823824491,name:"Margined White",species:"Pieris marginalis",date:"2019-03-24",url:"https://www.inaturalist.org/observations/21589092",photo:"https://static.inaturalist.org/photos/33418074/square.jpg",color:"#911eb4",initials:"MW",weather:"☁️ Overcast &middot; 14/4°C"},{lat:46.1802206353,lon:-123.8252778279,name:"Margined White",species:"Pieris marginalis",date:"2019-03-24",url:"https://www.inaturalist.org/observations/21598663",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33433335/square.jpg",color:"#911eb4",initials:"MW",weather:"☁️ Overcast &middot; 14/4°C"},{lat:45.511305,lon:-122.6132966667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-29",url:"https://www.inaturalist.org/observations/21766670",photo:"https://static.inaturalist.org/photos/33712913/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Light Drizzle &middot; 15/4°C &middot; 0.8mm"},{lat:45.5128364,lon:-122.5929961,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-30",url:"https://www.inaturalist.org/observations/21849968",photo:"https://static.inaturalist.org/photos/33848632/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 18/4°C"},{lat:45.5128364,lon:-122.5929961,name:"Painted Lady",species:"Vanessa cardui",date:"2019-03-30",url:"https://www.inaturalist.org/observations/21850001",photo:"https://static.inaturalist.org/photos/33848700/square.jpg",color:"#dcbeff",initials:"PL",weather:"☁️ Overcast &middot; 18/4°C"},{lat:45.3809177447,lon:-122.6260223011,name:"Satyr Comma",species:"Polygonia satyrus",date:"2019-03-28",url:"https://www.inaturalist.org/observations/21896742",photo:"https://static.inaturalist.org/photos/33928255/square.jpeg",color:"#42d4f4",initials:"SC",weather:"🌦️ Drizzle &middot; 15/2°C &middot; 2.7mm"},{lat:44.77794,lon:-123.835533,name:"Echo Azure",species:"Celastrina echo",date:"2019-03-31",url:"https://www.inaturalist.org/observations/21897668",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/33927133/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 19/4°C"},{lat:45.3895216667,lon:-122.586595,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/25892891",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/40156621/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:45.2682013856,lon:-122.7378004789,name:"Common Wood-Nymph",species:"Cercyonis pegala",date:"2018-02-05",url:"https://www.inaturalist.org/observations/31089180",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/48621728/square.jpeg",color:"#e6194b",initials:"CW",weather:"🌦️ Light Drizzle &middot; 13/6°C &middot; 0.2mm"},{lat:45.51766167,lon:-122.627005,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-18",url:"https://www.inaturalist.org/observations/38822819",photo:"https://static.inaturalist.org/photos/61759621/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 10/1°C"},{lat:45.4549032436,lon:-122.7747664711,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-22",url:"https://www.inaturalist.org/observations/39058697",photo:"https://static.inaturalist.org/photos/61975336/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 11/-0°C"},{lat:44.594605,lon:-123.30953833,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-02-21",url:"https://www.inaturalist.org/observations/39227688",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/62208349/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 12/-1°C"},{lat:45.18631667,lon:-122.221405,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-10",url:"https://www.inaturalist.org/observations/39830077",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/63232726/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/-2°C"},{lat:46.17571,lon:-123.9735866667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-17",url:"https://www.inaturalist.org/observations/40163155",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/63795964/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/-1°C"},{lat:45.6938350097,lon:-121.6024699272,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2020-03-18",url:"https://www.inaturalist.org/observations/40220178",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/63891315/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 12/3°C"},{lat:45.7201610803,lon:-121.7050747946,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-19",url:"https://www.inaturalist.org/observations/40264526",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/63964540/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/2°C"},{lat:46.188210826,lon:-123.8172303542,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-20",url:"https://www.inaturalist.org/observations/40315605",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/64042879/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/4°C"},{lat:44.9358897778,lon:-123.0307136389,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-22",url:"https://www.inaturalist.org/observations/40536817",photo:"https://static.inaturalist.org/photos/64242664/square.jpeg",color:"#e6194b",initials:"CT",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.4mm"},{lat:45.9487616667,lon:-123.9398016667,name:"Margined White",species:"Pieris marginalis",date:"2020-03-25",url:"https://www.inaturalist.org/observations/40728852",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/64565985/square.jpeg",color:"#911eb4",initials:"MW",weather:"🌨️ Light Snow &middot; 9/2°C &middot; 5.8mm"},{lat:44.6658941835,lon:-123.2495076736,name:"Echo Azure",species:"Celastrina echo",date:"2016-03-24",url:"https://www.inaturalist.org/observations/45044919",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/71416753/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌧️ Light Rain &middot; 11/5°C &middot; 8.1mm"},{lat:45.5104790537,lon:-123.8322992496,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2018-03-06",url:"https://www.inaturalist.org/observations/45802750",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/72639623/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 13/-1°C"},{lat:45.499525,lon:-123.24936167,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-22",url:"https://www.inaturalist.org/observations/46892056",photo:"https://static.inaturalist.org/photos/74366895/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.4mm"},{lat:44.6386722653,lon:-123.3190848785,name:"Pacific Azure",species:"Celastrina echo echo",date:"2020-03-21",url:"https://www.inaturalist.org/observations/55615048",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/88568012/square.jpg",color:"#888",initials:"?",weather:"☁️ Overcast &middot; 13/3°C"},{lat:44.6948948002,lon:-122.8767452146,name:"Echo Azure",species:"Celastrina echo",date:"2020-03-02",url:"https://www.inaturalist.org/observations/62191181",photo:"https://static.inaturalist.org/photos/99613988/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌦️ Light Drizzle &middot; 8/4°C &middot; 0.4mm"},{lat:45.59792,lon:-122.3984916667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-13",url:"https://www.inaturalist.org/observations/62769920",photo:"https://static.inaturalist.org/photos/100630468/square.jpeg",color:"#e6194b",initials:"CT",weather:"🌦️ Light Drizzle &middot; 11/2°C &middot; 0.7mm"},{lat:45.7550383333,lon:-122.8521133333,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-19",url:"https://www.inaturalist.org/observations/66632088",photo:"https://static.inaturalist.org/photos/107458540/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.3703028011,lon:-122.6211524383,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-02-08",url:"https://www.inaturalist.org/observations/69282743",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/112394546/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 8/2°C"},{lat:45.597345,lon:-122.7523633333,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-01",url:"https://www.inaturalist.org/observations/70405938",photo:"https://static.inaturalist.org/photos/114450652/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 13/0°C"},{lat:45.2146734885,lon:-122.555134649,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-02",url:"https://www.inaturalist.org/observations/70483690",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/114595249/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 11/2°C"},{lat:45.4500817161,lon:-122.6671888901,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-10",url:"https://www.inaturalist.org/observations/70963490",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115456515/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Light Drizzle &middot; 12/1°C &middot; 0.9mm"},{lat:44.5829916667,lon:-123.3778216667,name:"Green Comma",species:"Polygonia faunus",date:"2021-03-12",url:"https://www.inaturalist.org/observations/71081046",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115668657/square.jpg",color:"#f032e6",initials:"GC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7436033333,lon:-123.18738,name:"Green Comma",species:"Polygonia faunus",date:"2021-03-12",url:"https://www.inaturalist.org/observations/71092145",photo:"https://static.inaturalist.org/photos/115688454/square.jpg",color:"#f032e6",initials:"GC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:44.6120711131,lon:-122.8399677202,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-12",url:"https://www.inaturalist.org/observations/71093011",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115689923/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.449240021,lon:-122.6692614441,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-13",url:"https://www.inaturalist.org/observations/71152063",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115802896/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 16/-1°C"},{lat:44.5994030011,lon:-123.2761958795,name:"Green Comma",species:"Polygonia faunus",date:"2021-03-12",url:"https://www.inaturalist.org/observations/71153210",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115798115/square.jpeg",color:"#f032e6",initials:"GC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:44.5992875452,lon:-123.2654048454,name:"Satyr Comma",species:"Polygonia satyrus",date:"2021-03-12",url:"https://www.inaturalist.org/observations/71159073",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115808925/square.jpeg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.6875670876,lon:-121.775968432,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-13",url:"https://www.inaturalist.org/observations/71190382",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/115865067/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 16/-1°C"},{lat:45.4754478692,lon:-122.3858928256,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-13",url:"https://www.inaturalist.org/observations/71225408",photo:"https://static.inaturalist.org/photos/115927456/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 16/-1°C"},{lat:45.4548819715,lon:-122.6748137232,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-17",url:"https://www.inaturalist.org/observations/71455693",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/116339767/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/-1°C"},{lat:45.5645769722,lon:-122.623968,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-17",url:"https://www.inaturalist.org/observations/71457581",photo:"https://static.inaturalist.org/photos/116343189/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/-1°C"},{lat:45.8460506142,lon:-123.097609632,name:"Satyr Comma",species:"Polygonia satyrus",date:"2021-03-23",url:"https://www.inaturalist.org/observations/71911035",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/117154711/square.jpeg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 12/1°C"},{lat:44.5653208286,lon:-123.2549434781,name:"Small White",species:"Pieris rapae",date:"2021-03-23",url:"https://www.inaturalist.org/observations/71915195",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/117162028/square.jpeg",color:"#4363d8",initials:"SW",weather:"☁️ Overcast &middot; 12/1°C"},{lat:46.0177435613,lon:-123.9861173418,name:"Echo Azure",species:"Celastrina echo",date:"2021-03-27",url:"https://www.inaturalist.org/observations/72187871",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/117652074/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 15/2°C"},{lat:46.096165,lon:-123.898215,name:"Echo Azure",species:"Celastrina echo",date:"2021-03-27",url:"https://www.inaturalist.org/observations/72218301",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/117702108/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.2452805615,lon:-122.2591829672,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-27",url:"https://www.inaturalist.org/observations/72240035",photo:"https://static.inaturalist.org/photos/117747773/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.7523934026,lon:-122.8475316647,name:"Satyr Comma",species:"Polygonia satyrus",date:"2021-03-30",url:"https://www.inaturalist.org/observations/72506101",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/118227017/square.jpeg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 11/-2°C"},{lat:44.6488857079,lon:-123.0690908432,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-31",url:"https://www.inaturalist.org/observations/72706099",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/118585450/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 19/0°C"},{lat:45.4711969,lon:-122.6179533,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-11",url:"https://www.inaturalist.org/observations/77169611",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/126193410/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/1°C"},{lat:44.6050870258,lon:-123.2381278343,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-31",url:"https://www.inaturalist.org/observations/80560612",photo:"https://static.inaturalist.org/photos/132050706/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 19/0°C"},{lat:44.8642197074,lon:-122.6362075806,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2019-03-18",url:"https://www.inaturalist.org/observations/105175928",photo:"https://static.inaturalist.org/photos/176410468/square.jpg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 16/7°C"},{lat:45.5294614182,lon:-122.4979890393,name:"Small White",species:"Pieris rapae",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106614088",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179134636/square.jpg",color:"#4363d8",initials:"SW",weather:"☀️ Clear &middot; 13/6°C"},{lat:44.6765739716,lon:-123.4619256292,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-02-12",url:"https://www.inaturalist.org/observations/106715050",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179327617/square.jpeg",color:"#e6194b",initials:"CT",weather:"☀️ Clear &middot; 13/6°C"},{lat:45.7328483333,lon:-122.563935,name:"Oreas Comma",species:"Polygonia oreas",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719828",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335500/square.jpg",color:"#ffe119",initials:"OC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7317883333,lon:-122.56266,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-13",url:"https://www.inaturalist.org/observations/106719829",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/179335509/square.jpg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 14/2°C"},{lat:45.7030946914,lon:-121.7245747894,name:"Green Comma",species:"Polygonia faunus",date:"2022-03-05",url:"https://www.inaturalist.org/observations/108109996",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/181959739/square.jpeg",color:"#f032e6",initials:"GC",weather:"☁️ Overcast &middot; 12/2°C"},{lat:46.0956833333,lon:-123.9056533333,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-06",url:"https://www.inaturalist.org/observations/108119813",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/181977931/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 10/1°C"},{lat:45.1345952706,lon:-123.3727902991,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-03-07",url:"https://www.inaturalist.org/observations/108134652",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/182005424/square.jpg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 13/1°C"},{lat:44.6136024364,lon:-122.840013653,name:"Red Admiral",species:"Vanessa atalanta",date:"2022-03-11",url:"https://www.inaturalist.org/observations/108390409",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/182483811/square.jpeg",color:"#fabed4",initials:"RA",weather:"☁️ Overcast &middot; 15/1°C"},{lat:45.4972583333,lon:-122.3500666667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-12",url:"https://www.inaturalist.org/observations/108453901",photo:"https://static.inaturalist.org/photos/182601502/square.jpg",color:"#e6194b",initials:"CT",weather:"🌧️ Rain &middot; 14/1°C &middot; 6.3mm"},{lat:45.581912,lon:-122.4457043997,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-12",url:"https://www.inaturalist.org/observations/108478815",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/182648334/square.jpeg",color:"#e6194b",initials:"CT",weather:"🌧️ Rain &middot; 14/1°C &middot; 6.3mm"},{lat:44.51859121,lon:-122.4610134959,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-12",url:"https://www.inaturalist.org/observations/108482941",photo:"https://static.inaturalist.org/photos/182656737/square.jpeg",color:"#e6194b",initials:"CT",weather:"🌧️ Rain &middot; 14/1°C &middot; 6.3mm"},{lat:45.5295795967,lon:-122.1253762697,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-12",url:"https://www.inaturalist.org/observations/108517913",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/182721895/square.jpg",color:"#e6194b",initials:"CT",weather:"🌧️ Rain &middot; 14/1°C &middot; 6.3mm"},{lat:45.4747996078,lon:-122.5339864336,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-07",url:"https://www.inaturalist.org/observations/108669304",photo:"https://static.inaturalist.org/photos/183010069/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 13/1°C"},{lat:45.4710383333,lon:-122.58915,name:"Small White",species:"Pieris rapae",date:"2022-03-16",url:"https://www.inaturalist.org/observations/108759005",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183177019/square.jpg",color:"#4363d8",initials:"SW",weather:"🌦️ Drizzle &middot; 12/3°C &middot; 1.1mm"},{lat:44.9357689971,lon:-124.0048177353,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-19",url:"https://www.inaturalist.org/observations/109011326",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183649106/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌧️ Light Rain &middot; 11/3°C &middot; 8.5mm"},{lat:46.0903539722,lon:-122.9578149722,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-11",url:"https://www.inaturalist.org/observations/109084019",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183784263/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/1°C"},{lat:44.5392912341,lon:-123.2541147926,name:"Satyr Comma",species:"Polygonia satyrus",date:"2022-02-09",url:"https://www.inaturalist.org/observations/109124179",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/183861688/square.jpeg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 12/2°C"},{lat:45.4539533333,lon:-122.5225,name:"Small White",species:"Pieris rapae",date:"2022-03-22",url:"https://www.inaturalist.org/observations/109254094",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/184104022/square.jpg",color:"#4363d8",initials:"SW",weather:"☁️ Overcast &middot; 19/9°C"},{lat:45.3573432,lon:-122.3589761,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-24",url:"https://www.inaturalist.org/observations/109431538",photo:"https://static.inaturalist.org/photos/184436730/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 18/1°C"},{lat:46.1216,lon:-123.8780633333,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-24",url:"https://www.inaturalist.org/observations/109486863",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/184538329/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 18/1°C"},{lat:44.9870365528,lon:-123.996736423,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-26",url:"https://www.inaturalist.org/observations/109594005",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/184738084/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.7777039722,lon:-121.521195,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-26",url:"https://www.inaturalist.org/observations/109620394",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/184789791/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.5254583333,lon:-122.7156166667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-27",url:"https://www.inaturalist.org/observations/109749537",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185030214/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 18/8°C"},{lat:45.4764563264,lon:-122.6698358069,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-25",url:"https://www.inaturalist.org/observations/109764255",photo:"https://static.inaturalist.org/photos/185057165/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/5°C"},{lat:46.1200083333,lon:-123.896555,name:"Margined White",species:"Pieris marginalis",date:"2022-03-27",url:"https://www.inaturalist.org/observations/109782903",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185088893/square.jpeg",color:"#911eb4",initials:"MW",weather:"☁️ Overcast &middot; 18/8°C"},{lat:45.948316414,lon:-123.9300471805,name:"Margined White",species:"Pieris marginalis",date:"2022-03-29",url:"https://www.inaturalist.org/observations/109924575",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185356400/square.jpeg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 15/6°C &middot; 0.2mm"},{lat:45.98292543,lon:-123.2343231,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-30",url:"https://www.inaturalist.org/observations/109978848",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185456361/square.jpeg",color:"#3cb44b",initials:"EA",weather:"🌦️ Light Drizzle &middot; 13/4°C &middot; 1.0mm"},{lat:45.7341033333,lon:-123.9453666667,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-31",url:"https://www.inaturalist.org/observations/110054243",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185593128/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌦️ Light Drizzle &middot; 12/3°C &middot; 1.7mm"},{lat:46.1492611667,lon:-123.1552971667,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-22",url:"https://www.inaturalist.org/observations/110066568",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185616199/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 19/9°C"},{lat:46.1383409273,lon:-123.5858642514,name:"Echo Azure",species:"Celastrina echo",date:"2022-03-22",url:"https://www.inaturalist.org/observations/110229242",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/185912312/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 19/9°C"},{lat:45.8797025275,lon:-123.9366677497,name:"Margined White",species:"Pieris marginalis",date:"2022-03-30",url:"https://www.inaturalist.org/observations/110760916",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/186898400/square.jpeg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 13/4°C &middot; 1.0mm"},{lat:45.5537699373,lon:-122.5947242228,name:"Small White",species:"Pieris rapae",date:"2022-03-22",url:"https://www.inaturalist.org/observations/110808857",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/186986694/square.jpg",color:"#4363d8",initials:"SW",weather:"☁️ Overcast &middot; 19/9°C"},{lat:45.5992731624,lon:-122.5105732894,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-22",url:"https://www.inaturalist.org/observations/110936079",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/187220699/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 19/9°C"},{lat:44.5746333333,lon:-123.242745,name:"Small White",species:"Pieris rapae",date:"2022-03-16",url:"https://www.inaturalist.org/observations/111815793",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/188806099/square.jpg",color:"#4363d8",initials:"SW",weather:"🌦️ Drizzle &middot; 12/3°C &middot; 1.1mm"},{lat:45.5958888889,lon:-122.7508777778,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2022-03-28",url:"https://www.inaturalist.org/observations/115646438",photo:"https://static.inaturalist.org/photos/195180132/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Drizzle &middot; 14/7°C &middot; 3.0mm"},{lat:44.585314,lon:-123.373449,name:"Green Comma",species:"Polygonia faunus",date:"2019-03-18",url:"https://www.inaturalist.org/observations/139936259",photo:"https://static.inaturalist.org/photos/239446324/square.jpg",color:"#f032e6",initials:"GC",weather:"☀️ Clear &middot; 16/7°C"},{lat:44.585314,lon:-123.373449,name:"Echo Azure",species:"Celastrina echo",date:"2004-03-26",url:"https://www.inaturalist.org/observations/139937226",photo:"https://static.inaturalist.org/photos/239447826/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌧️ Rain &middot; 10/5°C &middot; 16.9mm"},{lat:44.585314,lon:-123.373449,name:"Green Comma",species:"Polygonia faunus",date:"2019-03-18",url:"https://www.inaturalist.org/observations/139938443",photo:"https://static.inaturalist.org/photos/239450321/square.jpg",color:"#f032e6",initials:"GC",weather:"☀️ Clear &middot; 16/7°C"},{lat:45.0008532418,lon:-123.032361073,name:"Small White",species:"Pieris rapae",date:"2023-03-01",url:"https://www.inaturalist.org/observations/150019917",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258603971/square.jpg",color:"#4363d8",initials:"SW",weather:"☁️ Overcast &middot; 7/-2°C"},{lat:45.0008567756,lon:-123.0324100887,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103266",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759418/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008510402,lon:-123.0324141058,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103325",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759467/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008531255,lon:-123.0323815431,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103353",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759562/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008590927,lon:-123.0324235643,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103379",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759606/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008606232,lon:-123.0323994083,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103393",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759658/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008537577,lon:-123.0323945455,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103410",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759732/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008545787,lon:-123.0324209914,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103429",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759796/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008560205,lon:-123.03230172,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103440",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759842/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.0008538726,lon:-123.0324351872,name:"Small White",species:"Pieris rapae",date:"2023-03-02",url:"https://www.inaturalist.org/observations/150103452",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/258759920/square.jpg",color:"#4363d8",initials:"SW",weather:"🌧️ Light Rain &middot; 8/1°C &middot; 3.2mm"},{lat:45.5025883333,lon:-122.6036533333,name:"Gray Hairstreak",species:"Strymon melinus",date:"2023-03-07",url:"https://www.inaturalist.org/observations/150523277",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/259569024/square.jpg",color:"#bfef45",initials:"GH",weather:"🌨️ Snow &middot; 7/-1°C &middot; 2.6mm"},{lat:45.5025815401,lon:-122.6036020964,name:"Gray Hairstreak",species:"Strymon melinus",date:"2023-03-07",url:"https://www.inaturalist.org/observations/150523470",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/259569363/square.jpg",color:"#bfef45",initials:"GH",weather:"🌨️ Snow &middot; 7/-1°C &middot; 2.6mm"},{lat:44.8523010917,lon:-123.1943988802,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2023-03-15",url:"https://www.inaturalist.org/observations/151240294",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/260921291/square.jpg",color:"#f58231",initials:"MC",weather:"🌦️ Light Drizzle &middot; 9/2°C &middot; 1.0mm"},{lat:45.4712546,lon:-122.588719,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2023-03-17",url:"https://www.inaturalist.org/observations/151426499",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/261272973/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 15/4°C"},{lat:45.595968607,lon:-122.71411462,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2023-03-18",url:"https://www.inaturalist.org/observations/151529346",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/261461636/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.6875819735,lon:-121.7802351391,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2023-03-18",url:"https://www.inaturalist.org/observations/151550950",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/261503516/square.jpeg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 18/2°C"},{lat:45.5916116667,lon:-122.3913416667,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2023-03-21",url:"https://www.inaturalist.org/observations/151867319",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/262129552/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 15/3°C"},{lat:44.9140533333,lon:-123.1213888333,name:"Satyr Comma",species:"Polygonia satyrus",date:"2023-03-22",url:"https://www.inaturalist.org/observations/151970868",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/262293802/square.jpg",color:"#42d4f4",initials:"SC",weather:"🌦️ Light Drizzle &middot; 16/2°C &middot; 0.5mm"},{lat:45.4928624627,lon:-122.9483840681,name:"Western Tiger Swallowtail",species:"Papilio rutulus",date:"2023-03-31",url:"https://www.inaturalist.org/observations/152950400",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/264102358/square.jpg",color:"#aaffc3",initials:"WS",weather:"🌧️ Light Rain &middot; 7/5°C &middot; 14.2mm"},{lat:44.7370353985,lon:-122.2103955969,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2021-03-27",url:"https://www.inaturalist.org/observations/153142931",photo:"https://static.inaturalist.org/photos/264465743/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.688922962,lon:-122.1802339328,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2020-03-17",url:"https://www.inaturalist.org/observations/196821854",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/346494958/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/-1°C"},{lat:46.1697799072,lon:-123.9359017518,name:"Red Admiral",species:"Vanessa atalanta",date:"2024-02-07",url:"https://www.inaturalist.org/observations/199008161",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/350871580/square.jpeg",color:"#fabed4",initials:"RA",weather:"🌦️ Light Drizzle &middot; 9/2°C &middot; 0.8mm"},{lat:45.5124866667,lon:-123.8803916667,name:"Echo Azure",species:"Celastrina echo",date:"2024-02-23",url:"https://www.inaturalist.org/observations/200241029",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/353251089/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 15/2°C"},{lat:45.475675,lon:-122.6537027778,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2024-03-14",url:"https://www.inaturalist.org/observations/202475281",photo:"https://static.inaturalist.org/photos/357599854/square.jpeg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 16/-0°C"},{lat:46.14925,lon:-123.1554195,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2024-03-16",url:"https://www.inaturalist.org/observations/202691570",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/358007999/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 21/6°C"},{lat:44.7809393,lon:-122.79350565,name:"Gray Hairstreak",species:"Strymon melinus",date:"2024-03-16",url:"https://www.inaturalist.org/observations/202715328",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/358051999/square.jpeg",color:"#bfef45",initials:"GH",weather:"☁️ Overcast &middot; 21/6°C"},{lat:45.0413373231,lon:-123.8096109396,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-16",url:"https://www.inaturalist.org/observations/202750155",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/358120107/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 21/6°C"},{lat:45.0414024106,lon:-123.8096294629,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-16",url:"https://www.inaturalist.org/observations/202751093",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/358122350/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 21/6°C"},{lat:45.6593202218,lon:-122.5269144825,name:"Gray Hairstreak",species:"Strymon melinus",date:"2024-03-17",url:"https://www.inaturalist.org/observations/202870189",photo:"https://static.inaturalist.org/photos/358348774/square.jpg",color:"#bfef45",initials:"GH",weather:"☁️ Overcast &middot; 20/3°C"},{lat:45.6423279649,lon:-122.8420580312,name:"Green Comma",species:"Polygonia faunus",date:"2024-03-17",url:"https://www.inaturalist.org/observations/202936235",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/358480690/square.jpg",color:"#f032e6",initials:"GC",weather:"☁️ Overcast &middot; 20/3°C"},{lat:44.9763830529,lon:-123.9692530766,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-18",url:"https://www.inaturalist.org/observations/203055711",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/358710476/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 21/5°C"},{lat:45.0652147,lon:-121.5228199233,name:"Hoary Comma",species:"Polygonia gracilis",date:"2024-03-17",url:"https://www.inaturalist.org/observations/203399016",photo:"https://static.inaturalist.org/photos/359359455/square.jpg",color:"#9a6324",initials:"HC",weather:"☁️ Overcast &middot; 20/3°C"},{lat:45.550677184,lon:-122.3635005145,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2024-03-18",url:"https://www.inaturalist.org/observations/203539483",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/359635404/square.jpeg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 21/5°C"},{lat:45.7103222222,lon:-121.6712333333,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2024-03-18",url:"https://www.inaturalist.org/observations/203992556",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/360499614/square.jpeg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 21/5°C"},{lat:44.9753682248,lon:-123.9755353418,name:"Margined White",species:"Pieris marginalis",date:"2024-03-27",url:"https://www.inaturalist.org/observations/204218368",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/360935250/square.jpg",color:"#911eb4",initials:"MW",weather:"🌧️ Light Rain &middot; 13/7°C &middot; 13.8mm"},{lat:44.9693734356,lon:-123.9853624224,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-29",url:"https://www.inaturalist.org/observations/204486606",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361450264/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.1mm"},{lat:44.968682566,lon:-123.9840213783,name:"Margined White",species:"Pieris marginalis",date:"2024-03-29",url:"https://www.inaturalist.org/observations/204486683",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361450428/square.jpg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.1mm"},{lat:45.6270701448,lon:-122.0216210559,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-30",url:"https://www.inaturalist.org/observations/204614728",photo:"https://static.inaturalist.org/photos/361688681/square.jpeg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 16/4°C"},{lat:44.5054244727,lon:-124.0422162283,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-30",url:"https://www.inaturalist.org/observations/204643194",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361740073/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 16/4°C"},{lat:44.5054303857,lon:-124.0421771819,name:"Margined White",species:"Pieris marginalis",date:"2024-03-30",url:"https://www.inaturalist.org/observations/204643375",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361740652/square.jpg",color:"#911eb4",initials:"MW",weather:"☁️ Overcast &middot; 16/4°C"},{lat:44.5052202448,lon:-124.0424503445,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2024-03-30",url:"https://www.inaturalist.org/observations/204643846",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361741274/square.jpg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 16/4°C"},{lat:46.10574445,lon:-123.8993111167,name:"Margined White",species:"Pieris marginalis",date:"2024-03-29",url:"https://www.inaturalist.org/observations/204647243",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361747177/square.jpeg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.1mm"},{lat:46.10733055,lon:-123.89884445,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-29",url:"https://www.inaturalist.org/observations/204647244",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/361747168/square.jpeg",color:"#3cb44b",initials:"EA",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.1mm"},{lat:45.0199975002,lon:-123.9961509364,name:"Margined White",species:"Pieris marginalis",date:"2024-03-31",url:"https://www.inaturalist.org/observations/204804283",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/362041795/square.jpg",color:"#911eb4",initials:"MW",weather:"⛅ Partly Cloudy &middot; 15/3°C"},{lat:45.4712546,lon:-122.588719,name:"Small White",species:"Pieris rapae",date:"2024-03-31",url:"https://www.inaturalist.org/observations/205049126",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/362509457/square.jpeg",color:"#4363d8",initials:"SW",weather:"⛅ Partly Cloudy &middot; 15/3°C"},{lat:45.9435191629,lon:-123.969396701,name:"Margined White",species:"Pieris marginalis",date:"2024-03-29",url:"https://www.inaturalist.org/observations/205127825",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/362655120/square.jpg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 15/3°C &middot; 0.1mm"},{lat:45.6313078499,lon:-121.8990762051,name:"Echo Azure",species:"Celastrina echo",date:"2024-03-31",url:"https://www.inaturalist.org/observations/205665629",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/363682135/square.jpg",color:"#3cb44b",initials:"EA",weather:"⛅ Partly Cloudy &middot; 15/3°C"},{lat:45.4971173643,lon:-122.4682479799,name:"Anise Swallowtail",species:"Papilio zelicaon",date:"2014-02-10",url:"https://www.inaturalist.org/observations/227377296",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/403362365/square.jpg",color:"#469990",initials:"AS",weather:"🌦️ Drizzle &middot; 5/-2°C &middot; 5.8mm"},{lat:44.8142883333,lon:-123.3784783333,name:"Green Comma",species:"Polygonia faunus",date:"2025-02-27",url:"https://www.inaturalist.org/observations/263314500",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473017957/square.jpg",color:"#f032e6",initials:"GC",weather:"☁️ Overcast &middot; 17/3°C"},{lat:44.9668464762,lon:-123.7991424483,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263422920",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473230290/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.78109365,lon:-122.79355036,name:"Small White",species:"Pieris rapae",date:"2025-03-01",url:"https://www.inaturalist.org/observations/263538215",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473457540/square.jpeg",color:"#4363d8",initials:"SW",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.7809723,lon:-122.7939178,name:"Small White",species:"Pieris rapae",date:"2025-03-01",url:"https://www.inaturalist.org/observations/263544122",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473468627/square.jpeg",color:"#4363d8",initials:"SW",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.6081993487,lon:-123.3317070394,name:"Oreas Comma",species:"Polygonia oreas",date:"2025-03-01",url:"https://www.inaturalist.org/observations/263545210",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473471071/square.jpeg",color:"#ffe119",initials:"OC",weather:"☁️ Overcast &middot; 14/4°C"},{lat:45.8142628623,lon:-122.8017878981,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2025-03-01",url:"https://www.inaturalist.org/observations/263572816",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473526468/square.jpeg",color:"#f58231",initials:"MC",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.5814918887,lon:-123.3836391687,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800410",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473972789/square.jpg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.5842455314,lon:-123.3874628699,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-02-28",url:"https://www.inaturalist.org/observations/263800647",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/473973675/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 17/5°C"},{lat:45.6857308201,lon:-122.6955976719,name:"Small White",species:"Pieris rapae",date:"2025-03-03",url:"https://www.inaturalist.org/observations/263819485",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/474012889/square.jpg",color:"#4363d8",initials:"SW",weather:"🌦️ Light Drizzle &middot; 11/7°C &middot; 1.2mm"},{lat:45.5936819691,lon:-122.6588512218,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2025-03-05",url:"https://www.inaturalist.org/observations/264028789",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/474422383/square.jpg",color:"#f58231",initials:"MC",weather:"🌦️ Drizzle &middot; 13/2°C &middot; 1.3mm"},{lat:45.54572,lon:-122.78418,name:"Small White",species:"Pieris rapae",date:"2025-03-05",url:"https://www.inaturalist.org/observations/264104497",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/474551749/square.jpg",color:"#4363d8",initials:"SW",weather:"🌦️ Drizzle &middot; 13/2°C &middot; 1.3mm"},{lat:45.7201916667,lon:-122.88717,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-03-06",url:"https://www.inaturalist.org/observations/264134451",photo:"https://static.inaturalist.org/photos/474609312/square.jpg",color:"#42d4f4",initials:"SC",weather:"⛅ Partly Cloudy &middot; 13/2°C"},{lat:45.7005533333,lon:-122.6990583333,name:"Small White",species:"Pieris rapae",date:"2025-03-06",url:"https://www.inaturalist.org/observations/264142122",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/474624239/square.jpg",color:"#4363d8",initials:"SW",weather:"⛅ Partly Cloudy &middot; 13/2°C"},{lat:44.5871080689,lon:-123.3368568807,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-07",url:"https://www.inaturalist.org/observations/264436836",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/474866320/square.jpeg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 11/1°C"},{lat:44.9733927484,lon:-123.978036304,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-17",url:"https://www.inaturalist.org/observations/265772896",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/477439375/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌨️ Snow &middot; 9/2°C &middot; 7.4mm"},{lat:44.78108178,lon:-122.79361467,name:"Lorquin\'s Admiral",species:"Limenitis lorquini",date:"2025-03-17",url:"https://www.inaturalist.org/observations/265779070",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/477451897/square.jpeg",color:"#808000",initials:"LA",weather:"🌨️ Snow &middot; 9/2°C &middot; 7.4mm"},{lat:44.9101783333,lon:-123.02675,name:"Small White",species:"Pieris rapae",date:"2025-03-17",url:"https://www.inaturalist.org/observations/265783607",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/477461389/square.jpg",color:"#4363d8",initials:"SW",weather:"🌨️ Snow &middot; 9/2°C &middot; 7.4mm"},{lat:45.4786133333,lon:-122.649095,name:"Small White",species:"Pieris rapae",date:"2025-03-16",url:"https://www.inaturalist.org/observations/266056654",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/477992780/square.jpg",color:"#4363d8",initials:"SW",weather:"🌦️ Drizzle &middot; 10/4°C &middot; 2.7mm"},{lat:45.8948861111,lon:-123.9587888889,name:"Margined White",species:"Pieris marginalis",date:"2025-03-22",url:"https://www.inaturalist.org/observations/266588489",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/478995301/square.jpeg",color:"#911eb4",initials:"MW",weather:"🌦️ Light Drizzle &middot; 12/4°C &middot; 0.1mm"},{lat:45.6908701361,lon:-122.6577595474,name:"Small White",species:"Pieris rapae",date:"2025-03-24",url:"https://www.inaturalist.org/observations/266790822",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479365713/square.jpg",color:"#4363d8",initials:"SW",weather:"🌦️ Heavy Drizzle &middot; 20/12°C &middot; 2.2mm"},{lat:45.5117930738,lon:-122.5923157083,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-24",url:"https://www.inaturalist.org/observations/266822712",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479426955/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Heavy Drizzle &middot; 20/12°C &middot; 2.2mm"},{lat:45.4517466667,lon:-122.6691583333,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-25",url:"https://www.inaturalist.org/observations/266958133",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479687453/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 23/9°C"},{lat:45.9420566961,lon:-123.9150470882,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-25",url:"https://www.inaturalist.org/observations/266958879",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479916824/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 23/9°C"},{lat:44.9701784997,lon:-123.9793533782,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-25",url:"https://www.inaturalist.org/observations/267037259",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479841827/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 23/9°C"},{lat:44.9701784997,lon:-123.9793533782,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-25",url:"https://www.inaturalist.org/observations/267037260",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479841830/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 23/9°C"},{lat:44.9701784997,lon:-123.9793533782,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-25",url:"https://www.inaturalist.org/observations/267037262",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479841838/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 23/9°C"},{lat:46.1522916667,lon:-123.7931305556,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267076721",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479914176/square.jpeg",color:"#3cb44b",initials:"EA",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:45.4761283333,lon:-122.6545966667,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267106445",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/479970888/square.jpg",color:"#f58231",initials:"MC",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:45.2344374908,lon:-122.7194995659,name:"Small White",species:"Pieris rapae",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267107944",photo:"https://static.inaturalist.org/photos/479973583/square.jpeg",color:"#4363d8",initials:"SW",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:46.1163277833,lon:-123.8848611167,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267134554",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/480024389/square.jpeg",color:"#3cb44b",initials:"EA",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:46.1149972167,lon:-123.89508055,name:"Margined White",species:"Pieris marginalis",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267134559",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/480024413/square.jpeg",color:"#911eb4",initials:"MW",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:45.51908,lon:-122.708825,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267144279",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/480047270/square.jpg",color:"#e6194b",initials:"CT",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:44.5052743394,lon:-124.0416950938,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-25",url:"https://www.inaturalist.org/observations/267265798",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/480278659/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 23/9°C"},{lat:45.4526852914,lon:-122.6673857833,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-24",url:"https://www.inaturalist.org/observations/267286194",photo:"https://static.inaturalist.org/photos/480321700/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Heavy Drizzle &middot; 20/12°C &middot; 2.2mm"},{lat:45.4858860819,lon:-123.9780990779,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-26",url:"https://www.inaturalist.org/observations/267384004",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/480503304/square.jpeg",color:"#e6194b",initials:"CT",weather:"🌧️ Rain &middot; 27/11°C &middot; 15.2mm"},{lat:45.5128420368,lon:-122.9904557558,name:"Small White",species:"Pieris rapae",date:"2025-03-22",url:"https://www.inaturalist.org/observations/267586144",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/480879849/square.jpeg",color:"#4363d8",initials:"SW",weather:"🌦️ Light Drizzle &middot; 12/4°C &middot; 0.1mm"},{lat:45.5949628138,lon:-121.5946411202,name:"Propertius Duskywing",species:"Erynnis propertius",date:"2025-03-29",url:"https://www.inaturalist.org/observations/267608294",photo:"https://static.inaturalist.org/photos/480933719/square.jpeg",color:"#3cb44b",initials:"PD",weather:"🌧️ Light Rain &middot; 13/6°C &middot; 3.9mm"},{lat:45.7763748146,lon:-122.5246180594,name:"Small White",species:"Pieris rapae",date:"2025-03-30",url:"https://www.inaturalist.org/observations/267726669",photo:"https://static.inaturalist.org/photos/481162071/square.jpeg",color:"#4363d8",initials:"SW",weather:"🌦️ Drizzle &middot; 16/5°C &middot; 3.3mm"},{lat:45.4298829866,lon:-123.3527613209,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-03-25",url:"https://www.inaturalist.org/observations/267747319",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/481197686/square.jpeg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 23/9°C"},{lat:46.3279913119,lon:-124.0265980703,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-30",url:"https://www.inaturalist.org/observations/267751327",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/481207130/square.jpg",color:"#3cb44b",initials:"EA",weather:"🌦️ Drizzle &middot; 16/5°C &middot; 3.3mm"},{lat:45.4745657105,lon:-122.5289714397,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2025-03-30",url:"https://www.inaturalist.org/observations/267776474",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/481255793/square.jpg",color:"#e6194b",initials:"CT",weather:"🌦️ Drizzle &middot; 16/5°C &middot; 3.3mm"},{lat:45.6588283333,lon:-122.52575,name:"Gray Hairstreak",species:"Strymon melinus",date:"2024-03-17",url:"https://www.inaturalist.org/observations/278286699",photo:"https://static.inaturalist.org/photos/499685657/square.jpg",color:"#bfef45",initials:"GH",weather:"☁️ Overcast &middot; 20/3°C"},{lat:45.8901130894,lon:-122.7701306662,name:"Satyr Comma",species:"Polygonia satyrus",date:"2025-02-28",url:"https://www.inaturalist.org/observations/282977710",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/508437997/square.jpg",color:"#42d4f4",initials:"SC",weather:"☁️ Overcast &middot; 17/5°C"},{lat:44.539079794,lon:-123.3563653752,name:"California Sister",species:"Adelpha californica",date:"2019-02-10",url:"https://www.inaturalist.org/observations/309441939",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/558398316/square.jpg",color:"#f58231",initials:"CS",weather:"🌨️ Heavy Snow &middot; 4/-4°C &middot; 5.2mm"},{lat:45.7101950198,lon:-121.6710483463,name:"Hoary Comma",species:"Polygonia gracilis",date:"2024-03-18",url:"https://www.inaturalist.org/observations/324452971",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/587250551/square.jpg",color:"#9a6324",initials:"HC",weather:"☁️ Overcast &middot; 21/5°C"},{lat:45.5031847604,lon:-122.6280036703,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-03",url:"https://www.inaturalist.org/observations/337245292",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613022204/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 14/4°C"},{lat:44.8529809574,lon:-122.663884638,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337358596",photo:"https://static.inaturalist.org/photos/613255291/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.517975,lon:-122.5978866667,name:"Painted Lady",species:"Vanessa cardui",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337368726",photo:"https://static.inaturalist.org/photos/613275758/square.jpg",color:"#dcbeff",initials:"PL",weather:"☁️ Overcast &middot; 15/7°C"},{lat:45.5151366667,lon:-122.9471366667,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/337370187",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/613278172/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"},{lat:46.123695298,lon:-123.6889334033,name:"Echo Azure",species:"Celastrina echo",date:"2026-02-05",url:"https://www.inaturalist.org/observations/337467951",photo:"https://static.inaturalist.org/photos/613482138/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 12/5°C"},{lat:45.597545,lon:-122.7527166667,name:"Woodland Skipper",species:"Ochlodes sylvanoides",date:"2026-02-06",url:"https://www.inaturalist.org/observations/337597002",photo:"https://static.inaturalist.org/photos/613746817/square.jpg",color:"#4363d8",initials:"WS",weather:"☁️ Overcast &middot; 12/4°C"},{lat:46.1476232685,lon:-123.5841640458,name:"Echo Azure",species:"Celastrina echo",date:"2026-02-10",url:"https://www.inaturalist.org/observations/338115204",photo:"https://static.inaturalist.org/photos/614807341/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 11/2°C"},{lat:45.2425307,lon:-122.5147126,name:"Echo Azure",species:"Celastrina echo",date:"2025-03-25",url:"https://www.inaturalist.org/observations/338216462",photo:"https://static.inaturalist.org/photos/615014743/square.jpg",color:"#3cb44b",initials:"EA",weather:"☁️ Overcast &middot; 23/9°C"},{lat:45.734225,lon:-123.9453583333,name:"Mourning Cloak",species:"Nymphalis antiopa",date:"2026-02-11",url:"https://www.inaturalist.org/observations/338250214",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/615083767/square.jpg",color:"#f58231",initials:"MC",weather:"⛅ Partly Cloudy &middot; 13/2°C"},{lat:45.4306659396,lon:-122.6801843718,name:"California Tortoiseshell",species:"Nymphalis californica",date:"2026-02-04",url:"https://www.inaturalist.org/observations/338810917",photo:"https://inaturalist-open-data.s3.amazonaws.com/photos/616220074/square.jpg",color:"#e6194b",initials:"CT",weather:"☁️ Overcast &middot; 15/7°C"}];
+
+  function buildPopup(o) {
+    var html = '<div class="obs-popup">';
+    if (o.photo) {
+      html += '<img class="obs-popup-img" src="' + o.photo + '" alt="' + o.name + '">';
+    }
+    html += '<div class="obs-popup-body">';
+    html += '<span style="color:' + o.color + ';font-weight:700">&#9679;</span> ';
+    html += '<b>' + o.name + '</b><br><i>' + o.species + '</i>';
+    html += '<br>' + o.date;
+    if (o.weather) {
+      html += '<br><span class="obs-popup-weather">' + o.weather + '</span>';
+    }
+    html += '<br><a href="' + o.url + '" target="_blank">View on iNaturalist</a>';
+    html += '</div></div>';
+    return html;
+  }
+
+  var group = L.layerGroup();
+  for (var i = 0; i < obs.length; i++) {
+    var o = obs[i];
+    var m = L.circleMarker([o.lat, o.lon], {
+      radius: 11, fillColor: o.color, color: '#fff',
+      weight: 1.5, opacity: 0.9, fillOpacity: 0.85
+    });
+    m.bindPopup(buildPopup(o), {maxWidth: 280, minWidth: 200});
+    m.bindTooltip(o.initials, {permanent: true, direction: "center",
+      className: "map-label", offset: [0, 0]});
+    group.addLayer(m);
+  }
+  group.addTo(map);
+  L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
+    color: '#555', weight: 1.5, dashArray: '6 4',
+    fill: false, opacity: 0.5
+  }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');
+  if (obs.length > 0) {
+    var bounds = L.latLngBounds(obs.map(function(o) { return [o.lat, o.lon]; }));
+    map.fitBounds(bounds, {padding: [30, 30]});
+  }
+})();
+</script>
+</body>
+</html>
