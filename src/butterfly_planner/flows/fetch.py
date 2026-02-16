@@ -22,8 +22,8 @@ from prefect import flow, task
 
 from butterfly_planner import gdd, sunshine
 from butterfly_planner.datasources import inaturalist
-from butterfly_planner.services import weather
-from butterfly_planner.services.http import session
+from butterfly_planner.datasources.weather import forecast as weather_forecast
+from butterfly_planner.datasources.weather import historical as weather_historical
 
 # Data directories
 DATA_DIR = Path("data")
@@ -33,7 +33,7 @@ RAW_DIR = DATA_DIR / "raw"
 @task(name="fetch-weather", retries=2, retry_delay_seconds=5)
 def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     """
-    Fetch 7-day weather forecast from Open-Meteo.
+    Fetch 16-day weather forecast from Open-Meteo.
 
     Args:
         lat: Latitude (default: Portland, OR)
@@ -42,24 +42,7 @@ def fetch_weather(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:
     Returns:
         Weather data dict
     """
-    url = "https://api.open-meteo.com/v1/forecast"
-    params: dict[str, str | int | float | list[str]] = {
-        "latitude": lat,
-        "longitude": lon,
-        "daily": [
-            "temperature_2m_max",
-            "temperature_2m_min",
-            "precipitation_sum",
-            "weather_code",
-        ],
-        "timezone": "America/Los_Angeles",
-        "forecast_days": 16,
-    }
-
-    resp = session.get(url, params=params)
-    resp.raise_for_status()
-    result: dict[str, Any] = resp.json()
-    return result
+    return weather_forecast.fetch_forecast(lat, lon)
 
 
 @task(name="fetch-sunshine-15min", retries=2, retry_delay_seconds=5)
@@ -220,7 +203,7 @@ def fetch_historical_weather(
     for _year, year_dates in by_year.items():
         start = min(year_dates)
         end = max(year_dates)
-        data = weather.fetch_historical_daily(start, end, lat, lon)
+        data = weather_historical.fetch_historical_daily(start, end, lat, lon)
         daily = data.get("daily", {})
         api_dates = daily.get("time", [])
         for i, api_date in enumerate(api_dates):

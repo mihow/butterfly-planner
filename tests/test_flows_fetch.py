@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class TestFetchWeather:
     """Test fetching weather data from API."""
 
-    @patch("butterfly_planner.flows.fetch.session.get")
+    @patch("butterfly_planner.datasources.weather.forecast.session.get")
     def test_fetch_weather(self, mock_get: Mock) -> None:
         """Test fetching weather data from Open-Meteo."""
         mock_response = Mock()
@@ -227,7 +227,7 @@ class TestSaveInaturalist:
 class TestFetchHistoricalWeather:
     """Test fetching historical weather for observation dates."""
 
-    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    @patch("butterfly_planner.flows.fetch.weather_historical.fetch_historical_daily")
     def test_fetch_historical_weather(self, mock_fetch: Mock) -> None:
         """Test fetching historical weather groups by year and returns by-date dict."""
         mock_fetch.return_value = {
@@ -254,7 +254,7 @@ class TestFetchHistoricalWeather:
         assert result["2024-06-16"]["precip_mm"] == 1.5
         mock_fetch.assert_called_once_with("2024-06-15", "2024-06-16", 45.5, -122.6)
 
-    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    @patch("butterfly_planner.flows.fetch.weather_historical.fetch_historical_daily")
     def test_fetch_historical_weather_multiple_years(self, mock_fetch: Mock) -> None:
         """Test that observations from different years make separate API calls."""
         mock_fetch.return_value = {
@@ -308,12 +308,12 @@ class TestSaveHistoricalWeather:
 class TestFetchAllFlow:
     """Test the main fetch flow."""
 
-    @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
+    @patch("butterfly_planner.flows.fetch.weather_historical.fetch_historical_daily")
     @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
     @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_16day_sunshine")
-    @patch("butterfly_planner.flows.fetch.session.get")
+    @patch("butterfly_planner.datasources.weather.forecast.session.get")
     def test_fetch_all(
         self,
         mock_get: Mock,
