@@ -7,8 +7,15 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import patch
 
-from butterfly_planner import inaturalist
+from butterfly_planner.datasources import inaturalist
 from butterfly_planner.datasources.inaturalist import client as inat_client
+from butterfly_planner.datasources.inaturalist.observations import _parse_observation
+from butterfly_planner.datasources.inaturalist.species import _parse_species_record
+from butterfly_planner.datasources.inaturalist.weekly import (
+    _week_range,
+    _week_to_months,
+    _weeks_to_months,
+)
 
 # =============================================================================
 # Fixtures / Sample API Responses
@@ -213,7 +220,7 @@ class TestParseSpeciesRecord:
 
     def test_full_record(self) -> None:
         result = SAMPLE_SPECIES_COUNTS_RESPONSE["results"][0]
-        record = inaturalist._parse_species_record(result)
+        record = _parse_species_record(result)
         assert record.taxon_id == 48662
         assert record.scientific_name == "Vanessa cardui"
         assert record.common_name == "Painted Lady"
@@ -223,7 +230,7 @@ class TestParseSpeciesRecord:
 
     def test_record_without_photo(self) -> None:
         result = SAMPLE_SPECIES_COUNTS_RESPONSE["results"][2]
-        record = inaturalist._parse_species_record(result)
+        record = _parse_species_record(result)
         assert record.photo_url is None
         assert record.scientific_name == "Papilio zelicaon"
 
@@ -232,7 +239,7 @@ class TestParseObservation:
     """Test _parse_observation helper."""
 
     def test_valid_observation(self) -> None:
-        obs = inaturalist._parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[0])
+        obs = _parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[0])
         assert obs is not None
         assert obs.id == 100001
         assert obs.species == "Vanessa cardui"
@@ -243,22 +250,22 @@ class TestParseObservation:
         assert obs.photo_url is not None
 
     def test_observation_without_photo(self) -> None:
-        obs = inaturalist._parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[1])
+        obs = _parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[1])
         assert obs is not None
         assert obs.photo_url is None
 
     def test_observation_without_location_returns_none(self) -> None:
-        obs = inaturalist._parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[2])
+        obs = _parse_observation(SAMPLE_OBSERVATIONS_RESPONSE[2])
         assert obs is None
 
     def test_observation_with_bad_location_returns_none(self) -> None:
         bad_obs = {"id": 999, "location": "invalid", "observed_on": "2025-06-15"}
-        obs = inaturalist._parse_observation(bad_obs)
+        obs = _parse_observation(bad_obs)
         assert obs is None
 
     def test_observation_without_observed_on_returns_none(self) -> None:
         bad_obs = {"id": 999, "location": "45.5,-122.6", "observed_on": None}
-        obs = inaturalist._parse_observation(bad_obs)
+        obs = _parse_observation(bad_obs)
         assert obs is None
 
 
@@ -494,19 +501,19 @@ class TestWeekRange:
     """Test _week_range helper."""
 
     def test_mid_year(self) -> None:
-        weeks = inaturalist._week_range(25)
+        weeks = _week_range(25)
         assert weeks == [24, 25, 26]
 
     def test_week_1_wraps_to_52(self) -> None:
-        weeks = inaturalist._week_range(1)
+        weeks = _week_range(1)
         assert weeks == [1, 2, 52]
 
     def test_week_52_wraps_to_1(self) -> None:
-        weeks = inaturalist._week_range(52)
+        weeks = _week_range(52)
         assert weeks == [1, 51, 52]
 
     def test_custom_radius(self) -> None:
-        weeks = inaturalist._week_range(10, radius=2)
+        weeks = _week_range(10, radius=2)
         assert weeks == [8, 9, 10, 11, 12]
 
 
@@ -515,13 +522,13 @@ class TestWeeksToMonths:
 
     def test_single_month(self) -> None:
         # Weeks 24-26 are all in June
-        months = inaturalist._weeks_to_months([24, 25, 26], year=2026)
+        months = _weeks_to_months([24, 25, 26], year=2026)
         assert 6 in months
 
     def test_spanning_months(self) -> None:
         # Weeks around month boundaries should return multiple months
         # Week 5 (late Jan) through week 7 (mid Feb) → Jan + Feb
-        months = inaturalist._weeks_to_months([5, 6, 7], year=2026)
+        months = _weeks_to_months([5, 6, 7], year=2026)
         assert 1 in months or 2 in months
         assert len(months) >= 1
 
@@ -531,28 +538,28 @@ class TestWeekToMonths:
 
     def test_mid_january(self) -> None:
         # Week 3 is mid-January
-        months = inaturalist._week_to_months(3, year=2026)
+        months = _week_to_months(3, year=2026)
         assert months == [1]
 
     def test_mid_june(self) -> None:
         # Week 25 is mid-June
-        months = inaturalist._week_to_months(25, year=2026)
+        months = _week_to_months(25, year=2026)
         assert 6 in months
 
     def test_week_spanning_two_months(self) -> None:
         # Week ~5 often spans Jan/Feb boundary
         # Find a week that actually spans two months
-        months = inaturalist._week_to_months(5, year=2026)
+        months = _week_to_months(5, year=2026)
         # Could be [1, 2] or just [1] depending on year — just check it returns valid months
         assert all(1 <= m <= 12 for m in months)
         assert len(months) >= 1
 
     def test_week_1(self) -> None:
-        months = inaturalist._week_to_months(1, year=2026)
+        months = _week_to_months(1, year=2026)
         assert 1 in months
 
     def test_week_52(self) -> None:
-        months = inaturalist._week_to_months(52, year=2026)
+        months = _week_to_months(52, year=2026)
         assert 12 in months
 
 

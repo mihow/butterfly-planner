@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from butterfly_planner import sunshine
+from butterfly_planner.datasources import sunshine
 
 
 class TestSunshineSlot:

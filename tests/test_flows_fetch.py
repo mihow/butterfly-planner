@@ -9,10 +9,10 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
+from butterfly_planner.datasources.inaturalist import SpeciesRecord
+from butterfly_planner.datasources.sunshine import DailySunshine, SunshineSlot
 from butterfly_planner.flows import fetch
-from butterfly_planner.inaturalist import SpeciesRecord
 from butterfly_planner.store import DataStore
-from butterfly_planner.sunshine import DailySunshine, SunshineSlot
 
 if TYPE_CHECKING:
     from pathlib import Path

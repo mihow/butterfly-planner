@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import butterfly_planner.renderers.gdd as gdd_renderer
-from butterfly_planner.gdd import (
+from butterfly_planner.datasources.gdd import (
     DailyGDD,
     DayOfYearStats,
     SpeciesGDDProfile,

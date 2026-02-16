@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from butterfly_planner.gdd import (
+from butterfly_planner.datasources.gdd import (
     DEFAULT_BASE_TEMP_F,
     DayOfYearStats,
     SpeciesGDDProfile,

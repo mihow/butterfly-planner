@@ -2,7 +2,25 @@
 
 ## Project
 
-Butterfly Planner - GIS layers for butterfly abundance and species diversity forecasting in Oregon and Washington. Uses butterfly observation data, environmental data, and flower phenology to predict optimal butterfly viewing locations by week of the year. Isochrone mapping for driving time analysis is a key feature.
+Butterfly Planner - butterfly abundance and species diversity forecasting in Oregon and Washington. Uses butterfly observation data, environmental data, and flower phenology to predict optimal butterfly viewing locations by week of the year. Isochrone mapping for driving time analysis is a key feature.
+
+### Architecture
+
+```
+src/butterfly_planner/
+├── datasources/          # External APIs (each has client.py + domain modules)
+│   ├── inaturalist/      # Butterfly observations & species counts
+│   ├── weather/          # Open-Meteo forecast & historical
+│   ├── sunshine/         # Open-Meteo sunshine (15-min, daily, ensemble)
+│   └── gdd/              # Growing Degree Days computation
+├── store.py              # Tiered cache: reference/ historical/ live/ derived/
+├── analysis/             # Cross-datasource joins (species-GDD correlation)
+├── renderers/            # Pure data → HTML (sunshine, sightings, GDD charts)
+├── flows/                # Prefect orchestration (fetch → build)
+└── services/             # Shared HTTP client, future API stubs
+```
+
+Data flow: `datasources → store (cache) → analysis → renderers → derived/site/`
 
 ## IMPORTANT: Verify What You Change
 
