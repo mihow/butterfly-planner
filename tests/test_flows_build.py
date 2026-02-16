@@ -652,7 +652,8 @@ class TestBuildButterflySightingsHtml:
         assert "taxon_id=48662&month=6" in result
         assert "quality_grade=research" in result
         # "Browse on iNaturalist" link for all butterflies in region
-        assert "taxon_id=47224&month=6" in result
+        # URL is autoescaped in the href attribute
+        assert "taxon_id=47224&amp;month=6" in result
         # Photo should link to taxon page
         assert 'href="https://www.inaturalist.org/taxa/48662"' in result
 

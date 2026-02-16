@@ -13,10 +13,10 @@ during {{ period_label }}, {{ month_name }}
     <tbody>
     {% for sp in species %}
     <tr>
-        <td>{{ sp.photo_html }}</td>
-        <td><span class="species-dot" style="background:{{ sp.color }};" title="{{ sp.initials }}"></span>{{ sp.name_html }}<br>
+        <td>{{ sp.photo_html|safe }}</td>
+        <td><span class="species-dot" style="background:{{ sp.color }};" title="{{ sp.initials }}"></span>{{ sp.name_html|safe }}<br>
         <span class="species-scientific">{{ sp.scientific_name }}</span></td>
-        <td class="obs-count"><div class="obs-bar" style="width: {{ sp.bar_width }}px; background: {{ sp.color }};"></div>{{ sp.count_html }}</td>
+        <td class="obs-count"><div class="obs-bar" style="width: {{ sp.bar_width }}px; background: {{ sp.color }};"></div>{{ sp.count_html|safe }}</td>
     </tr>
     {% endfor %}
     </tbody>

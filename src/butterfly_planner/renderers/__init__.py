@@ -51,7 +51,7 @@ import jinja2
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader(str(_TEMPLATE_DIR)),
-    autoescape=False,  # We produce trusted HTML fragments
+    autoescape=True,
 )
 
 

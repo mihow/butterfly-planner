@@ -1,7 +1,7 @@
 """GDD (Growing Degree Days) HTML renderers.
 
 Today's GDD summary card and the accumulated GDD timeline SVG chart.
-Imports data types from butterfly_planner.gdd for type annotations.
+Imports data types from butterfly_planner.datasources.gdd for type annotations.
 """
 
 from __future__ import annotations
