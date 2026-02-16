@@ -213,7 +213,7 @@ class TestBuildSunshine16DayHtml:
     """Test building 16-day sunshine HTML."""
 
     def test_build_sunshine_16day_html_with_data(self) -> None:
-        """Test building HTML with 16-day sunshine data and weather."""
+        """Test building HTML with 16-day sunshine data and pre-merged weather."""
         sunshine_data = {
             "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
             "daily_16day": {
@@ -224,19 +224,22 @@ class TestBuildSunshine16DayHtml:
                 }
             },
         }
-        weather_data = {
-            "data": {
-                "daily": {
-                    "time": ["2026-02-04", "2026-02-05"],
-                    "temperature_2m_max": [15.0, 8.0],
-                    "temperature_2m_min": [5.0, 2.0],
-                    "precipitation_sum": [0.0, 5.2],
-                    "weather_code": [0, 61],
-                }
-            }
+        weather_by_date = {
+            "2026-02-04": {
+                "high_c": 15.0,
+                "low_c": 5.0,
+                "precip_mm": 0.0,
+                "weather_code": 0,
+            },
+            "2026-02-05": {
+                "high_c": 8.0,
+                "low_c": 2.0,
+                "precip_mm": 5.2,
+                "weather_code": 61,
+            },
         }
 
-        result = build_sunshine_16day_html(sunshine_data, weather_data)
+        result = build_sunshine_16day_html(sunshine_data, weather_by_date)
 
         assert "16-Day Sunshine Forecast" in result
         assert "2026-02-04" in result
@@ -569,13 +572,30 @@ class TestBuildButterflyMapHtml:
     """Test building butterfly map with enriched popups."""
 
     def test_map_with_photo_and_weather(self) -> None:
-        """Test map markers include photo URL and weather data."""
-        hw = {
-            "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
+        """Test map markers include photo URL and pre-enriched weather data."""
+        # Pre-enrich observations with weather (as analysis module would do)
+        enriched_inat = {
+            **SAMPLE_INAT_DATA_WITH_OBS,
+            "data": {
+                **SAMPLE_INAT_DATA_WITH_OBS["data"],
+                "observations": [
+                    {
+                        **SAMPLE_INAT_DATA_WITH_OBS["data"]["observations"][0],
+                        "weather": {
+                            "high_c": 22.0,
+                            "low_c": 10.0,
+                            "precip_mm": 0.0,
+                            "weather_code": 0,
+                        },
+                    },
+                    {
+                        **SAMPLE_INAT_DATA_WITH_OBS["data"]["observations"][1],
+                        "weather": None,
+                    },
+                ],
+            },
         }
-        map_div, map_script = build_butterfly_map_html(
-            SAMPLE_INAT_DATA_WITH_OBS, historical_weather=hw
-        )
+        map_div, map_script = build_butterfly_map_html(enriched_inat)
 
         assert "Butterfly Sightings Map" in map_div
         # Photo URL should be in marker data

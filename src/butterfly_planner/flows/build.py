@@ -16,6 +16,8 @@ from zoneinfo import ZoneInfo
 
 from prefect import flow, task
 
+from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
+from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.gdd import build_gdd_timeline_html, build_gdd_today_html
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
@@ -130,7 +132,8 @@ def build_html(
     sunshine_16day_html = ""
     if sunshine_data:
         sunshine_today_html = build_sunshine_today_html(sunshine_data)
-        sunshine_16day_html = build_sunshine_16day_html(sunshine_data, weather_data)
+        weather_by_date = merge_sunshine_weather(weather_data)
+        sunshine_16day_html = build_sunshine_16day_html(sunshine_data, weather_by_date)
 
     butterfly_sightings_html = ""
     butterfly_map_html = ""
@@ -140,9 +143,16 @@ def build_html(
         palette = build_species_palette(species_list)
         butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette)
 
-        butterfly_map_html, map_script_html = build_butterfly_map_html(
-            inat_data, palette, historical_weather
-        )
+        # Enrich observations with historical weather before rendering map
+        observations = inat_data.get("data", {}).get("observations", [])
+        if observations and historical_weather:
+            enriched = enrich_observations_with_weather(observations, historical_weather)
+            inat_data = {
+                **inat_data,
+                "data": {**inat_data.get("data", {}), "observations": enriched},
+            }
+
+        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data, palette)
 
     gdd_today_html = ""
     gdd_timeline_html = ""

@@ -60,12 +60,14 @@ def _week_label(weeks: list[int]) -> str:
 def build_butterfly_map_html(
     inat_data: dict[str, Any],
     palette: dict[str, SpeciesStyle] | None = None,
-    historical_weather: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[str, str]:
     """Build an interactive Leaflet map of butterfly observations.
 
     Each marker carries structured data so the JS template can build rich
     popups with thumbnail images and weather info.
+
+    Observations should be pre-enriched with a ``"weather"`` key (see
+    ``analysis.species_weather.enrich_observations_with_weather``).
 
     Returns a (map_div_html, map_script_js) tuple.
     """
@@ -86,8 +88,6 @@ def build_butterfly_map_html(
         species_list: list[dict[str, Any]] = data.get("species", [])
         palette = build_species_palette(species_list)
 
-    hw = historical_weather or {}
-
     # Build JS array of marker objects for the template.
     markers_js_parts: list[str] = []
     for obs in observations:
@@ -106,8 +106,8 @@ def build_butterfly_map_html(
         color = style.color if style else "#888"
         initials = style.initials if style else "?"
 
-        # Weather string for this observation's date
-        w = hw.get(obs_date)
+        # Weather from pre-enriched observation
+        w = obs.get("weather")
         weather_html = _escape_js(_build_weather_html(w)) if w else ""
 
         marker = (

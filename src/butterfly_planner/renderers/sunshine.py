@@ -148,9 +148,14 @@ def _build_hourly_bar(slots: list[tuple[str, int, bool]]) -> str:
 
 
 def build_sunshine_16day_html(
-    sunshine_data: dict[str, Any], weather_data: dict[str, Any] | None = None
+    sunshine_data: dict[str, Any],
+    weather_by_date: dict[str, dict[str, Any]] | None = None,
 ) -> str:
-    """Build HTML for the merged 16-day forecast (sunshine + weather)."""
+    """Build HTML for the 16-day forecast (sunshine + pre-merged weather).
+
+    Weather data should be pre-merged via
+    ``analysis.weekly_forecast.merge_sunshine_weather``.
+    """
     daily = sunshine_data["daily_16day"].get("daily", {})
     dates = daily.get("time", [])
     sunshine_secs = daily.get("sunshine_duration", [])
@@ -159,18 +164,7 @@ def build_sunshine_16day_html(
     if not dates:
         return "<p>No 16-day sunshine data available.</p>"
 
-    weather_by_date: dict[str, dict[str, Any]] = {}
-    if weather_data:
-        w_daily = weather_data.get("data", {}).get("daily", {})
-        w_dates = w_daily.get("time", [])
-        for j, w_date in enumerate(w_dates):
-            weather_by_date[w_date] = {
-                "high_c": w_daily.get("temperature_2m_max", [None])[j],
-                "low_c": w_daily.get("temperature_2m_min", [None])[j],
-                "precip_mm": w_daily.get("precipitation_sum", [None])[j],
-                "weather_code": w_daily.get("weather_code", [None])[j],
-            }
-
+    weather_by_date = weather_by_date or {}
     slots_by_date = _group_15min_by_date(sunshine_data)
 
     rows = []

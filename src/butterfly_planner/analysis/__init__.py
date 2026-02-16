@@ -8,6 +8,8 @@ It never fetches data or produces HTML.
 
 Modules:
   - species_gdd: observations + GDD accumulation -> emergence profiles
+  - species_weather: observations + historical weather -> enriched observations
+  - weekly_forecast: sunshine + weather forecast -> date-keyed weather lookup
 
 Adding an analysis module
 -------------------------
