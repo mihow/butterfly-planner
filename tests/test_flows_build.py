@@ -20,9 +20,21 @@ from butterfly_planner.renderers.sunshine import (
     build_sunshine_today_html,
 )
 from butterfly_planner.renderers.weather_utils import c_to_f, wmo_code_to_conditions
+from butterfly_planner.store import DataStore
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def write_envelope(base_dir: Path, path: str, data: object, source: str = "test") -> None:
+    """Write test data in the metadata envelope format."""
+    full = base_dir / path
+    full.parent.mkdir(parents=True, exist_ok=True)
+    envelope = {
+        "meta": {"source": source, "fetched_at": "2026-02-04T12:00:00+00:00"},
+        "data": data,
+    }
+    full.write_text(json.dumps(envelope))
 
 
 class TestCelsiusToFahrenheit:
@@ -42,22 +54,19 @@ class TestLoadWeather:
 
     def test_load_weather_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading weather data when file exists."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        weather_file = raw_dir / "weather.json"
-        weather_data = {"fetched_at": "2026-02-04T12:00:00", "data": {"daily": {}}}
-        weather_file.write_text(json.dumps(weather_data))
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        weather_payload = {"daily": {}}
+        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
 
         result = build.load_weather()
-        assert result == weather_data
+        assert result == weather_payload
 
     def test_load_weather_not_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading weather data when file doesn't exist."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
         result = build.load_weather()
         assert result is None
@@ -68,24 +77,27 @@ class TestLoadSunshine:
 
     def test_load_sunshine_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading sunshine data when file exists."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        sunshine_file = raw_dir / "sunshine.json"
-        sunshine_data = {"fetched_at": "2026-02-04T12:00:00", "today_15min": {}, "daily_16day": {}}
-        sunshine_file.write_text(json.dumps(sunshine_data))
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        data_15min = {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}}
+        data_16day = {"daily": {"time": [], "sunshine_duration": [], "daylight_duration": []}}
+        write_envelope(tmp_path, "live/sunshine_15min.json", data_15min, source="open-meteo.com")
+        write_envelope(tmp_path, "live/sunshine_16day.json", data_16day, source="open-meteo.com")
 
         result = build.load_sunshine()
-        assert result == sunshine_data
+        assert result is not None
+        assert result["fetched_at"] == "2026-02-04T12:00:00+00:00"
+        assert result["source"] == "open-meteo.com"
+        assert result["today_15min"] == data_15min
+        assert result["daily_16day"] == data_16day
 
     def test_load_sunshine_not_exists(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test loading sunshine data when file doesn't exist."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
         result = build.load_sunshine()
         assert result is None
@@ -463,23 +475,25 @@ class TestLoadInaturalist:
 
     def test_load_inaturalist_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading iNaturalist data when file exists."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        inat_file = raw_dir / "inaturalist.json"
-        inat_file.write_text(json.dumps(SAMPLE_INAT_DATA))
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        # The envelope data payload is what was under SAMPLE_INAT_DATA["data"]
+        inat_payload = SAMPLE_INAT_DATA["data"]
+        write_envelope(tmp_path, "live/inaturalist.json", inat_payload, source="inaturalist.org")
 
         result = build.load_inaturalist()
-        assert result == SAMPLE_INAT_DATA
+        assert result is not None
+        assert result["fetched_at"] == "2026-02-04T12:00:00+00:00"
+        assert result["source"] == "inaturalist.org"
+        assert result["data"] == inat_payload
 
     def test_load_inaturalist_not_exists(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test loading iNaturalist data when file doesn't exist."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
         result = build.load_inaturalist()
         assert result is None
@@ -490,18 +504,25 @@ class TestLoadHistoricalWeather:
 
     def test_load_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading historical weather when file exists."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        hw_file = raw_dir / "historical_weather.json"
-        hw_data = {
-            "fetched_at": "2026-02-04T12:00:00",
-            "source": "open-meteo.com (archive)",
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
+
+        hw_payload = {
             "by_date": {
-                "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
+                "2024-06-15": {
+                    "high_c": 22.0,
+                    "low_c": 10.0,
+                    "precip_mm": 0.0,
+                    "weather_code": 0,
+                },
             },
         }
-        hw_file.write_text(json.dumps(hw_data))
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        write_envelope(
+            tmp_path,
+            "historical/weather/historical_weather.json",
+            hw_payload,
+            source="open-meteo.com (archive)",
+        )
 
         result = build.load_historical_weather()
         assert result is not None
@@ -510,9 +531,8 @@ class TestLoadHistoricalWeather:
 
     def test_load_not_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading historical weather when file doesn't exist."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
         result = build.load_historical_weather()
         assert result is None
@@ -718,9 +738,8 @@ class TestBuildAllFlow:
 
     def test_build_all_no_weather(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test flow when no weather data exists."""
-        raw_dir = tmp_path / "data" / "raw"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
 
         result = build.build_all()
         assert result == {"error": "no data"}
@@ -729,25 +748,21 @@ class TestBuildAllFlow:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test flow with weather but no sunshine data."""
-        raw_dir = tmp_path / "data" / "raw"
-        site_dir = tmp_path / "site"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        site_dir = ds.derived / "site"
+        monkeypatch.setattr(build, "store", ds)
         monkeypatch.setattr(build, "SITE_DIR", site_dir)
 
-        weather_data = {
-            "fetched_at": "2026-02-04T12:00:00+00:00",
-            "data": {
-                "daily": {
-                    "time": ["2026-02-04"],
-                    "temperature_2m_max": [15.0],
-                    "temperature_2m_min": [5.0],
-                    "precipitation_sum": [0],
-                    "weather_code": [0],
-                }
-            },
+        weather_payload = {
+            "daily": {
+                "time": ["2026-02-04"],
+                "temperature_2m_max": [15.0],
+                "temperature_2m_min": [5.0],
+                "precipitation_sum": [0],
+                "weather_code": [0],
+            }
         }
-        (raw_dir / "weather.json").write_text(json.dumps(weather_data))
+        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
 
         result = build.build_all()
 
@@ -757,44 +772,45 @@ class TestBuildAllFlow:
 
     def test_build_all_with_all_data(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test flow with weather, sunshine, and iNaturalist data."""
-        raw_dir = tmp_path / "data" / "raw"
-        site_dir = tmp_path / "site"
-        raw_dir.mkdir(parents=True)
-        monkeypatch.setattr(build, "RAW_DIR", raw_dir)
+        ds = DataStore(tmp_path)
+        site_dir = ds.derived / "site"
+        monkeypatch.setattr(build, "store", ds)
         monkeypatch.setattr(build, "SITE_DIR", site_dir)
 
-        weather_data = {
-            "fetched_at": "2026-02-04T12:00:00+00:00",
-            "data": {
-                "daily": {
-                    "time": ["2026-02-04"],
-                    "temperature_2m_max": [15.0],
-                    "temperature_2m_min": [5.0],
-                    "precipitation_sum": [0],
-                    "weather_code": [1],
-                }
-            },
+        weather_payload = {
+            "daily": {
+                "time": ["2026-02-04"],
+                "temperature_2m_max": [15.0],
+                "temperature_2m_min": [5.0],
+                "precipitation_sum": [0],
+                "weather_code": [1],
+            }
         }
-        sunshine_data = {
-            "fetched_at": "2026-02-04T12:00:00",
-            "today_15min": {
-                "minutely_15": {
-                    "time": ["2026-02-04T12:00:00"],
-                    "sunshine_duration": [900],
-                    "is_day": [1],
-                }
-            },
-            "daily_16day": {
-                "daily": {
-                    "time": ["2026-02-04"],
-                    "sunshine_duration": [14400],
-                    "daylight_duration": [36000],
-                }
-            },
+        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+
+        sunshine_15min_payload = {
+            "minutely_15": {
+                "time": ["2026-02-04T12:00:00"],
+                "sunshine_duration": [900],
+                "is_day": [1],
+            }
         }
-        (raw_dir / "weather.json").write_text(json.dumps(weather_data))
-        (raw_dir / "sunshine.json").write_text(json.dumps(sunshine_data))
-        (raw_dir / "inaturalist.json").write_text(json.dumps(SAMPLE_INAT_DATA))
+        sunshine_16day_payload = {
+            "daily": {
+                "time": ["2026-02-04"],
+                "sunshine_duration": [14400],
+                "daylight_duration": [36000],
+            }
+        }
+        write_envelope(
+            tmp_path, "live/sunshine_15min.json", sunshine_15min_payload, source="open-meteo.com"
+        )
+        write_envelope(
+            tmp_path, "live/sunshine_16day.json", sunshine_16day_payload, source="open-meteo.com"
+        )
+
+        inat_payload = SAMPLE_INAT_DATA["data"]
+        write_envelope(tmp_path, "live/inaturalist.json", inat_payload, source="inaturalist.org")
 
         result = build.build_all()
 
