@@ -38,7 +38,7 @@ class DataStore:
 
         Returns the ``data`` field, or None if the file doesn't exist.
         """
-        full = self.base / path if not path.is_absolute() else path
+        full = self._resolve(path)
         if not full.exists():
             return None
         with full.open() as f:
@@ -47,7 +47,7 @@ class DataStore:
 
     def read_raw(self, path: Path) -> dict[str, Any] | None:
         """Read the full envelope (meta + data) from a JSON file."""
-        full = self.base / path if not path.is_absolute() else path
+        full = self._resolve(path)
         if not full.exists():
             return None
         with full.open() as f:
@@ -74,7 +74,7 @@ class DataStore:
         Returns:
             Absolute path of the written file.
         """
-        full = self.base / path if not path.is_absolute() else path
+        full = self._resolve(path)
         full.parent.mkdir(parents=True, exist_ok=True)
 
         meta: dict[str, Any] = {
@@ -115,7 +115,7 @@ class DataStore:
         Returns:
             Absolute path of the stored file.
         """
-        full = self.base / path if not path.is_absolute() else path
+        full = self._resolve(path)
         full.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, full)
 
@@ -136,11 +136,17 @@ class DataStore:
 
     def file_path(self, path: Path) -> Path | None:
         """Return the absolute path of a stored file, or None if missing."""
-        full = self.base / path if not path.is_absolute() else path
+        full = self._resolve(path)
         return full if full.exists() else None
 
     def _resolve(self, path: Path) -> Path:
-        return self.base / path if not path.is_absolute() else path
+        full = self.base / path if not path.is_absolute() else path
+        try:
+            full.resolve().relative_to(self.base.resolve())
+        except ValueError:
+            msg = f"Path escapes store base directory: {path}"
+            raise ValueError(msg) from None
+        return full
 
     def _read_meta(self, full: Path) -> dict[str, Any]:
         """Read metadata from either a JSON envelope or a sidecar .meta.json."""

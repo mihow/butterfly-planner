@@ -6,6 +6,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from butterfly_planner.store import DataStore
 
 
@@ -194,3 +196,28 @@ class TestDataStoreWriteFile:
     def test_file_path_missing(self, tmp_path: Path) -> None:
         store = DataStore(tmp_path)
         assert store.file_path(Path("reference/missing.bin")) is None
+
+
+class TestPathTraversal:
+    """Test that paths escaping the base directory are rejected."""
+
+    def test_read_blocks_traversal(self, tmp_path: Path) -> None:
+        store = DataStore(tmp_path)
+        with pytest.raises(ValueError, match="escapes store base"):
+            store.read(Path("../etc/passwd"))
+
+    def test_write_blocks_traversal(self, tmp_path: Path) -> None:
+        store = DataStore(tmp_path)
+        with pytest.raises(ValueError, match="escapes store base"):
+            store.write(Path("../../escape.json"), {}, source="test")
+
+    def test_file_path_blocks_traversal(self, tmp_path: Path) -> None:
+        store = DataStore(tmp_path)
+        with pytest.raises(ValueError, match="escapes store base"):
+            store.file_path(Path("live/../../outside.json"))
+
+    def test_valid_nested_path_allowed(self, tmp_path: Path) -> None:
+        store = DataStore(tmp_path)
+        store.write(Path("live/deep/nested.json"), {"ok": True}, source="test")
+        result = store.read(Path("live/deep/nested.json"))
+        assert result == {"ok": True}
