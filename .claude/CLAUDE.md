@@ -22,6 +22,14 @@ src/butterfly_planner/
 
 Data flow: `datasources → store (cache) → analysis → renderers → derived/site/`
 
+### Adding new modules
+
+Each package `__init__.py` has a step-by-step guide. Short version:
+
+- **Datasource**: Create `datasources/{name}/` with `client.py` + fetch modules → wire `@task` in `flows/fetch.py` → `store.write()`
+- **Analysis**: Create `analysis/{name}.py` with pure functions (imports datasource models only, no I/O) → call from `flows/build.py`
+- **Renderer**: Create `renderers/{name}.py` with `build_*_html()` using `render_template()` → add template in `templates/` → wire in `flows/build.py` → add to `base.html.j2`
+
 ## IMPORTANT: Verify What You Change
 
 **Code is not "done" until you've run it and seen it work.**
