@@ -118,6 +118,7 @@ def build_html(
     sunshine_data: dict[str, Any] | None,
     inat_data: dict[str, Any] | None = None,
     gdd_data: dict[str, Any] | None = None,
+    historical_weather: dict[str, dict[str, Any]] | None = None,
 ) -> str:
     """Build HTML page from weather, sunshine, iNaturalist, and GDD data."""
     fetched_dt = datetime.fromisoformat(weather_data["fetched_at"])
@@ -139,9 +140,8 @@ def build_html(
         palette = build_species_palette(species_list)
         butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette)
 
-        hist_weather = load_historical_weather()
         butterfly_map_html, map_script_html = build_butterfly_map_html(
-            inat_data, palette, hist_weather
+            inat_data, palette, historical_weather
         )
 
     gdd_today_html = ""
@@ -210,8 +210,11 @@ def build_all() -> dict[str, Any]:
     if not gdd_data:
         print("Warning: No GDD data found. Building without growing degree days.")
 
+    print("Loading historical weather...")
+    hist_weather = load_historical_weather()
+
     print("Building HTML...")
-    html = build_html(weather_envelope, sunshine, inat, gdd_data)
+    html = build_html(weather_envelope, sunshine, inat, gdd_data, hist_weather)
 
     print("Writing site...")
     output_path = write_site(html)

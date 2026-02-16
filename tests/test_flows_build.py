@@ -690,7 +690,7 @@ class TestBuildHtmlWithInaturalist:
             },
         }
 
-        result = build.build_html(weather_data, None, SAMPLE_INAT_DATA)
+        result = build.build_html(weather_data, None, SAMPLE_INAT_DATA, historical_weather=None)
 
         assert "Butterfly Sightings" in result
         assert "June" in result
