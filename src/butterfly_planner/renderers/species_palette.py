@@ -73,6 +73,8 @@ def build_species_palette(species_list: list[dict[str, Any]]) -> dict[str, Speci
 
 def species_initials(name: str) -> str:
     """Derive a 2-letter abbreviation from a common name."""
+    if not name:
+        return "??"
     words = name.split()
     if len(words) >= 2:
         return (words[0][0] + words[-1][0]).upper()

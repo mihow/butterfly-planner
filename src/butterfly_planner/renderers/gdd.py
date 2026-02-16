@@ -7,7 +7,10 @@ Imports data types from butterfly_planner.gdd for type annotations.
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from butterfly_planner.datasources.gdd import (
     DEFAULT_BASE_TEMP_F,
@@ -206,8 +209,8 @@ def build_gdd_timeline_html(
 
 def _build_normal_band(
     normals: list[DayOfYearStats] | None,
-    x_fn: Any,
-    y_fn: Any,
+    x_fn: Callable[[int], float],
+    y_fn: Callable[[float], float],
 ) -> tuple[str, str]:
     """Build SVG polygon (band) and polyline (mean) for GDD normals.
 
@@ -232,7 +235,7 @@ def _build_normal_band(
 def _build_species_markers(
     profiles: dict[str, SpeciesGDDProfile] | None,
     y_max: float,
-    y_fn: Any,
+    y_fn: Callable[[float], float],
 ) -> list[dict[str, str]]:
     """Build species GDD threshold markers for the timeline SVG."""
     if not profiles:
@@ -252,8 +255,8 @@ def _build_species_markers(
 
 def _build_polyline(
     daily_entries: list[dict[str, Any]],
-    x_fn: Any,
-    y_fn: Any,
+    x_fn: Callable[[int], float],
+    y_fn: Callable[[float], float],
 ) -> str:
     """Build SVG polyline points string from daily GDD entries."""
     points = []

@@ -66,14 +66,15 @@ def correlate_observations_with_gdd(
 
         sorted_vals = sorted(gdd_values)
         n = len(sorted_vals)
+        deciles = statistics.quantiles(sorted_vals, n=10, method="inclusive")
         profiles[sci_name] = SpeciesGDDProfile(
             scientific_name=sci_name,
             common_name=species_names.get(sci_name, sci_name),
             observation_count=n,
             gdd_min=sorted_vals[0],
-            gdd_p10=sorted_vals[max(0, int(n * 0.1))],
+            gdd_p10=deciles[0],
             gdd_median=statistics.median(sorted_vals),
-            gdd_p90=sorted_vals[min(n - 1, int(n * 0.9))],
+            gdd_p90=deciles[8],
             gdd_max=sorted_vals[-1],
         )
 

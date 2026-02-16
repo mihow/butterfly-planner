@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from butterfly_planner.reference.viewing import MIN_GOOD_SUNSHINE_HOURS, MIN_GOOD_SUNSHINE_PCT
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.weather_utils import wmo_code_to_conditions
 
@@ -138,8 +139,9 @@ def _build_hourly_bar(slots: list[tuple[str, int, bool]]) -> str:
         else:
             color = "#b8860b"
 
-        dt_hour = datetime.fromisoformat(daylight[0][0]).replace(hour=h, minute=0)
-        title = f"{dt_hour.strftime('%I %p')}: {sun_secs / 60:.0f}min sun"
+        hour_12 = h % 12 or 12
+        am_pm = "AM" if h < 12 else "PM"
+        title = f"{hour_12} {am_pm}: {sun_secs / 60:.0f}min sun"
         segments.append(f'<div class="hour-seg" style="background:{color};" title="{title}"></div>')
 
     return f'<div class="hour-bar">{"".join(segments)}</div>'
@@ -179,7 +181,7 @@ def build_sunshine_16day_html(
         daylight_hours = day_sec / 3600
         sunshine_pct = (sun_sec / day_sec * 100) if day_sec > 0 else 0
 
-        is_good = sunshine_hours > 3.0 or sunshine_pct > 40.0
+        is_good = sunshine_hours > MIN_GOOD_SUNSHINE_HOURS or sunshine_pct > MIN_GOOD_SUNSHINE_PCT
 
         day_slots = slots_by_date.get(date_str)
         if day_slots:
