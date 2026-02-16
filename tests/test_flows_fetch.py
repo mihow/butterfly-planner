@@ -155,8 +155,9 @@ class TestSaveSunshine:
 class TestFetchInaturalist:
     """Test fetching iNaturalist data."""
 
-    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
-    def test_fetch_inaturalist(self, mock_fetch: Mock) -> None:
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_fetch_inaturalist(self, mock_fetch: Mock, mock_obs: Mock) -> None:
         """Test fetching iNaturalist species counts."""
         mock_fetch.return_value = [
             SpeciesRecord(
@@ -169,6 +170,7 @@ class TestFetchInaturalist:
                 taxon_url="https://www.inaturalist.org/taxa/48662",
             ),
         ]
+        mock_obs.return_value = []
 
         result = fetch.fetch_inaturalist()
 
@@ -178,10 +180,12 @@ class TestFetchInaturalist:
         assert result["species"][0]["scientific_name"] == "Vanessa cardui"
         assert result["species"][0]["observation_count"] == 542
 
-    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
-    def test_fetch_inaturalist_empty(self, mock_fetch: Mock) -> None:
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_fetch_inaturalist_empty(self, mock_fetch: Mock, mock_obs: Mock) -> None:
         """Test fetching with no species found."""
         mock_fetch.return_value = []
+        mock_obs.return_value = []
 
         result = fetch.fetch_inaturalist()
 
@@ -305,7 +309,8 @@ class TestFetchAllFlow:
     """Test the main fetch flow."""
 
     @patch("butterfly_planner.flows.fetch.weather.fetch_historical_daily")
-    @patch("butterfly_planner.flows.fetch.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_today_15min_sunshine")
     @patch("butterfly_planner.flows.fetch.sunshine.fetch_16day_sunshine")
     @patch("butterfly_planner.flows.fetch.session.get")
@@ -315,6 +320,7 @@ class TestFetchAllFlow:
         mock_fetch_16day: Mock,
         mock_fetch_15min: Mock,
         mock_fetch_inat: Mock,
+        mock_fetch_inat_obs: Mock,
         mock_fetch_hist: Mock,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
@@ -346,6 +352,7 @@ class TestFetchAllFlow:
         ]
 
         # Mock iNaturalist
+        mock_fetch_inat_obs.return_value = []
         mock_fetch_inat.return_value = [
             SpeciesRecord(
                 taxon_id=48662,

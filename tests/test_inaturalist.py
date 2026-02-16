@@ -8,7 +8,7 @@ from datetime import date
 from unittest.mock import patch
 
 from butterfly_planner import inaturalist
-from butterfly_planner.services import inat
+from butterfly_planner.datasources.inaturalist import client as inat_client
 
 # =============================================================================
 # Fixtures / Sample API Responses
@@ -270,7 +270,7 @@ class TestParseObservation:
 class TestFetchSpeciesCounts:
     """Test fetch_species_counts with mocked API."""
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_basic_fetch(self, mock_api: object) -> None:
         mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
 
@@ -282,12 +282,12 @@ class TestFetchSpeciesCounts:
 
         # Verify API was called with correct params
         call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
-        assert call_args["taxon_id"] == inat.BUTTERFLIES
+        assert call_args["taxon_id"] == inat_client.BUTTERFLIES
         assert call_args["month"] == "6"
         assert call_args["quality_grade"] == "research"
         assert call_args["swlat"] == 44.5
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_multiple_months(self, mock_api: object) -> None:
         mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
 
@@ -296,7 +296,7 @@ class TestFetchSpeciesCounts:
         call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["month"] == "6,7"
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_custom_bbox(self, mock_api: object) -> None:
         mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
         custom_bbox = {"swlat": 42.0, "swlng": -123.0, "nelat": 45.0, "nelng": -120.0}
@@ -306,7 +306,7 @@ class TestFetchSpeciesCounts:
         call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["swlat"] == 42.0
 
-    @patch("butterfly_planner.services.inat.get_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_empty_results(self, mock_api: object) -> None:
         mock_api.return_value = {"total_results": 0, "results": []}  # type: ignore[union-attr]
 
@@ -317,7 +317,7 @@ class TestFetchSpeciesCounts:
 class TestFetchObservationsForMonth:
     """Test fetch_observations_for_month with mocked API."""
 
-    @patch("butterfly_planner.services.inat.get_observations_paginated")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
     def test_basic_fetch(self, mock_paginated: object) -> None:
         mock_paginated.return_value = SAMPLE_OBSERVATIONS_RESPONSE  # type: ignore[union-attr]
 
@@ -328,7 +328,7 @@ class TestFetchObservationsForMonth:
         assert obs[0].species == "Vanessa cardui"
         assert obs[1].species == "Pieris rapae"
 
-    @patch("butterfly_planner.services.inat.get_observations_paginated")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
     def test_params_passed_correctly(self, mock_paginated: object) -> None:
         mock_paginated.return_value = []  # type: ignore[union-attr]
 
@@ -336,13 +336,13 @@ class TestFetchObservationsForMonth:
 
         call_args = mock_paginated.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["month"] == "5,6"
-        assert call_args["taxon_id"] == inat.BUTTERFLIES
+        assert call_args["taxon_id"] == inat_client.BUTTERFLIES
 
 
 class TestFetchWeeklyHistogram:
     """Test fetch_weekly_histogram with mocked API."""
 
-    @patch("butterfly_planner.services.inat.get_histogram")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_histogram")
     def test_basic_fetch(self, mock_hist: object) -> None:
         mock_hist.return_value = SAMPLE_HISTOGRAM_RESPONSE  # type: ignore[union-attr]
 
@@ -356,7 +356,7 @@ class TestFetchWeeklyHistogram:
         week_30 = next(w for w in weeks if w.week == 30)
         assert week_30.count == 1200
 
-    @patch("butterfly_planner.services.inat.get_histogram")
+    @patch("butterfly_planner.datasources.inaturalist.client.get_histogram")
     def test_params_include_bbox(self, mock_hist: object) -> None:
         mock_hist.return_value = SAMPLE_HISTOGRAM_RESPONSE  # type: ignore[union-attr]
 
@@ -365,7 +365,7 @@ class TestFetchWeeklyHistogram:
         call_args = mock_hist.call_args[0][0]  # type: ignore[union-attr]
         assert call_args["swlat"] == 44.5
         assert call_args["interval"] == "week_of_year"
-        assert call_args["taxon_id"] == inat.BUTTERFLIES
+        assert call_args["taxon_id"] == inat_client.BUTTERFLIES
 
 
 # =============================================================================
@@ -376,8 +376,8 @@ class TestFetchWeeklyHistogram:
 class TestGetCurrentWeekSpecies:
     """Test get_current_week_species convenience function."""
 
-    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
-    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     def test_returns_summary(self, mock_species: object, mock_obs: object) -> None:
         mock_species.return_value = [  # type: ignore[union-attr]
             inaturalist.SpeciesRecord(
@@ -408,8 +408,8 @@ class TestGetCurrentWeekSpecies:
         assert summary.year is None  # All years
         assert len(summary.weeks) == 3  # current week ± 1
 
-    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
-    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     def test_queries_multiple_months(self, mock_species: object, mock_obs: object) -> None:
         mock_species.return_value = []  # type: ignore[union-attr]
         mock_obs.return_value = []  # type: ignore[union-attr]
@@ -425,8 +425,8 @@ class TestGetCurrentWeekSpecies:
 class TestGetSpeciesForWeek:
     """Test get_species_for_week function."""
 
-    @patch("butterfly_planner.inaturalist.fetch_observations_for_month")
-    @patch("butterfly_planner.inaturalist.fetch_species_counts")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
     def test_week_25(self, mock_species: object, mock_obs: object) -> None:
         mock_species.return_value = []  # type: ignore[union-attr]
         mock_obs.return_value = []  # type: ignore[union-attr]
@@ -565,56 +565,56 @@ class TestInatClient:
     """Test low-level inat service module constants and structure."""
 
     def test_constants(self) -> None:
-        assert inat.BUTTERFLIES == 47224
-        assert inat.LEPIDOPTERA == 47157
-        assert inat.OREGON == 10
-        assert inat.WASHINGTON == 46
-        assert "v1" in inat.API_BASE
+        assert inat_client.BUTTERFLIES == 47224
+        assert inat_client.LEPIDOPTERA == 47157
+        assert inat_client.OREGON == 10
+        assert inat_client.WASHINGTON == 46
+        assert "v1" in inat_client.API_BASE
 
     def test_max_per_page(self) -> None:
-        assert inat.MAX_PER_PAGE == 200
+        assert inat_client.MAX_PER_PAGE == 200
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_get_observations_calls_api(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
         mock_resp.raise_for_status.return_value = None
 
         # Reset rate limiter for test
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        result = inat.get_observations({"taxon_id": 47224})
+        result = inat_client.get_observations({"taxon_id": 47224})
         assert result == {"results": [], "total_results": 0}
         mock_get.assert_called_once()  # type: ignore[union-attr]
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_get_species_counts_calls_api(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
         mock_resp.raise_for_status.return_value = None
 
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        result = inat.get_species_counts({"taxon_id": 47224})
+        result = inat_client.get_species_counts({"taxon_id": 47224})
         assert result == {"results": [], "total_results": 0}
 
         call_url = mock_get.call_args[0][0]  # type: ignore[union-attr]
         assert "species_counts" in call_url
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_pagination_stops_on_empty(self, mock_get: object) -> None:
         mock_resp = mock_get.return_value  # type: ignore[union-attr]
         mock_resp.json.return_value = {"results": [], "total_results": 0}
         mock_resp.raise_for_status.return_value = None
 
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        results = inat.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
+        results = inat_client.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
         assert results == []
         # Should stop after first empty page
         assert mock_get.call_count == 1  # type: ignore[union-attr]
 
-    @patch("butterfly_planner.services.inat.session.get")
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
     def test_pagination_uses_id_above(self, mock_get: object) -> None:
         # First page returns results, second page empty
         page1 = {"results": [{"id": 100}, {"id": 200}], "total_results": 2}
@@ -624,9 +624,9 @@ class TestInatClient:
         mock_resp.json.side_effect = [page1, page2]
         mock_resp.raise_for_status.return_value = None
 
-        inat._last_request_time = 0.0
+        inat_client._last_request_time = 0.0
 
-        results = inat.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
+        results = inat_client.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
         assert len(results) == 2
 
         # Second call should include id_above=200
