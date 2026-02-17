@@ -6,41 +6,38 @@ Generates a textual representation showing the dependency flow.
 
 from __future__ import annotations
 
-import sys
-
-from hamilton import base, driver
-
 # Import the module to visualize
 import prototype_basic_dag
+from hamilton import base, driver
 
 
 def main() -> None:
     """Generate DAG visualization."""
-    
+
     # Create Hamilton driver
     config = {}
     dr = driver.Driver(
-        config, 
+        config,
         prototype_basic_dag,
         adapter=base.SimplePythonGraphAdapter()
     )
-    
+
     print("Hamilton Analysis DAG Visualization")
     print("=" * 70)
-    
+
     # Get all nodes
     nodes = dr.list_available_variables()
-    
+
     print(f"\nTotal nodes in DAG: {len(nodes)}")
     print("\nAll Nodes:")
     for node in sorted(nodes, key=lambda n: n.name):
         print(f"  - {node.name}")
-    
+
     # Print dependency structure
     print("\n" + "=" * 70)
     print("Dependency Flow (source → transformation → output):")
     print("=" * 70)
-    
+
     print("""
 ┌─────────────────────┐
 │  SOURCE NODES       │  (No dependencies - data loaders)
@@ -71,7 +68,7 @@ Dependencies explained:
   2. observations_with_weather depends on observations_raw AND weather_by_date
   3. species_gdd_profiles depends on observations_raw AND gdd_year_data
     """)
-    
+
     print("=" * 70)
     print("\nKey Benefits of Hamilton DAG:")
     print("-" * 70)

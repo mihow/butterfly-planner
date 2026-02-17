@@ -1,7 +1,7 @@
 """
 Prototype 3: Prefect + Hamilton Integration
 
-This demonstrates how Prefect (macro-orchestration) and Hamilton 
+This demonstrates how Prefect (macro-orchestration) and Hamilton
 (micro-orchestration) work together. Prefect handles scheduling, retries,
 and flow-level coordination. Hamilton handles function-level DAG within
 the analysis step.
@@ -9,6 +9,8 @@ the analysis step.
 
 from __future__ import annotations
 
+# Import the actual store from the project
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,11 +18,8 @@ from typing import Any
 from hamilton import base, driver
 from prefect import flow, task
 
-# Import the actual store from the project
-import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 from butterfly_planner.store import DataStore
-
 
 # =============================================================================
 # Hamilton Analysis Functions
@@ -29,7 +28,7 @@ from butterfly_planner.store import DataStore
 
 def observations_data(raw_observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Process raw observations.
-    
+
     In Hamilton, we can declare dependencies via function parameters.
     """
     return [obs for obs in raw_observations if obs.get("species")]
@@ -39,17 +38,17 @@ def weather_lookup(raw_weather: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Transform weather into date-keyed lookup."""
     if not raw_weather:
         return {}
-    
+
     w_daily = raw_weather.get("daily", {})
     w_dates = w_daily.get("time", [])
-    
+
     weather_by_date: dict[str, dict[str, Any]] = {}
     for j, w_date in enumerate(w_dates):
         weather_by_date[w_date] = {
             "high_c": w_daily.get("temperature_2m_max", [None])[j],
             "low_c": w_daily.get("temperature_2m_min", [None])[j],
         }
-    
+
     return weather_by_date
 
 
@@ -83,7 +82,7 @@ def analysis_summary(enriched_observations: list[dict[str, Any]]) -> dict[str, A
 @task(name="load-from-store")
 def load_from_store(store: DataStore, path: str) -> dict[str, Any]:
     """Prefect task: Load data from store.
-    
+
     Prefect handles:
     - Retry logic if store read fails
     - Logging and observability
@@ -102,18 +101,18 @@ def run_hamilton_analysis(
     weather: dict[str, Any],
 ) -> dict[str, Any]:
     """Prefect task: Run Hamilton DAG for analysis.
-    
+
     This is where Hamilton shines - it orchestrates the function-level
     dependencies within this single task.
-    
+
     Prefect sees this as one task. Hamilton sees it as a multi-node DAG.
     """
     print("🔄 Running Hamilton analysis DAG...")
-    
+
     # Create Hamilton driver with our analysis functions
     config = {}
     dr = driver.Driver(config, sys.modules[__name__], adapter=base.SimplePythonGraphAdapter())
-    
+
     # Execute the DAG with provided inputs
     results = dr.execute(
         final_vars=["enriched_observations", "analysis_summary"],
@@ -122,7 +121,7 @@ def run_hamilton_analysis(
             "raw_weather": weather,
         },
     )
-    
+
     print(f"✓ Analysis complete: {results['analysis_summary']}")
     return results
 
@@ -131,7 +130,7 @@ def run_hamilton_analysis(
 def save_results(store: DataStore, results: dict[str, Any]) -> Path:
     """Prefect task: Save analysis results to store."""
     from datetime import UTC, datetime, timedelta
-    
+
     path = Path("derived/analysis_results.json")
     store.write(
         path,
@@ -139,7 +138,7 @@ def save_results(store: DataStore, results: dict[str, Any]) -> Path:
         source="hamilton-analysis",
         valid_until=datetime.now(UTC) + timedelta(hours=1),
     )
-    
+
     full = store.derived / "analysis_results.json"
     print(f"💾 Saved results to {full}")
     return full
@@ -148,13 +147,13 @@ def save_results(store: DataStore, results: dict[str, Any]) -> Path:
 @flow(name="analyze-butterflies")
 def analyze_butterflies_flow(store_path: Path) -> dict[str, Any]:
     """Prefect flow: Macro-orchestration of the analysis pipeline.
-    
+
     Prefect handles:
     - Flow-level scheduling (run daily at 6am)
     - Cross-task coordination
     - Retry policies
     - Notifications on failure
-    
+
     Hamilton (within run_hamilton_analysis) handles:
     - Function-level DAG
     - Automatic dependency resolution
@@ -162,22 +161,22 @@ def analyze_butterflies_flow(store_path: Path) -> dict[str, Any]:
     """
     print("🚀 Starting butterfly analysis flow (Prefect)")
     print("=" * 70)
-    
+
     store = DataStore(store_path)
-    
+
     # Prefect orchestrates these tasks in order
     observations = load_from_store(store, "live/inaturalist.json")
     weather = load_from_store(store, "live/weather.json")
-    
+
     # Hamilton orchestrates the analysis DAG within this task
     results = run_hamilton_analysis(observations, weather)
-    
+
     # Save the results
     output_path = save_results(store, results)
-    
+
     print("=" * 70)
     print(f"✓ Flow complete. Results: {output_path}")
-    
+
     return results
 
 
@@ -188,16 +187,16 @@ def analyze_butterflies_flow(store_path: Path) -> dict[str, Any]:
 
 def main() -> None:
     """Demonstrate Prefect + Hamilton integration."""
-    
+
     print("Prefect + Hamilton Integration Prototype")
     print("=" * 70)
     print()
-    
+
     # Setup mock data
     print("Setup: Creating mock data store...")
     from datetime import UTC, datetime, timedelta
     temp_store = DataStore(Path("/tmp/prefect_hamilton_test"))
-    
+
     temp_store.write(
         Path("live/inaturalist.json"),
         {
@@ -210,7 +209,7 @@ def main() -> None:
         source="mock-inat",
         valid_until=datetime.now(UTC) + timedelta(hours=1),
     )
-    
+
     temp_store.write(
         Path("live/weather.json"),
         {
@@ -224,10 +223,10 @@ def main() -> None:
         valid_until=datetime.now(UTC) + timedelta(hours=1),
     )
     print("✓ Mock data ready\n")
-    
+
     # Run the Prefect flow
-    results = analyze_butterflies_flow(Path("/tmp/prefect_hamilton_test"))
-    
+    analyze_butterflies_flow(Path("/tmp/prefect_hamilton_test"))
+
     print()
     print("=" * 70)
     print("Architecture Summary:")
@@ -271,7 +270,7 @@ Key Insights:
    - Provides observability across the entire workflow
    - Coordinates data loading, processing, and saving
 
-2. HAMILTON = Micro-orchestration  
+2. HAMILTON = Micro-orchestration
    - Manages function-level dependencies WITHIN the analysis task
    - Automatically wires data transformations
    - Makes the analysis logic testable and composable

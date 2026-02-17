@@ -15,7 +15,6 @@ from typing import Any
 
 from hamilton import base, driver
 
-
 # =============================================================================
 # Hamilton Functions - Analysis Layer as DAG Nodes
 # =============================================================================
@@ -23,7 +22,7 @@ from hamilton import base, driver
 
 def observations_raw() -> list[dict[str, Any]]:
     """Load raw observations (normally from store).
-    
+
     In Hamilton, this is a "source" node with no inputs.
     """
     # Mock data for prototype
@@ -54,7 +53,7 @@ def observations_raw() -> list[dict[str, Any]]:
 
 def weather_data_raw() -> dict[str, Any]:
     """Load raw weather data (normally from store).
-    
+
     Another source node.
     """
     return {
@@ -72,7 +71,7 @@ def weather_data_raw() -> dict[str, Any]:
 
 def gdd_year_data() -> dict[int, dict[str, Any]]:
     """Load GDD year data (normally from store).
-    
+
     Another source node.
     """
     # Mock GDD data - day of year -> accumulated GDD
@@ -89,7 +88,7 @@ def gdd_year_data() -> dict[int, dict[str, Any]]:
 
 def weather_by_date(weather_data_raw: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Transform weather data into date-keyed lookup.
-    
+
     Hamilton sees this depends on weather_data_raw and will execute it after.
     This is from analysis/weekly_forecast.py:merge_sunshine_weather.
     """
@@ -116,7 +115,7 @@ def observations_with_weather(
     weather_by_date: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Enrich observations with weather data.
-    
+
     Hamilton sees this depends on both observations_raw AND weather_by_date.
     This is from analysis/species_weather.py:enrich_observations_with_weather.
     """
@@ -133,7 +132,7 @@ def species_gdd_profiles(
     gdd_year_data: dict[int, dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
     """Correlate observations with GDD to build species profiles.
-    
+
     Hamilton sees this depends on observations_raw AND gdd_year_data.
     This is from analysis/species_gdd.py:correlate_observations_with_gdd (simplified).
     """
@@ -192,32 +191,32 @@ def species_gdd_profiles(
 
 def main() -> None:
     """Execute the Hamilton DAG."""
-    
+
     # Create Hamilton driver - it discovers all functions in this module
     # Use DictResult for non-pandas outputs
     config = {}
     dr = driver.Driver(config, sys.modules[__name__], adapter=base.SimplePythonGraphAdapter())
-    
+
     print("Hamilton DAG Structure")
     print("=" * 60)
-    
+
     # Visualize the DAG
     print("\nDAG Nodes (Functions):")
     for node in dr.list_available_variables():
         print(f"  - {node}")
-    
+
     print("\n" + "=" * 60)
     print("Executing DAG to compute 'species_gdd_profiles' and 'observations_with_weather'")
     print("=" * 60 + "\n")
-    
+
     # Execute the DAG - Hamilton will figure out what needs to run
     results = dr.execute(
         final_vars=["species_gdd_profiles", "observations_with_weather"],
     )
-    
+
     print("Results:")
     print("-" * 60)
-    
+
     print("\nSpecies GDD Profiles:")
     for species, profile in results["species_gdd_profiles"].items():
         print(f"  {species}:")
@@ -225,7 +224,7 @@ def main() -> None:
         print(f"    Observations: {profile['observation_count']}")
         print(f"    GDD Range: {profile['gdd_min']:.1f} - {profile['gdd_max']:.1f}")
         print(f"    GDD Median: {profile['gdd_median']:.1f}")
-    
+
     print("\nObservations with Weather:")
     for obs in results["observations_with_weather"]:
         print(f"  {obs['common_name']} on {obs['observed_on']}:")
@@ -235,7 +234,7 @@ def main() -> None:
             print(f"    Precip: {weather['precip_mm']}mm")
         else:
             print("    No weather data")
-    
+
     print("\n" + "=" * 60)
     print("Key Observations:")
     print("=" * 60)
@@ -244,7 +243,7 @@ def main() -> None:
    - observations_with_weather depends on: observations_raw, weather_by_date
    - weather_by_date depends on: weather_data_raw
    - species_gdd_profiles depends on: observations_raw, gdd_year_data
-   
+
 2. Functions are pure transformations with explicit inputs/outputs
 
 3. No manual dependency management or ordering required
