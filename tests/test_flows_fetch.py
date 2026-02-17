@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 from butterfly_planner.datasources.inaturalist import SpeciesRecord
+from butterfly_planner.datasources.inaturalist.observations import ButterflyObservation
 from butterfly_planner.datasources.sunshine import DailySunshine, SunshineSlot
 from butterfly_planner.flows import fetch
 from butterfly_planner.store import DataStore
@@ -195,6 +196,57 @@ class TestFetchInaturalist:
         result = fetch.fetch_inaturalist()
 
         assert result["species"] == []
+
+
+class TestFetchInaturalistWeekFiltering:
+    """Test that fetch_inaturalist filters observations to target weeks."""
+
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_observations_outside_target_weeks_are_filtered(
+        self, mock_species: Mock, mock_obs: Mock
+    ) -> None:
+        """Observations whose week-of-year is outside the target window are excluded."""
+        mock_species.return_value = []
+
+        # Week 8 of 2024 starts Feb 19; week 12 starts Mar 18
+        obs_in_window = ButterflyObservation(
+            id=1,
+            species="Vanessa cardui",
+            common_name="Painted Lady",
+            observed_on=date(2024, 2, 20),  # week 8
+            latitude=45.5,
+            longitude=-122.6,
+            quality_grade="research",
+            url="https://example.com/1",
+        )
+        obs_outside_window = ButterflyObservation(
+            id=2,
+            species="Pieris rapae",
+            common_name="Cabbage White",
+            observed_on=date(2024, 3, 31),  # week 13 — well outside ±1
+            latitude=45.5,
+            longitude=-122.6,
+            quality_grade="research",
+            url="https://example.com/2",
+        )
+        mock_obs.return_value = [obs_in_window, obs_outside_window]
+
+        # Patch get_current_week_species to control the weeks window
+        with patch(
+            "butterfly_planner.flows.fetch.inaturalist.get_current_week_species"
+        ) as mock_current:
+            mock_summary = Mock()
+            mock_summary.month = 2
+            mock_summary.weeks = [7, 8, 9]
+            mock_summary.species = []
+            mock_summary.observations = [obs_in_window, obs_outside_window]
+            mock_current.return_value = mock_summary
+
+            result = fetch.fetch_inaturalist()
+
+        assert len(result["observations"]) == 1
+        assert result["observations"][0]["id"] == 1
 
 
 class TestSaveInaturalist:

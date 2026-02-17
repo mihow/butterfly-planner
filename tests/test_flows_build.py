@@ -5,6 +5,7 @@ Tests for the build flow module and renderer modules.
 from __future__ import annotations
 
 import json
+from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,6 +13,8 @@ import pytest
 from butterfly_planner.flows import build
 from butterfly_planner.renderers.sightings_map import (
     _build_weather_html,
+    _iso_week_to_monday,
+    _week_label,
     build_butterfly_map_html,
 )
 from butterfly_planner.renderers.sightings_table import build_butterfly_sightings_html
@@ -566,6 +569,53 @@ class TestBuildWeatherHtml:
         result = _build_weather_html(w)
         assert "Overcast" in result
         assert "\u00b0C" not in result
+
+
+class TestIsoWeekToMonday:
+    """Test _iso_week_to_monday helper."""
+
+    def test_week_1_2026(self) -> None:
+        monday = _iso_week_to_monday(1, year=2026)
+        assert monday == date(2025, 12, 29)
+        assert monday.weekday() == 0  # Monday
+
+    def test_mid_year(self) -> None:
+        monday = _iso_week_to_monday(25, year=2026)
+        assert monday == date(2026, 6, 15)
+        assert monday.weekday() == 0
+
+    def test_week_52(self) -> None:
+        monday = _iso_week_to_monday(52, year=2026)
+        assert monday == date(2026, 12, 21)
+        assert monday.weekday() == 0
+
+
+class TestWeekLabel:
+    """Test _week_label produces date-range labels."""
+
+    def test_empty_weeks(self) -> None:
+        assert _week_label([]) == "this week"
+
+    def test_single_week(self) -> None:
+        label = _week_label([8])
+        # Should be a date range like "Feb 16-22" (for 2026)
+        assert "\u2013" in label  # en-dash
+        # Should NOT contain the word "week"
+        assert "week" not in label.lower()
+
+    def test_three_week_window(self) -> None:
+        label = _week_label([7, 8, 9])
+        # Should span from Monday of week 7 to Sunday of week 9
+        assert "\u2013" in label
+        assert "Feb" in label
+        assert "week" not in label.lower()
+
+    def test_cross_month_boundary(self) -> None:
+        # Weeks spanning a month boundary should show both month names
+        label = _week_label([4, 5, 6])
+        assert "\u2013" in label
+        # Should contain two month abbreviations (Jan and Feb for 2026)
+        assert "Jan" in label or "Feb" in label
 
 
 class TestBuildButterflyMapHtml:

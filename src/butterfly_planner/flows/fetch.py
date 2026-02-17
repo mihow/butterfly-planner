@@ -98,8 +98,14 @@ def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]
 
 @task(name="fetch-inaturalist", retries=2, retry_delay_seconds=5)
 def fetch_inaturalist() -> dict[str, Any]:
-    """Fetch butterfly species and observations for the current week ± 1."""
+    """Fetch butterfly species and observations for the current week ± 1.
+
+    Observations are filtered so only those whose week-of-year falls
+    within the target week window are included (the iNaturalist API
+    only supports month-level filtering, which is coarser).
+    """
     summary = inaturalist.get_current_week_species()
+    target_weeks = set(summary.weeks)
     return {
         "month": summary.month,
         "weeks": summary.weeks,
@@ -128,6 +134,7 @@ def fetch_inaturalist() -> dict[str, Any]:
                 "photo_url": obs.photo_url,
             }
             for obs in summary.observations
+            if obs.observed_on.isocalendar()[1] in target_weeks
         ],
     }
 
