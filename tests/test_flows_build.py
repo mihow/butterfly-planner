@@ -5,7 +5,6 @@ Tests for the build flow module and renderer modules.
 from __future__ import annotations
 
 import json
-from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
@@ -13,8 +12,7 @@ import pytest
 from butterfly_planner.flows import build
 from butterfly_planner.renderers.sightings_map import (
     _build_weather_html,
-    _iso_week_to_monday,
-    _week_label,
+    _date_range_label,
     build_butterfly_map_html,
 )
 from butterfly_planner.renderers.sightings_table import build_butterfly_sightings_html
@@ -437,6 +435,8 @@ SAMPLE_INAT_DATA_WITH_OBS: dict = {
     "data": {
         "month": 6,
         "weeks": [23, 24, 25],
+        "date_start": "2026-06-01",
+        "date_end": "2026-06-15",
         "species": [
             {
                 "taxon_id": 48662,
@@ -571,51 +571,23 @@ class TestBuildWeatherHtml:
         assert "\u00b0C" not in result
 
 
-class TestIsoWeekToMonday:
-    """Test _iso_week_to_monday helper."""
+class TestDateRangeLabel:
+    """Test _date_range_label helper."""
 
-    def test_week_1_2026(self) -> None:
-        monday = _iso_week_to_monday(1, year=2026)
-        assert monday == date(2025, 12, 29)
-        assert monday.weekday() == 0  # Monday
+    def test_empty_dates(self) -> None:
+        assert _date_range_label("", "") == "this week"
 
-    def test_mid_year(self) -> None:
-        monday = _iso_week_to_monday(25, year=2026)
-        assert monday == date(2026, 6, 15)
-        assert monday.weekday() == 0
+    def test_same_month(self) -> None:
+        label = _date_range_label("2026-02-10", "2026-02-24")
+        assert label == "Feb 10\u201324"
 
-    def test_week_52(self) -> None:
-        monday = _iso_week_to_monday(52, year=2026)
-        assert monday == date(2026, 12, 21)
-        assert monday.weekday() == 0
+    def test_cross_month(self) -> None:
+        label = _date_range_label("2026-02-24", "2026-03-10")
+        assert label == "Feb 24\u2013Mar 10"
 
-
-class TestWeekLabel:
-    """Test _week_label produces date-range labels."""
-
-    def test_empty_weeks(self) -> None:
-        assert _week_label([]) == "this week"
-
-    def test_single_week(self) -> None:
-        label = _week_label([8])
-        # Should be a date range like "Feb 16-22" (for 2026)
-        assert "\u2013" in label  # en-dash
-        # Should NOT contain the word "week"
+    def test_no_week_word(self) -> None:
+        label = _date_range_label("2026-06-08", "2026-06-22")
         assert "week" not in label.lower()
-
-    def test_three_week_window(self) -> None:
-        label = _week_label([7, 8, 9])
-        # Should span from Monday of week 7 to Sunday of week 9
-        assert "\u2013" in label
-        assert "Feb" in label
-        assert "week" not in label.lower()
-
-    def test_cross_month_boundary(self) -> None:
-        # Weeks spanning a month boundary should show both month names
-        label = _week_label([4, 5, 6])
-        assert "\u2013" in label
-        # Should contain two month abbreviations (Jan and Feb for 2026)
-        assert "Jan" in label or "Feb" in label
 
 
 class TestBuildButterflyMapHtml:
@@ -668,7 +640,9 @@ class TestBuildButterflyMapHtml:
 
     def test_map_no_observations(self) -> None:
         """Test map with no observations returns fallback."""
-        no_obs: dict = {"data": {"observations": [], "weeks": [5, 6, 7]}}
+        no_obs: dict = {
+            "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
+        }
         map_div, map_script = build_butterfly_map_html(no_obs)
 
         assert "No observation data" in map_div

@@ -10,7 +10,7 @@ from typing import Any
 
 from butterfly_planner.reference.geography import TARGET_REGION_PARAMS
 from butterfly_planner.renderers import render_template
-from butterfly_planner.renderers.sightings_map import _week_label, _year_range
+from butterfly_planner.renderers.sightings_map import _date_range_label, _year_range
 from butterfly_planner.renderers.species_palette import (
     MONTH_NAMES,
     SpeciesStyle,
@@ -37,7 +37,8 @@ def build_butterfly_sightings_html(
     species_list: list[dict[str, Any]] = data.get("species", [])
     observations_list: list[dict[str, Any]] = data.get("observations", [])
     month = data.get("month", 0)
-    weeks: list[int] = data.get("weeks", [])
+    date_start: str = data.get("date_start", "")
+    date_end: str = data.get("date_end", "")
 
     if not species_list:
         return "<p>No butterfly sightings data available.</p>"
@@ -46,8 +47,8 @@ def build_butterfly_sightings_html(
         palette = build_species_palette(species_list)
 
     years = _year_range(observations_list)
-    if weeks:
-        period_label = f"{_week_label(weeks).title()} ({years})"
+    if date_start and date_end:
+        period_label = f"{_date_range_label(date_start, date_end).title()} ({years})"
     elif 1 <= month <= 12:
         period_label = MONTH_NAMES[month]
     else:

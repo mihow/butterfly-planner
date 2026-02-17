@@ -6,7 +6,7 @@ for rich popups with thumbnail images and weather info.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 from butterfly_planner.renderers import render_template
@@ -49,31 +49,18 @@ def _year_range(observations: list[dict[str, Any]]) -> str:
     return f"{min_year}\u2013{max_year}"
 
 
-def _iso_week_to_monday(week: int, year: int | None = None) -> date:
-    """Return the Monday of a given ISO week number."""
-    ref_year = year or date.today().year
-    jan4 = date(ref_year, 1, 4)
-    iso_year_start = jan4 - timedelta(days=jan4.weekday())
-    return iso_year_start + timedelta(weeks=week - 1)
+def _date_range_label(date_start: str, date_end: str) -> str:
+    """Human-readable date-range label from ISO date strings.
 
-
-def _week_label(weeks: list[int]) -> str:
-    """Human-readable date-range label for a list of ISO weeks.
-
-    Converts ISO week numbers to a calendar date range like
-    ``Feb 9 - Mar 1`` instead of ``weeks 7-9``.
+    Returns e.g. ``Feb 10 - 24`` (same month) or ``Feb 24 - Mar 10``
+    (cross-month).  Falls back to ``this week`` when dates are missing.
     """
-    if not weeks:
+    if not date_start or not date_end:
         return "this week"
-    first_monday = _iso_week_to_monday(min(weeks))
-    last_monday = _iso_week_to_monday(max(weeks))
-    last_sunday = last_monday + timedelta(days=6)
-
-    start_str = first_monday.strftime("%b %-d")
-    if first_monday.month == last_sunday.month:
-        end_str = last_sunday.strftime("%-d")
-    else:
-        end_str = last_sunday.strftime("%b %-d")
+    start = date.fromisoformat(date_start)
+    end = date.fromisoformat(date_end)
+    start_str = start.strftime("%b %-d")
+    end_str = end.strftime("%-d") if start.month == end.month else end.strftime("%b %-d")
     return f"{start_str}\u2013{end_str}"
 
 
@@ -93,9 +80,8 @@ def build_butterfly_map_html(
     """
     data = inat_data.get("data", {})
     observations: list[dict[str, Any]] = data.get("observations", [])
-    weeks: list[int] = data.get("weeks", [])
 
-    label = _week_label(weeks)
+    label = _date_range_label(data.get("date_start", ""), data.get("date_end", ""))
 
     if not observations:
         return (

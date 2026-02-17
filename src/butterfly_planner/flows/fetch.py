@@ -22,6 +22,7 @@ from prefect import flow, task
 from butterfly_planner.datasources import gdd, inaturalist, sunshine
 from butterfly_planner.datasources.weather import forecast as weather_forecast
 from butterfly_planner.datasources.weather import historical as weather_historical
+from butterfly_planner.reference.viewing import OBS_WINDOW_DAYS_AHEAD, OBS_WINDOW_DAYS_BACK
 from butterfly_planner.store import DataStore
 
 # Data store with tiered directories
@@ -100,15 +101,30 @@ def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]
 def fetch_inaturalist() -> dict[str, Any]:
     """Fetch butterfly species and observations for the current week ± 1.
 
-    Observations are filtered so only those whose week-of-year falls
-    within the target week window are included (the iNaturalist API
-    only supports month-level filtering, which is coarser).
+    Observations are filtered to ±7 days of today (by month-day, across
+    all years).  The iNaturalist API only supports month-level filtering,
+    so this post-filter narrows the window.
     """
     summary = inaturalist.get_current_week_species()
-    target_weeks = set(summary.weeks)
+
+    today = date.today()
+    window_start = today - timedelta(days=OBS_WINDOW_DAYS_BACK)
+    window_end = today + timedelta(days=OBS_WINDOW_DAYS_AHEAD)
+
+    def _in_window(obs_date: date) -> bool:
+        """Check if an observation's month-day falls within ±7 days of today."""
+        try:
+            normalized = obs_date.replace(year=today.year)
+        except ValueError:
+            # Feb 29 in a non-leap year — treat as Feb 28
+            normalized = date(today.year, 2, 28)
+        return window_start <= normalized <= window_end
+
     return {
         "month": summary.month,
         "weeks": summary.weeks,
+        "date_start": window_start.isoformat(),
+        "date_end": window_end.isoformat(),
         "species": [
             {
                 "taxon_id": s.taxon_id,
@@ -134,7 +150,7 @@ def fetch_inaturalist() -> dict[str, Any]:
                 "photo_url": obs.photo_url,
             }
             for obs in summary.observations
-            if obs.observed_on.isocalendar()[1] in target_weeks
+            if _in_window(obs.observed_on)
         ],
     }
 
