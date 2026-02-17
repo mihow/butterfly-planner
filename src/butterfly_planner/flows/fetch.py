@@ -101,9 +101,9 @@ def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]
 def fetch_inaturalist() -> dict[str, Any]:
     """Fetch butterfly species and observations for the current week ± 1.
 
-    Observations are filtered to ±7 days of today (by month-day, across
-    all years).  The iNaturalist API only supports month-level filtering,
-    so this post-filter narrows the window.
+    Observations are filtered to 14 days prior and 7 days after today
+    (by month-day, across all years).  The iNaturalist API only supports
+    month-level filtering, so this post-filter narrows the window.
     """
     summary = inaturalist.get_current_week_species()
 
@@ -111,14 +111,17 @@ def fetch_inaturalist() -> dict[str, Any]:
     window_start = today - timedelta(days=OBS_WINDOW_DAYS_BACK)
     window_end = today + timedelta(days=OBS_WINDOW_DAYS_AHEAD)
 
+    start_md = (window_start.month, window_start.day)
+    end_md = (window_end.month, window_end.day)
+
     def _in_window(obs_date: date) -> bool:
-        """Check if an observation's month-day falls within ±7 days of today."""
-        try:
-            normalized = obs_date.replace(year=today.year)
-        except ValueError:
-            # Feb 29 in a non-leap year — treat as Feb 28
-            normalized = date(today.year, 2, 28)
-        return window_start <= normalized <= window_end
+        """Check if an observation's month-day falls within the date window."""
+        obs_md = (obs_date.month, obs_date.day)
+        if start_md <= end_md:
+            # Normal case: window does not wrap around year boundary
+            return start_md <= obs_md <= end_md
+        # Window wraps year boundary (e.g. Dec 20 - Jan 10)
+        return obs_md >= start_md or obs_md <= end_md
 
     return {
         "month": summary.month,

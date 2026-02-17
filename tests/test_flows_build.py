@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from butterfly_planner.flows import build
+from butterfly_planner.renderers.date_utils import date_range_label
 from butterfly_planner.renderers.sightings_map import (
     _build_weather_html,
-    _date_range_label,
     build_butterfly_map_html,
 )
 from butterfly_planner.renderers.sightings_table import build_butterfly_sightings_html
@@ -572,21 +572,21 @@ class TestBuildWeatherHtml:
 
 
 class TestDateRangeLabel:
-    """Test _date_range_label helper."""
+    """Test date_range_label helper."""
 
     def test_empty_dates(self) -> None:
-        assert _date_range_label("", "") == "this week"
+        assert date_range_label("", "") == "this week"
 
     def test_same_month(self) -> None:
-        label = _date_range_label("2026-02-10", "2026-02-24")
+        label = date_range_label("2026-02-10", "2026-02-24")
         assert label == "Feb 10\u201324"
 
     def test_cross_month(self) -> None:
-        label = _date_range_label("2026-02-24", "2026-03-10")
+        label = date_range_label("2026-02-24", "2026-03-10")
         assert label == "Feb 24\u2013Mar 10"
 
     def test_no_week_word(self) -> None:
-        label = _date_range_label("2026-06-08", "2026-06-22")
+        label = date_range_label("2026-06-08", "2026-06-22")
         assert "week" not in label.lower()
 
 
