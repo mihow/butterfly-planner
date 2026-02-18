@@ -170,6 +170,14 @@
             text-shadow: 0 0 3px rgba(0,0,0,0.5);
         }
 
+        /* --- Map layer control --- */
+        .leaflet-control-layers {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 0.82rem;
+            border-radius: 4px;
+        }
+        .leaflet-control-layers-separator { display: none; }
+
         /* --- Observation popup --- */
         .obs-popup { display: flex; gap: 0.6rem; align-items: flex-start; }
         .obs-popup-img {
@@ -314,6 +322,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"
             crossorigin=""></script>
     {{ map_script|safe }}
 </body>

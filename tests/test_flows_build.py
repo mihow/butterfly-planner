@@ -662,6 +662,40 @@ class TestBuildButterflyMapHtml:
         assert "obs-popup-weather" in map_script
 
 
+class TestBuildButterflyMapHeatLayer:
+    """Test heat map layer in butterfly map."""
+
+    def test_heat_layer_present(self) -> None:
+        """Test that the map script includes heat layer setup."""
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "L.heatLayer" in map_script
+        assert "heatPoints" in map_script
+
+    def test_layer_control_present(self) -> None:
+        """Test that the map script includes layer controls."""
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "L.control.layers" in map_script
+        assert '"Sightings"' in map_script
+        assert '"Density"' in map_script
+
+    def test_heat_layer_not_in_empty_map(self) -> None:
+        """Test that heat layer is not rendered when there are no observations."""
+        no_obs: dict = {
+            "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
+        }
+        _, map_script = build_butterfly_map_html(no_obs)
+
+        assert map_script == ""
+
+    def test_map_description_mentions_density(self) -> None:
+        """Test that the map description mentions the heat map layer."""
+        map_div, _ = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "density" in map_div.lower()
+
+
 class TestBuildButterflySightingsHtml:
     """Test building butterfly sightings HTML section."""
 

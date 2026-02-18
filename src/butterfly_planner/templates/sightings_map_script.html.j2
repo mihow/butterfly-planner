@@ -24,7 +24,8 @@
     return html;
   }
 
-  var group = L.layerGroup();
+  // --- Sightings marker layer ---
+  var markers = L.layerGroup();
   for (var i = 0; i < obs.length; i++) {
     var o = obs[i];
     var m = L.circleMarker([o.lat, o.lon], {
@@ -34,9 +35,33 @@
     m.bindPopup(buildPopup(o), {maxWidth: 280, minWidth: 200});
     m.bindTooltip(o.initials, {permanent: true, direction: "center",
       className: "map-label", offset: [0, 0]});
-    group.addLayer(m);
+    markers.addLayer(m);
   }
-  group.addTo(map);
+
+  // --- Density heat map layer ---
+  var heatPoints = [];
+  for (var j = 0; j < obs.length; j++) {
+    heatPoints.push([obs[j].lat, obs[j].lon]);
+  }
+  var heat = L.heatLayer(heatPoints, {
+    radius: 18,
+    blur: 22,
+    maxZoom: 12,
+    max: 1.0,
+    gradient: {0.2: '#ffffb2', 0.4: '#fecc5c', 0.6: '#fd8d3c', 0.8: '#f03b20', 1.0: '#bd0026'}
+  });
+
+  // --- Layer control ---
+  var overlays = {
+    "Sightings": markers,
+    "Density": heat
+  };
+  L.control.layers(null, overlays, {collapsed: false, position: 'topright'}).addTo(map);
+
+  // Both layers on by default; heat underneath markers
+  heat.addTo(map);
+  markers.addTo(map);
+
   L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
     color: '#555', weight: 1.5, dashArray: '6 4',
     fill: false, opacity: 0.5
