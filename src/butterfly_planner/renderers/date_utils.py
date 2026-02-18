@@ -24,7 +24,7 @@ def year_range(observations: list[dict[str, Any]]) -> str:
 def date_range_label(date_start: str, date_end: str) -> str:
     """Human-readable date-range label from ISO date strings.
 
-    Returns e.g. ``Feb 10 - 24`` (same month) or ``Feb 24 - Mar 10``
+    Returns e.g. ``Feb 10\u201324`` (same month) or ``Feb 24\u2013Mar 10``
     (cross-month).  Falls back to ``this week`` when dates are missing.
     """
     if not date_start or not date_end:

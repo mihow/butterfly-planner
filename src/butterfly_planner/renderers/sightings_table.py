@@ -46,8 +46,8 @@ def build_butterfly_sightings_html(
     if palette is None:
         palette = build_species_palette(species_list)
 
-    years = year_range(observations_list)
     if date_start and date_end:
+        years = year_range(observations_list)
         period_label = f"{date_range_label(date_start, date_end).title()} ({years})"
     elif 1 <= month <= 12:
         period_label = MONTH_NAMES[month]

@@ -585,6 +585,10 @@ class TestDateRangeLabel:
         label = date_range_label("2026-02-24", "2026-03-10")
         assert label == "Feb 24\u2013Mar 10"
 
+    def test_cross_year(self) -> None:
+        label = date_range_label("2026-12-25", "2027-01-05")
+        assert label == "Dec 25\u2013Jan 5"
+
     def test_no_week_word(self) -> None:
         label = date_range_label("2026-06-08", "2026-06-22")
         assert "week" not in label.lower()
