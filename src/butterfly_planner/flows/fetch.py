@@ -22,6 +22,7 @@ from prefect import flow, task
 from butterfly_planner.datasources import gdd, inaturalist, sunshine
 from butterfly_planner.datasources.weather import forecast as weather_forecast
 from butterfly_planner.datasources.weather import historical as weather_historical
+from butterfly_planner.reference.viewing import OBS_WINDOW_DAYS_AHEAD, OBS_WINDOW_DAYS_BACK
 from butterfly_planner.store import DataStore
 
 # Data store with tiered directories
@@ -98,11 +99,35 @@ def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]
 
 @task(name="fetch-inaturalist", retries=2, retry_delay_seconds=5)
 def fetch_inaturalist() -> dict[str, Any]:
-    """Fetch butterfly species and observations for the current week ± 1."""
+    """Fetch butterfly species and observations for the current week ± 1.
+
+    Observations are filtered to 14 days prior and 7 days after today
+    (by month-day, across all years).  The iNaturalist API only supports
+    month-level filtering, so this post-filter narrows the window.
+    """
     summary = inaturalist.get_current_week_species()
+
+    today = date.today()
+    window_start = today - timedelta(days=OBS_WINDOW_DAYS_BACK)
+    window_end = today + timedelta(days=OBS_WINDOW_DAYS_AHEAD)
+
+    start_md = (window_start.month, window_start.day)
+    end_md = (window_end.month, window_end.day)
+
+    def _in_window(obs_date: date) -> bool:
+        """Check if an observation's month-day falls within the date window."""
+        obs_md = (obs_date.month, obs_date.day)
+        if start_md <= end_md:
+            # Normal case: window does not wrap around year boundary
+            return start_md <= obs_md <= end_md
+        # Window wraps year boundary (e.g. Dec 20 - Jan 10)
+        return obs_md >= start_md or obs_md <= end_md
+
     return {
         "month": summary.month,
         "weeks": summary.weeks,
+        "date_start": window_start.isoformat(),
+        "date_end": window_end.isoformat(),
         "species": [
             {
                 "taxon_id": s.taxon_id,
@@ -128,6 +153,7 @@ def fetch_inaturalist() -> dict[str, Any]:
                 "photo_url": obs.photo_url,
             }
             for obs in summary.observations
+            if _in_window(obs.observed_on)
         ],
     }
 

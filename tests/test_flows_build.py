@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from butterfly_planner.flows import build
+from butterfly_planner.renderers.date_utils import date_range_label
 from butterfly_planner.renderers.sightings_map import (
     _build_weather_html,
     build_butterfly_map_html,
@@ -434,6 +435,8 @@ SAMPLE_INAT_DATA_WITH_OBS: dict = {
     "data": {
         "month": 6,
         "weeks": [23, 24, 25],
+        "date_start": "2026-06-01",
+        "date_end": "2026-06-15",
         "species": [
             {
                 "taxon_id": 48662,
@@ -568,6 +571,29 @@ class TestBuildWeatherHtml:
         assert "\u00b0C" not in result
 
 
+class TestDateRangeLabel:
+    """Test date_range_label helper."""
+
+    def test_empty_dates(self) -> None:
+        assert date_range_label("", "") == "this week"
+
+    def test_same_month(self) -> None:
+        label = date_range_label("2026-02-10", "2026-02-24")
+        assert label == "Feb 10\u201324"
+
+    def test_cross_month(self) -> None:
+        label = date_range_label("2026-02-24", "2026-03-10")
+        assert label == "Feb 24\u2013Mar 10"
+
+    def test_cross_year(self) -> None:
+        label = date_range_label("2026-12-25", "2027-01-05")
+        assert label == "Dec 25\u2013Jan 5"
+
+    def test_no_week_word(self) -> None:
+        label = date_range_label("2026-06-08", "2026-06-22")
+        assert "week" not in label.lower()
+
+
 class TestBuildButterflyMapHtml:
     """Test building butterfly map with enriched popups."""
 
@@ -618,7 +644,9 @@ class TestBuildButterflyMapHtml:
 
     def test_map_no_observations(self) -> None:
         """Test map with no observations returns fallback."""
-        no_obs: dict = {"data": {"observations": [], "weeks": [5, 6, 7]}}
+        no_obs: dict = {
+            "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
+        }
         map_div, map_script = build_butterfly_map_html(no_obs)
 
         assert "No observation data" in map_div

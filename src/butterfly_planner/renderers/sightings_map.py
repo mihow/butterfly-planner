@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from butterfly_planner.renderers import render_template
+from butterfly_planner.renderers.date_utils import date_range_label, year_range
 from butterfly_planner.renderers.species_palette import (
     SpeciesStyle,
     build_species_palette,
@@ -33,30 +34,6 @@ def _build_weather_html(w: dict[str, Any]) -> str:
     return " &middot; ".join(parts)
 
 
-def _year_range(observations: list[dict[str, Any]]) -> str:
-    """Derive year range string from observation dates, e.g. '2014-2026'."""
-    years: set[int] = set()
-    for obs in observations:
-        observed_on = obs.get("observed_on", "")
-        if observed_on and len(observed_on) >= 4 and observed_on[:4].isdigit():
-            years.add(int(observed_on[:4]))
-    if not years:
-        return "all years"
-    min_year, max_year = min(years), max(years)
-    if min_year == max_year:
-        return str(min_year)
-    return f"{min_year}\u2013{max_year}"
-
-
-def _week_label(weeks: list[int]) -> str:
-    """Human-readable label for a list of ISO weeks."""
-    if not weeks:
-        return "this week"
-    if len(weeks) == 1:
-        return f"week {weeks[0]}"
-    return f"weeks {weeks[0]}\u2013{weeks[-1]}"
-
-
 def build_butterfly_map_html(
     inat_data: dict[str, Any],
     palette: dict[str, SpeciesStyle] | None = None,
@@ -73,9 +50,8 @@ def build_butterfly_map_html(
     """
     data = inat_data.get("data", {})
     observations: list[dict[str, Any]] = data.get("observations", [])
-    weeks: list[int] = data.get("weeks", [])
 
-    label = _week_label(weeks)
+    label = date_range_label(data.get("date_start", ""), data.get("date_end", ""))
 
     if not observations:
         return (
@@ -126,7 +102,7 @@ def build_butterfly_map_html(
         markers_js_parts.append(marker)
 
     markers_js = "[" + ",".join(markers_js_parts) + "]"
-    years = _year_range(observations)
+    years = year_range(observations)
 
     map_div = render_template(
         "sightings_map.html.j2",
