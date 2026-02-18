@@ -1,6 +1,6 @@
 # Butterfly Planner
 
-A combination of site-suitability analysis with **trip**-suitability analysis. Depending on the availability and interest of the participants on a given day.
+A combination of site-suitability analysis with **trip**-suitability analysis. Depending on the availability and interest of the participants on a given day. One part exploratory dashboard, two parts executive decision-making tool.
 
 GIS layers for butterfly abundance and species diversity forecasting in Oregon and Washington.
 
