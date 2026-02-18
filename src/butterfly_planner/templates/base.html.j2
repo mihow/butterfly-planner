@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v={{ build_version }}"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin="" />
     <style>
@@ -178,6 +178,28 @@
         }
         .leaflet-control-layers-separator { display: none; }
 
+        /* --- Heat map intensity slider --- */
+        .heat-intensity-control {
+            background: #fff;
+            padding: 6px 10px;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 0.78rem;
+            color: #555;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .heat-intensity-control label { white-space: nowrap; }
+        .heat-intensity-control input[type="range"] { width: 80px; cursor: pointer; }
+        .heat-intensity-value {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 0.75rem;
+            min-width: 3.5em;
+            text-align: right;
+        }
+
         /* --- Observation popup --- */
         .obs-popup { display: flex; gap: 0.6rem; align-items: flex-start; }
         .obs-popup-img {
@@ -320,10 +342,10 @@
         Forecast models may not reflect actual conditions.</p>
     </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v={{ build_version }}"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js?v={{ build_version }}"
             crossorigin=""></script>
     {{ map_script|safe }}
 </body>

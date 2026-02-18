@@ -377,6 +377,26 @@ class TestBuildHtml:
         assert "16-Day Sunshine Forecast" in result
         assert "Clear" in result  # WMO code 0 (with emoji)
 
+    def test_cache_busting_version_in_urls(self) -> None:
+        """Test that CDN URLs include a build version query parameter."""
+        weather_data = {
+            "fetched_at": "2026-02-04T12:00:00+00:00",
+            "data": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "temperature_2m_max": [15.0],
+                    "temperature_2m_min": [5.0],
+                    "precipitation_sum": [0],
+                    "weather_code": [0],
+                }
+            },
+        }
+        result = build.build_html(weather_data, None)
+
+        assert "leaflet.css?v=202602" in result
+        assert "leaflet.js?v=202602" in result
+        assert "leaflet-heat.js?v=202602" in result
+
     def test_build_html_without_sunshine(self) -> None:
         """Test building HTML without sunshine data."""
         weather_data = {
@@ -694,6 +714,32 @@ class TestBuildButterflyMapHeatLayer:
         map_div, _ = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
 
         assert "density" in map_div.lower()
+
+
+class TestHeatMapIntensitySlider:
+    """Test heat map dynamic intensity slider."""
+
+    def test_intensity_slider_control_present(self) -> None:
+        """Test that the map script includes the intensity slider control."""
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "IntensityControl" in map_script
+        assert 'type="range"' in map_script
+
+    def test_auto_scaled_default_max(self) -> None:
+        """Test that the default max is auto-scaled based on observation count."""
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        # With 2 observations: max = max(0.08, min(1.0, 0.05 + 2*0.02)) = 0.09
+        assert "defaultMax" in map_script
+        # Should NOT use the old hardcoded max: 1.0
+        assert "max: defaultMax" in map_script
+
+    def test_slider_updates_heat_layer(self) -> None:
+        """Test that the slider wires up to heat.setOptions."""
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        assert "heat.setOptions" in map_script
 
 
 class TestBuildButterflySightingsHtml:

@@ -43,12 +43,36 @@
   for (var j = 0; j < obs.length; j++) {
     heatPoints.push([obs[j].lat, obs[j].lon]);
   }
+  // Auto-scale intensity: fewer observations → lower max → more vivid colors.
+  // With 5 obs, max ≈ 0.15; with 20, max ≈ 0.35; with 80+, max ≈ 1.0.
+  var defaultMax = Math.max(0.08, Math.min(1.0, 0.05 + obs.length * 0.02));
   var heat = L.heatLayer(heatPoints, {
     radius: 18,
     blur: 22,
     maxZoom: 12,
-    max: 1.0,
+    max: defaultMax,
     gradient: {0.2: '#ffffb2', 0.4: '#fecc5c', 0.6: '#fd8d3c', 0.8: '#f03b20', 1.0: '#bd0026'}
+  });
+
+  // --- Intensity slider control ---
+  var IntensityControl = L.Control.extend({
+    options: { position: 'bottomright' },
+    onAdd: function() {
+      var container = L.DomUtil.create('div', 'leaflet-bar heat-intensity-control');
+      container.innerHTML =
+        '<label>Intensity</label>' +
+        '<input type="range" min="0.05" max="1.0" step="0.01" value="' + defaultMax.toFixed(2) + '">' +
+        '<span class="heat-intensity-value">' + Math.round((1 / defaultMax) * 100) + '%</span>';
+      var slider = container.querySelector('input');
+      var label = container.querySelector('.heat-intensity-value');
+      L.DomEvent.disableClickPropagation(container);
+      slider.addEventListener('input', function() {
+        var val = parseFloat(this.value);
+        heat.setOptions({max: val});
+        label.textContent = Math.round((1 / val) * 100) + '%';
+      });
+      return container;
+    }
   });
 
   // --- Layer control ---
@@ -57,6 +81,7 @@
     "Density": heat
   };
   L.control.layers(null, overlays, {collapsed: false, position: 'topright'}).addTo(map);
+  new IntensityControl().addTo(map);
 
   // Both layers on by default; heat underneath markers
   heat.addTo(map);
