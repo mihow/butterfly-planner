@@ -1,6 +1,6 @@
 [Skip to main content](#content-area)
 
-[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/light.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=536eade682636e84231afce2577f9509)![dark logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/dark.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=0766b3221061e80143e9f300733e640b)](/docs)
+[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/light.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=d535f2e20f53cd911acc59ad1b64b2e0)![dark logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/dark.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=28e49a2ffe69101f4aae9bfa70b393d0)](/docs)
 
 ![US](https://d3gk2c5xim1je2.cloudfront.net/flags/US.svg)
 
@@ -117,7 +117,7 @@ Without clear success criteria, it might produce something that looks right but 
 
 | Strategy | Before | After |
 | --- | --- | --- |
-| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#e792948295a7829f868a978b82c984888a) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#bbcec8dec9fb95d8d4d6) is false. run the tests after implementing”* |
+| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#bdc8ced8cffdd8c5dcd0cdd1d893ded2d0) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#ff8a8c9a8dbfd19c9092) is false. run the tests after implementing”* |
 | **Verify UI changes visually** | *”make the dashboard look better"* | *"[paste screenshot] implement this design. take a screenshot of the result and compare it to the original. list differences and fix them”* |
 | **Address root causes, not symptoms** | *”the build is failing"* | *"the build fails with this error: [paste error]. fix it and verify the build succeeds. address the root cause, don’t suppress the error”* |
 
@@ -743,9 +743,7 @@ YesNo
 
 [Common workflows](/docs/en/common-workflows)[Claude Code on the web](/docs/en/claude-code-on-the-web)
 
-⌘I
-
-[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/light.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=536eade682636e84231afce2577f9509)![dark logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/dark.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=0766b3221061e80143e9f300733e640b)](/docs)
+[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/light.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=d535f2e20f53cd911acc59ad1b64b2e0)![dark logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/dark.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=28e49a2ffe69101f4aae9bfa70b393d0)](/docs)
 
 [x](https://x.com/AnthropicAI)[linkedin](https://www.linkedin.com/company/anthropicresearch)
 
@@ -764,3 +762,7 @@ Learn
 Terms and policies
 
 [Privacy policy](https://www.anthropic.com/legal/privacy)[Disclosure policy](https://www.anthropic.com/responsible-disclosure-policy)[Usage policy](https://www.anthropic.com/legal/aup)[Commercial terms](https://www.anthropic.com/legal/commercial-terms)[Consumer terms](https://www.anthropic.com/legal/consumer-terms)
+
+Assistant
+
+Responses are generated using AI and may contain mistakes.

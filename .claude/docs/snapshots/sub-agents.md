@@ -1,6 +1,6 @@
 [Skip to main content](#content-area)
 
-[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/light.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=536eade682636e84231afce2577f9509)![dark logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/dark.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=0766b3221061e80143e9f300733e640b)](/docs)
+[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/light.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=d535f2e20f53cd911acc59ad1b64b2e0)![dark logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/dark.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=28e49a2ffe69101f4aae9bfa70b393d0)](/docs)
 
 ![US](https://d3gk2c5xim1je2.cloudfront.net/flags/US.svg)
 
@@ -247,6 +247,7 @@ The `/agents` command provides an interactive interface for managing subagents. 
 * See which subagents are active when duplicates exist
 
 This is the recommended way to create and manage subagents. For manual creation or automation, you can also add subagent files directly.
+To list all configured subagents from the command line without starting an interactive session, run `claude agents`. This shows agents grouped by source and indicates which are overridden by higher-priority definitions.
 
 ### [​](#choose-the-subagent-scope) Choose the subagent scope
 
@@ -320,12 +321,14 @@ The following fields can be used in the YAML frontmatter. Only `name` and `descr
 | `tools` | No | [Tools](#available-tools) the subagent can use. Inherits all tools if omitted |
 | `disallowedTools` | No | Tools to deny, removed from inherited or specified list |
 | `model` | No | [Model](#choose-a-model) to use: `sonnet`, `opus`, `haiku`, or `inherit`. Defaults to `inherit` |
-| `permissionMode` | No | [Permission mode](#permission-modes): `default`, `acceptEdits`, `delegate`, `dontAsk`, `bypassPermissions`, or `plan` |
+| `permissionMode` | No | [Permission mode](#permission-modes): `default`, `acceptEdits`, `dontAsk`, `bypassPermissions`, or `plan` |
 | `maxTurns` | No | Maximum number of agentic turns before the subagent stops |
 | `skills` | No | [Skills](/docs/en/skills) to load into the subagent’s context at startup. The full skill content is injected, not just made available for invocation. Subagents don’t inherit skills from the parent conversation |
 | `mcpServers` | No | [MCP servers](/docs/en/mcp) available to this subagent. Each entry is either a server name referencing an already-configured server (e.g., `"slack"`) or an inline definition with the server name as key and a full [MCP server config](/docs/en/mcp#configure-mcp-servers) as value |
 | `hooks` | No | [Lifecycle hooks](#define-hooks-for-subagents) scoped to this subagent |
 | `memory` | No | [Persistent memory scope](#enable-persistent-memory): `user`, `project`, or `local`. Enables cross-session learning |
+| `background` | No | Set to `true` to always run this subagent as a [background task](#run-subagents-in-foreground-or-background). Default: `false` |
+| `isolation` | No | Set to `worktree` to run the subagent in a temporary [git worktree](/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees), giving it an isolated copy of the repository. The worktree is automatically cleaned up if the subagent makes no changes |
 
 ### [​](#choose-a-model) Choose a model
 
@@ -401,7 +404,6 @@ The `permissionMode` field controls how the subagent handles permission prompts.
 | `default` | Standard permission checking with prompts |
 | `acceptEdits` | Auto-accept file edits |
 | `dontAsk` | Auto-deny permission prompts (explicitly allowed tools still work) |
-| `delegate` | Coordination-only mode for [agent team](/docs/en/agent-teams#use-delegate-mode) leads. Restricts to team management tools |
 | `bypassPermissions` | Skip all permission checks |
 | `plan` | Plan mode (read-only exploration) |
 
@@ -1051,9 +1053,7 @@ YesNo
 
 [Run agent teams](/docs/en/agent-teams)
 
-⌘I
-
-[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/light.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=536eade682636e84231afce2577f9509)![dark logo](https://mintcdn.com/claude-code/o69F7a6qoW9vboof/logo/dark.svg?fit=max&auto=format&n=o69F7a6qoW9vboof&q=85&s=0766b3221061e80143e9f300733e640b)](/docs)
+[Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/light.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=d535f2e20f53cd911acc59ad1b64b2e0)![dark logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/dark.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=28e49a2ffe69101f4aae9bfa70b393d0)](/docs)
 
 [x](https://x.com/AnthropicAI)[linkedin](https://www.linkedin.com/company/anthropicresearch)
 
@@ -1072,3 +1072,7 @@ Learn
 Terms and policies
 
 [Privacy policy](https://www.anthropic.com/legal/privacy)[Disclosure policy](https://www.anthropic.com/responsible-disclosure-policy)[Usage policy](https://www.anthropic.com/legal/aup)[Commercial terms](https://www.anthropic.com/legal/commercial-terms)[Consumer terms](https://www.anthropic.com/legal/consumer-terms)
+
+Assistant
+
+Responses are generated using AI and may contain mistakes.
