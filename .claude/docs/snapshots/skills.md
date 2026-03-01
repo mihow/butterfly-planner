@@ -169,7 +169,7 @@ Where you store a skill determines who can use it:
 
 | Location | Path | Applies to |
 | --- | --- | --- |
-| Enterprise | See [managed settings](/docs/en/permissions#managed-settings) | All users in your organization |
+| Enterprise | See [managed settings](/docs/en/settings#settings-files) | All users in your organization |
 | Personal | `~/.claude/skills/<skill-name>/SKILL.md` | All your projects |
 | Project | `.claude/skills/<skill-name>/SKILL.md` | This project only |
 | Plugin | `<plugin>/skills/<skill-name>/SKILL.md` | Where plugin is enabled |
@@ -205,7 +205,7 @@ Files in `.claude/commands/` still work and support the same [frontmatter](#fron
 
 Skills defined in `.claude/skills/` within directories added via `--add-dir` are loaded automatically and picked up by live change detection, so you can edit them during a session without restarting.
 
-CLAUDE.md files from `--add-dir` directories are not loaded by default. To load them, set `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`. See [Load memory from additional directories](/docs/en/memory#load-memory-from-additional-directories).
+CLAUDE.md files from `--add-dir` directories are not loaded by default. To load them, set `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`. See [Load from additional directories](/docs/en/memory#load-from-additional-directories).
 
 [​](#configure-skills) Configure skills
 ---------------------------------------
@@ -621,7 +621,7 @@ Skills can be distributed at different scopes depending on your audience:
 
 * **Project skills**: Commit `.claude/skills/` to version control
 * **Plugins**: Create a `skills/` directory in your [plugin](/docs/en/plugins)
-* **Managed**: Deploy organization-wide through [managed settings](/docs/en/permissions#managed-settings)
+* **Managed**: Deploy organization-wide through [managed settings](/docs/en/settings#settings-files)
 
 ### [​](#generate-visual-output) Generate visual output
 
@@ -664,7 +664,7 @@ Run the visualization script from your project root:
 
 ```bash
 python ~/.claude/skills/codebase-visualizer/scripts/visualize.py .
-```
+```text
 
 This creates `codebase-map.html` in the current directory and opens it in your default browser.
 
@@ -868,6 +868,8 @@ Was this page helpful?
 YesNo
 
 [Discover and install prebuilt plugins](/docs/en/discover-plugins)[Output styles](/docs/en/output-styles)
+
+⌘I
 
 [Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/light.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=d535f2e20f53cd911acc59ad1b64b2e0)![dark logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/dark.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=28e49a2ffe69101f4aae9bfa70b393d0)](/docs)
 

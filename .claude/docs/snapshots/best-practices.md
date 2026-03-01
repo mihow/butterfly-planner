@@ -34,11 +34,13 @@ Best Practices for Claude Code
 
 * [How Claude Code works](/docs/en/how-claude-code-works)
 * [Extend Claude Code](/docs/en/features-overview)
+* [Store instructions and memories](/docs/en/memory)
 * [Common workflows](/docs/en/common-workflows)
 * [Best practices](/docs/en/best-practices)
 
 ##### Platforms and integrations
 
+* [Remote Control](/docs/en/remote-control)
 * [Claude Code on the web](/docs/en/claude-code-on-the-web)
 * Claude Code on desktop
 * [Chrome extension (beta)](/docs/en/chrome)
@@ -73,10 +75,10 @@ On this page
 * [Rewind with checkpoints](#rewind-with-checkpoints)
 * [Resume conversations](#resume-conversations)
 * [Automate and scale](#automate-and-scale)
-* [Run headless mode](#run-headless-mode)
+* [Run non-interactive mode](#run-non-interactive-mode)
 * [Run multiple Claude sessions](#run-multiple-claude-sessions)
 * [Fan out across files](#fan-out-across-files)
-* [Safe Autonomous Mode](#safe-autonomous-mode)
+* [Safe autonomous mode](#safe-autonomous-mode)
 * [Avoid common failure patterns](#avoid-common-failure-patterns)
 * [Develop your intuition](#develop-your-intuition)
 * [Related resources](#related-resources)
@@ -117,7 +119,7 @@ Without clear success criteria, it might produce something that looks right but 
 
 | Strategy | Before | After |
 | --- | --- | --- |
-| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#bdc8ced8cffdd8c5dcd0cdd1d893ded2d0) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#ff8a8c9a8dbfd19c9092) is false. run the tests after implementing”* |
+| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#770204120537120f161a071b125914181a) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#8df8fee8ffcda3eee2e0) is false. run the tests after implementing”* |
 | **Verify UI changes visually** | *”make the dashboard look better"* | *"[paste screenshot] implement this design. take a screenshot of the result and compare it to the original. list differences and fix them”* |
 | **Address root causes, not symptoms** | *”the build is failing"* | *"the build fails with this error: [paste error]. fix it and verify the build succeeds. address the root cause, don’t suppress the error”* |
 
@@ -255,7 +257,7 @@ A few setup steps make Claude Code significantly more effective across all your 
 
 Run `/init` to generate a starter CLAUDE.md file based on your current project structure, then refine over time.
 
-CLAUDE.md is a special file that Claude reads at the start of every conversation. Include Bash commands, code style, and workflow rules. This gives Claude persistent context **it can’t infer from code alone**.
+CLAUDE.md is a special file that Claude reads at the start of every conversation. Include Bash commands, code style, and workflow rules. This gives Claude persistent context it can’t infer from code alone.
 The `/init` command analyzes your codebase to detect build systems, test frameworks, and code patterns, giving you a solid foundation to refine.
 There’s no required format for CLAUDE.md files, but keep it short and human-readable. For example:
 
@@ -312,9 +314,9 @@ See @README.md for project overview and @package.json for available npm commands
 
 You can place CLAUDE.md files in several locations:
 
-* **Home folder (`~/.claude/CLAUDE.md`)**: Applies to all Claude sessions
-* **Project root (`./CLAUDE.md`)**: Check into git to share with your team, or name it `CLAUDE.local.md` and `.gitignore` it
-* **Parent directories**: Useful for monorepos where both `root/CLAUDE.md` and `root/foo/CLAUDE.md` are pulled in automatically
+* **Home folder (`~/.claude/CLAUDE.md`)**: applies to all Claude sessions
+* **Project root (`./CLAUDE.md`)**: check into git to share with your team, or name it `CLAUDE.local.md` and `.gitignore` it
+* **Parent directories**: useful for monorepos where both `root/CLAUDE.md` and `root/foo/CLAUDE.md` are pulled in automatically
 * **Child directories**: Claude pulls in child CLAUDE.md files on demand when working with files in those directories
 
 ### [​](#configure-permissions) Configure permissions
@@ -323,14 +325,14 @@ Use `/permissions` to allowlist safe commands or `/sandbox` for OS-level isolati
 
 By default, Claude Code requests permission for actions that might modify your system: file writes, Bash commands, MCP tools, etc. This is safe but tedious. After the tenth approval you’re not really reviewing anymore, you’re just clicking through. There are two ways to reduce these interruptions:
 
-* **Permission allowlists**: Permit specific tools you know are safe (like `npm run lint` or `git commit`)
-* **Sandboxing**: Enable OS-level isolation that restricts filesystem and network access, allowing Claude to work more freely within defined boundaries
+* **Permission allowlists**: permit specific tools you know are safe (like `npm run lint` or `git commit`)
+* **Sandboxing**: enable OS-level isolation that restricts filesystem and network access, allowing Claude to work more freely within defined boundaries
 
 Alternatively, use `--dangerously-skip-permissions` to bypass all permission checks for contained workflows like fixing lint errors or generating boilerplate.
 
 Letting Claude run arbitrary commands can result in data loss, system corruption, or data exfiltration via prompt injection. Only use `--dangerously-skip-permissions` in a sandbox without internet access.
 
-Read more about [configuring permissions](/docs/en/settings) and [enabling sandboxing](/docs/en/sandboxing#sandboxing).
+Read more about [configuring permissions](/docs/en/permissions) and [enabling sandboxing](/docs/en/sandboxing).
 
 ### [​](#use-cli-tools) Use CLI tools
 
@@ -506,10 +508,10 @@ Correct Claude as soon as you notice it going off track.
 
 The best results come from tight feedback loops. Though Claude occasionally solves problems perfectly on the first attempt, correcting it quickly generally produces better solutions faster.
 
-* **`Esc`**: Stop Claude mid-action with the `Esc` key. Context is preserved, so you can redirect.
-* **`Esc + Esc` or `/rewind`**: Press `Esc` twice or run `/rewind` to open the rewind menu and restore previous conversation and code state, or summarize from a selected message.
-* **`"Undo that"`**: Have Claude revert its changes.
-* **`/clear`**: Reset context between unrelated tasks. Long sessions with irrelevant context can reduce performance.
+* **`Esc`**: stop Claude mid-action with the `Esc` key. Context is preserved, so you can redirect.
+* **`Esc + Esc` or `/rewind`**: press `Esc` twice or run `/rewind` to open the rewind menu and restore previous conversation and code state, or summarize from a selected message.
+* **`"Undo that"`**: have Claude revert its changes.
+* **`/clear`**: reset context between unrelated tasks. Long sessions with irrelevant context can reduce performance.
 
 If you’ve corrected Claude more than twice on the same issue in one session, the context is cluttered with failed approaches. Run `/clear` and start fresh with a more specific prompt that incorporates what you learned. A clean session with a better prompt almost always outperforms a long session with accumulated corrections.
 
@@ -569,7 +571,7 @@ Checkpoints only track changes made *by Claude*, not external processes. This is
 
 Run `claude --continue` to pick up where you left off, or `--resume` to choose from recent sessions.
 
-Claude Code saves conversations locally. When a task spans multiple sessions (you start a feature, get interrupted, come back the next day) you don’t have to re-explain the context:
+Claude Code saves conversations locally. When a task spans multiple sessions, you don’t have to re-explain the context:
 
 Report incorrect code
 
@@ -582,7 +584,7 @@ claude --continue    # Resume the most recent conversation
 claude --resume      # Select from recent conversations
 ```
 
-Use `/rename` to give sessions descriptive names (`"oauth-migration"`, `"debugging-memory-leak"`) so you can find them later. Treat sessions like branches. Different workstreams can have separate, persistent contexts.
+Use `/rename` to give sessions descriptive names like `"oauth-migration"` or `"debugging-memory-leak"` so you can find them later. Treat sessions like branches: different workstreams can have separate, persistent contexts.
 
 
 ---
@@ -590,14 +592,14 @@ Use `/rename` to give sessions descriptive names (`"oauth-migration"`, `"debuggi
 [​](#automate-and-scale) Automate and scale
 -------------------------------------------
 
-Once you’re effective with one Claude, multiply your output with parallel sessions, headless mode, and fan-out patterns.
+Once you’re effective with one Claude, multiply your output with parallel sessions, non-interactive mode, and fan-out patterns.
 Everything so far assumes one human, one Claude, and one conversation. But Claude Code scales horizontally. The techniques in this section show how you can get more done.
 
-### [​](#run-headless-mode) Run headless mode
+### [​](#run-non-interactive-mode) Run non-interactive mode
 
 Use `claude -p "prompt"` in CI, pre-commit hooks, or scripts. Add `--output-format stream-json` for streaming JSON output.
 
-With `claude -p "your prompt"`, you can run Claude headlessly, without an interactive session. Headless mode is how you integrate Claude into CI pipelines, pre-commit hooks, or any automated workflow. The output formats (plain text, JSON, streaming JSON) let you parse results programmatically.
+With `claude -p "your prompt"`, you can run Claude non-interactively, without a session. Non-interactive mode is how you integrate Claude into CI pipelines, pre-commit hooks, or any automated workflow. The output formats let you parse results programmatically: plain text, JSON, or streaming JSON.
 
 Report incorrect code
 
@@ -686,7 +688,7 @@ claude -p "<your prompt>" --output-format json | your_command
 
 Use `--verbose` for debugging during development, and turn it off in production.
 
-### [​](#safe-autonomous-mode) Safe Autonomous Mode
+### [​](#safe-autonomous-mode) Safe autonomous mode
 
 Use `claude --dangerously-skip-permissions` to bypass all permission checks and let Claude work uninterrupted. This works well for workflows like fixing lint errors or generating boilerplate code.
 
@@ -723,25 +725,18 @@ Over time, you’ll develop intuition that no guide can capture. You’ll know w
 [​](#related-resources) Related resources
 -----------------------------------------
 
-[How Claude Code works
----------------------
-
-Understand the agentic loop, tools, and context management](/docs/en/how-claude-code-works)[Extend Claude Code
-------------------
-
-Choose between skills, hooks, MCP, subagents, and plugins](/docs/en/features-overview)[Common workflows
-----------------
-
-Step-by-step recipes for debugging, testing, PRs, and more](/docs/en/common-workflows)[CLAUDE.md
----------
-
-Store project conventions and persistent context](/docs/en/memory)
+* [How Claude Code works](/docs/en/how-claude-code-works): the agentic loop, tools, and context management
+* [Extend Claude Code](/docs/en/features-overview): skills, hooks, MCP, subagents, and plugins
+* [Common workflows](/docs/en/common-workflows): step-by-step recipes for debugging, testing, PRs, and more
+* [CLAUDE.md](/docs/en/memory): store project conventions and persistent context
 
 Was this page helpful?
 
 YesNo
 
-[Common workflows](/docs/en/common-workflows)[Claude Code on the web](/docs/en/claude-code-on-the-web)
+[Common workflows](/docs/en/common-workflows)[Remote Control](/docs/en/remote-control)
+
+⌘I
 
 [Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/light.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=d535f2e20f53cd911acc59ad1b64b2e0)![dark logo](https://mintcdn.com/claude-code/TBPmHzr19mDCuhZi/logo/dark.svg?fit=max&auto=format&n=TBPmHzr19mDCuhZi&q=85&s=28e49a2ffe69101f4aae9bfa70b393d0)](/docs)
 
