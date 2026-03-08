@@ -31,6 +31,7 @@ Create custom subagents
 * [Create plugins](/docs/en/plugins)
 * [Discover and install prebuilt plugins](/docs/en/discover-plugins)
 * [Extend Claude with skills](/docs/en/skills)
+* [Run prompts on a schedule](/docs/en/scheduled-tasks)
 * [Output styles](/docs/en/output-styles)
 * [Automate with hooks](/docs/en/hooks-guide)
 * [Programmatic usage](/docs/en/headless)

@@ -31,6 +31,7 @@ Extend Claude with skills
 * [Create plugins](/docs/en/plugins)
 * [Discover and install prebuilt plugins](/docs/en/discover-plugins)
 * [Extend Claude with skills](/docs/en/skills)
+* [Run prompts on a schedule](/docs/en/scheduled-tasks)
 * [Output styles](/docs/en/output-styles)
 * [Automate with hooks](/docs/en/hooks-guide)
 * [Programmatic usage](/docs/en/headless)
@@ -39,6 +40,7 @@ Extend Claude with skills
 
 On this page
 
+* [Bundled skills](#bundled-skills)
 * [Getting started](#getting-started)
 * [Create your first skill](#create-your-first-skill)
 * [Where skills live](#where-skills-live)
@@ -72,15 +74,27 @@ Extend Claude with skills
 
 Copy page
 
-Create, manage, and share skills to extend Claude’s capabilities in Claude Code. Includes custom slash commands.
+Create, manage, and share skills to extend Claude’s capabilities in Claude Code. Includes custom commands and bundled skills.
 
 Copy page
 
 Skills extend what Claude can do. Create a `SKILL.md` file with instructions, and Claude adds it to its toolkit. Claude uses skills when relevant, or you can invoke one directly with `/skill-name`.
 
-For built-in commands like `/help` and `/compact`, see [interactive mode](/docs/en/interactive-mode#built-in-commands).**Custom slash commands have been merged into skills.** A file at `.claude/commands/review.md` and a skill at `.claude/skills/review/SKILL.md` both create `/review` and work the same way. Your existing `.claude/commands/` files keep working. Skills add optional features: a directory for supporting files, frontmatter to [control whether you or Claude invokes them](#control-who-invokes-a-skill), and the ability for Claude to load them automatically when relevant.
+For built-in commands like `/help` and `/compact`, see [interactive mode](/docs/en/interactive-mode#built-in-commands).**Custom commands have been merged into skills.** A file at `.claude/commands/review.md` and a skill at `.claude/skills/review/SKILL.md` both create `/review` and work the same way. Your existing `.claude/commands/` files keep working. Skills add optional features: a directory for supporting files, frontmatter to [control whether you or Claude invokes them](#control-who-invokes-a-skill), and the ability for Claude to load them automatically when relevant.
 
 Claude Code skills follow the [Agent Skills](https://agentskills.io) open standard, which works across multiple AI tools. Claude Code extends the standard with additional features like [invocation control](#control-who-invokes-a-skill), [subagent execution](#run-skills-in-a-subagent), and [dynamic context injection](#inject-dynamic-context).
+
+[​](#bundled-skills) Bundled skills
+-----------------------------------
+
+Bundled skills ship with Claude Code and are available in every session. Unlike [built-in commands](/docs/en/interactive-mode#built-in-commands), which execute fixed logic directly, bundled skills are prompt-based: they give Claude a detailed playbook and let it orchestrate the work using its tools. This means bundled skills can spawn parallel agents, read files, and adapt to your codebase.
+You invoke bundled skills the same way as any other skill: type `/` followed by the skill name.
+
+* **`/simplify`**: reviews your recently changed files for code reuse, quality, and efficiency issues, then fixes them. Run it after implementing a feature or bug fix to clean up your work. It spawns three review agents in parallel (code reuse, code quality, efficiency), aggregates their findings, and applies fixes. Pass optional text to focus on specific concerns: `/simplify focus on memory efficiency`.
+* **`/batch <instruction>`**: orchestrates large-scale changes across a codebase in parallel. Provide a description of the change and `/batch` researches the codebase, decomposes the work into 5 to 30 independent units, and presents a plan for your approval. Once approved, it spawns one background agent per unit, each in an isolated [git worktree](/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees). Each agent implements its unit, runs tests, and opens a pull request. Requires a git repository. Example: `/batch migrate src/ from Solid to React`.
+* **`/debug [description]`**: troubleshoots your current Claude Code session by reading the session debug log. Optionally describe the issue to focus the analysis.
+* **`/loop [interval] <prompt>`**: runs a prompt repeatedly on an interval while the session stays open. Claude parses the interval, schedules a recurring cron task, and confirms the cadence. Useful for polling a deployment, babysitting a PR, or periodically re-running another skill. Example: `/loop 5m check if the deploy finished`. See [Run prompts on a schedule](/docs/en/scheduled-tasks).
+* **`/claude-api`**: loads Claude API reference material for your project’s language (Python, TypeScript, Java, Go, Ruby, C#, PHP, or cURL) and Agent SDK reference for Python and TypeScript. Covers tool use, streaming, batches, structured outputs, and common pitfalls. Also activates automatically when your code imports `anthropic`, `@anthropic-ai/sdk`, or `claude_agent_sdk`.
 
 [​](#getting-started) Getting started
 -------------------------------------
@@ -305,6 +319,7 @@ Skills support string substitution for dynamic values in the skill content:
 | `$ARGUMENTS[N]` | Access a specific argument by 0-based index, such as `$ARGUMENTS[0]` for the first argument. |
 | `$N` | Shorthand for `$ARGUMENTS[N]`, such as `$0` for the first argument or `$1` for the second. |
 | `${CLAUDE_SESSION_ID}` | The current session ID. Useful for logging, creating session-specific files, or correlating skill output with sessions. |
+| `${CLAUDE_SKILL_DIR}` | The directory containing the skill’s `SKILL.md` file. For plugin skills, this is the skill’s subdirectory within the plugin, not the plugin root. Use this in bash injection commands to reference scripts or files bundled with the skill, regardless of the current working directory. |
 
 **Example using substitutions:**
 
@@ -867,7 +882,7 @@ Was this page helpful?
 
 YesNo
 
-[Discover and install prebuilt plugins](/docs/en/discover-plugins)[Output styles](/docs/en/output-styles)
+[Discover and install prebuilt plugins](/docs/en/discover-plugins)[Run prompts on a schedule](/docs/en/scheduled-tasks)
 
 ⌘I
 
