@@ -160,9 +160,12 @@ def build_html(
         gdd_today_html = build_gdd_today_html(gdd_data)
         gdd_timeline_html = build_gdd_timeline_html(gdd_data)
 
+    build_version = local_dt.strftime("%Y%m%d%H%M")
+
     return render_template(
         "base.html.j2",
         updated=updated,
+        build_version=build_version,
         sunshine_today=sunshine_today_html,
         sunshine_16day=sunshine_16day_html,
         butterfly_sightings=butterfly_sightings_html,
