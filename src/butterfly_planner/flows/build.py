@@ -9,6 +9,7 @@ Run locally:
 
 from __future__ import annotations
 
+import json as json_mod
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,7 @@ from prefect import flow, task
 from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.renderers import render_template
+from butterfly_planner.renderers.daily_data import build_daily_data
 from butterfly_planner.renderers.gdd import build_gdd_timeline_html, build_gdd_today_html
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
 from butterfly_planner.renderers.sightings_table import build_butterfly_sightings_html
@@ -173,6 +175,42 @@ def build_html(
     )
 
 
+@task(name="build-daily-data")
+def build_daily_data_task(
+    weather_data: dict[str, Any] | None,
+    sunshine_data: dict[str, Any] | None,
+    inat_data: dict[str, Any] | None = None,
+    gdd_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build structured daily data JSON from all data sources."""
+    return build_daily_data(
+        weather_data=weather_data,
+        sunshine_data=sunshine_data,
+        inat_data=inat_data,
+        gdd_data=gdd_data,
+    )
+
+
+@task(name="write-daily-data")
+def write_daily_data(daily_data: dict[str, Any]) -> Path:
+    """Write daily data JSON to derived/daily/<date>.json and today.json."""
+    daily_dir = store.derived / "daily"
+    daily_dir.mkdir(parents=True, exist_ok=True)
+
+    date_str = daily_data.get("date", "unknown")
+    date_path = daily_dir / f"{date_str}.json"
+
+    with date_path.open("w") as f:
+        json_mod.dump(daily_data, f, indent=2)
+
+    # Also write as today.json for easy widget access
+    today_path = daily_dir / "today.json"
+    with today_path.open("w") as f:
+        json_mod.dump(daily_data, f, indent=2)
+
+    return date_path
+
+
 @task(name="write-site")
 def write_site(html: str) -> Path:
     """Write HTML to site directory."""
@@ -229,8 +267,13 @@ def build_all() -> dict[str, Any]:
     print("Writing site...")
     output_path = write_site(html)
 
+    print("Building daily data JSON...")
+    daily_data = build_daily_data_task(weather_envelope, sunshine, inat, gdd_data)
+    daily_path = write_daily_data(daily_data)
+    print(f"Daily data written: {daily_path}")
+
     print(f"Site built: {output_path}")
-    return {"pages": 1, "output": str(output_path)}
+    return {"pages": 1, "output": str(output_path), "daily_data": str(daily_path)}
 
 
 if __name__ == "__main__":
