@@ -18,24 +18,33 @@ Search...
 
 Navigation
 
-Build with Claude Code
+Tools and plugins
 
 Extend Claude with skills
 
 [Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Resources](/docs/en/legal-and-compliance)
 
-##### Build with Claude Code
+##### Agents
 
 * [Create custom subagents](/docs/en/sub-agents)
 * [Run agent teams](/docs/en/agent-teams)
-* [Create plugins](/docs/en/plugins)
-* [Discover and install prebuilt plugins](/docs/en/discover-plugins)
-* [Extend Claude with skills](/docs/en/skills)
-* [Run prompts on a schedule](/docs/en/scheduled-tasks)
-* [Output styles](/docs/en/output-styles)
-* [Automate with hooks](/docs/en/hooks-guide)
-* [Programmatic usage](/docs/en/headless)
+
+##### Tools and plugins
+
 * [Model Context Protocol (MCP)](/docs/en/mcp)
+* [Discover and install prebuilt plugins](/docs/en/discover-plugins)
+* [Create plugins](/docs/en/plugins)
+* [Extend Claude with skills](/docs/en/skills)
+
+##### Automation
+
+* [Automate with hooks](/docs/en/hooks-guide)
+* [Push external events to Claude](/docs/en/channels)
+* [Run prompts on a schedule](/docs/en/scheduled-tasks)
+* [Programmatic usage](/docs/en/headless)
+
+##### Troubleshooting
+
 * [Troubleshooting](/docs/en/troubleshooting)
 
 On this page
@@ -67,7 +76,7 @@ On this page
 * [Claude doesn’t see all my skills](#claude-doesn%E2%80%99t-see-all-my-skills)
 * [Related resources](#related-resources)
 
-Build with Claude Code
+Tools and plugins
 
 Extend Claude with skills
 =========================
@@ -307,6 +316,7 @@ All fields are optional. Only `description` is recommended so Claude knows when 
 | `user-invocable` | No | Set to `false` to hide from the `/` menu. Use for background knowledge users shouldn’t invoke directly. Default: `true`. |
 | `allowed-tools` | No | Tools Claude can use without asking permission when this skill is active. |
 | `model` | No | Model to use when this skill is active. |
+| `effort` | No | [Effort level](/docs/en/model-config#adjust-effort-level) when this skill is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `max` (Opus 4.6 only). |
 | `context` | No | Set to `fork` to run in a forked subagent context. |
 | `agent` | No | Which subagent type to use when `context: fork` is set. |
 | `hooks` | No | Hooks scoped to this skill’s lifecycle. See [Hooks in skills and agents](/docs/en/hooks#hooks-in-skills-and-agents) for configuration format. |
@@ -506,8 +516,8 @@ Preserve all existing behavior and tests.
 
 ### [​](#inject-dynamic-context) Inject dynamic context
 
-The `!`command“ syntax runs shell commands before the skill content is sent to Claude. The command output replaces the placeholder, so Claude receives actual data, not the command itself.
-This skill summarizes a pull request by fetching live PR data with the GitHub CLI. The `!`gh pr diff“ and other commands run first, and their output gets inserted into the prompt:
+The `` !`<command>` `` syntax runs shell commands before the skill content is sent to Claude. The command output replaces the placeholder, so Claude receives actual data, not the command itself.
+This skill summarizes a pull request by fetching live PR data with the GitHub CLI. The `` !`gh pr diff` `` and other commands run first, and their output gets inserted into the prompt:
 
 Report incorrect code
 
@@ -535,7 +545,7 @@ Summarize this pull request...
 
 When this skill runs:
 
-1. Each `!`command“ executes immediately (before Claude sees anything)
+1. Each `` !`<command>` `` executes immediately (before Claude sees anything)
 2. The output replaces the placeholder in the skill content
 3. Claude receives the fully-rendered prompt with actual PR data
 
@@ -681,7 +691,7 @@ Run the visualization script from your project root:
 
 ```bash
 python ~/.claude/skills/codebase-visualizer/scripts/visualize.py .
-```text
+```
 
 This creates `codebase-map.html` in the current directory and opens it in your default browser.
 
@@ -884,7 +894,7 @@ Was this page helpful?
 
 YesNo
 
-[Discover and install prebuilt plugins](/docs/en/discover-plugins)[Run prompts on a schedule](/docs/en/scheduled-tasks)
+[Create plugins](/docs/en/plugins)[Automate with hooks](/docs/en/hooks-guide)
 
 ⌘I
 
@@ -906,7 +916,7 @@ Learn
 
 Terms and policies
 
-[Privacy policy](https://www.anthropic.com/legal/privacy)[Disclosure policy](https://www.anthropic.com/responsible-disclosure-policy)[Usage policy](https://www.anthropic.com/legal/aup)[Commercial terms](https://www.anthropic.com/legal/commercial-terms)[Consumer terms](https://www.anthropic.com/legal/consumer-terms)
+[Privacy choices](#)[Privacy policy](https://www.anthropic.com/legal/privacy)[Disclosure policy](https://www.anthropic.com/responsible-disclosure-policy)[Usage policy](https://www.anthropic.com/legal/aup)[Commercial terms](https://www.anthropic.com/legal/commercial-terms)[Consumer terms](https://www.anthropic.com/legal/consumer-terms)
 
 Assistant
 
