@@ -73,7 +73,7 @@ On this page
 * [Troubleshooting](#troubleshooting)
 * [Skill not triggering](#skill-not-triggering)
 * [Skill triggers too often](#skill-triggers-too-often)
-* [Claude doesn’t see all my skills](#claude-doesn%E2%80%99t-see-all-my-skills)
+* [Skill descriptions are cut short](#skill-descriptions-are-cut-short)
 * [Related resources](#related-resources)
 
 Tools and plugins
@@ -103,7 +103,7 @@ You invoke bundled skills the same way as any other skill: type `/` followed by 
 | --- | --- |
 | `/batch <instruction>` | Orchestrate large-scale changes across a codebase in parallel. Researches the codebase, decomposes the work into 5 to 30 independent units, and presents a plan. Once approved, spawns one background agent per unit in an isolated [git worktree](/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees). Each agent implements its unit, runs tests, and opens a pull request. Requires a git repository. Example: `/batch migrate src/ from Solid to React` |
 | `/claude-api` | Load Claude API reference material for your project’s language (Python, TypeScript, Java, Go, Ruby, C#, PHP, or cURL) and Agent SDK reference for Python and TypeScript. Covers tool use, streaming, batches, structured outputs, and common pitfalls. Also activates automatically when your code imports `anthropic`, `@anthropic-ai/sdk`, or `claude_agent_sdk` |
-| `/debug [description]` | Troubleshoot your current Claude Code session by reading the session debug log. Optionally describe the issue to focus the analysis |
+| `/debug [description]` | Enable debug logging for the current session and troubleshoot issues by reading the session debug log. Debug logging is off by default unless you started with `claude --debug`, so running `/debug` mid-session starts capturing logs from that point forward. Optionally describe the issue to focus the analysis |
 | `/loop [interval] <prompt>` | Run a prompt repeatedly on an interval while the session stays open. Useful for polling a deployment, babysitting a PR, or periodically re-running another skill. Example: `/loop 5m check if the deploy finished`. See [Run prompts on a schedule](/docs/en/scheduled-tasks) |
 | `/simplify [focus]` | Review your recently changed files for code reuse, quality, and efficiency issues, then fix them. Spawns three review agents in parallel, aggregates their findings, and applies fixes. Pass text to focus on specific concerns: `/simplify focus on memory efficiency` |
 
@@ -120,12 +120,6 @@ Create the skill directory
 
 Create a directory for the skill in your personal skills folder. Personal skills are available across all your projects.
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 mkdir -p ~/.claude/skills/explain-code
 ```
@@ -135,12 +129,6 @@ mkdir -p ~/.claude/skills/explain-code
 Write SKILL.md
 
 Every skill needs a `SKILL.md` file with two parts: YAML frontmatter (between `---` markers) that tells Claude when to use the skill, and markdown content with instructions Claude follows when the skill is invoked. The `name` field becomes the `/slash-command`, and the `description` helps Claude decide when to load it automatically.Create `~/.claude/skills/explain-code/SKILL.md`:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -164,23 +152,11 @@ Test the skill
 
 You can test it two ways:**Let Claude invoke it automatically** by asking something that matches the description:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 How does this code work?
 ```
 
 **Or invoke it directly** with the skill name:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 /explain-code src/auth/login.ts
@@ -205,12 +181,6 @@ When skills share the same name across levels, higher-priority locations win: en
 
 When you work with files in subdirectories, Claude Code automatically discovers skills from nested `.claude/skills/` directories. For example, if you’re editing a file in `packages/frontend/`, Claude Code also looks for skills in `packages/frontend/.claude/skills/`. This supports monorepo setups where packages have their own skills.
 Each skill is a directory with `SKILL.md` as the entrypoint:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 my-skill/
@@ -242,12 +212,6 @@ Skills are configured through YAML frontmatter at the top of `SKILL.md` and the 
 Skill files can contain any instructions, but thinking about how you want to invoke them helps guide what to include:
 **Reference content** adds knowledge Claude applies to your current work. Conventions, patterns, style guides, domain knowledge. This content runs inline so Claude can use it alongside your conversation context.
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 ---
 name: api-conventions
@@ -261,12 +225,6 @@ When writing API endpoints:
 ```
 
 **Task content** gives Claude step-by-step instructions for a specific action, like deployments, commits, or code generation. These are often actions you want to invoke directly with `/skill-name` rather than letting Claude decide when to run them. Add `disable-model-invocation: true` to prevent Claude from triggering it automatically.
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -288,12 +246,6 @@ Your `SKILL.md` can contain anything, but thinking through how you want the skil
 
 Beyond the markdown content, you can configure skill behavior using YAML frontmatter fields between `---` markers at the top of your `SKILL.md` file:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 ---
 name: my-skill
@@ -310,7 +262,7 @@ All fields are optional. Only `description` is recommended so Claude knows when 
 | Field | Required | Description |
 | --- | --- | --- |
 | `name` | No | Display name for the skill. If omitted, uses the directory name. Lowercase letters, numbers, and hyphens only (max 64 characters). |
-| `description` | Recommended | What the skill does and when to use it. Claude uses this to decide when to apply the skill. If omitted, uses the first paragraph of markdown content. |
+| `description` | Recommended | What the skill does and when to use it. Claude uses this to decide when to apply the skill. If omitted, uses the first paragraph of markdown content. Front-load the key use case: descriptions longer than 250 characters are truncated in the skill listing to reduce context usage. |
 | `argument-hint` | No | Hint shown during autocomplete to indicate expected arguments. Example: `[issue-number]` or `[filename] [format]`. |
 | `disable-model-invocation` | No | Set to `true` to prevent Claude from automatically loading this skill. Use for workflows you want to trigger manually with `/name`. Default: `false`. |
 | `user-invocable` | No | Set to `false` to hide from the `/` menu. Use for background knowledge users shouldn’t invoke directly. Default: `true`. |
@@ -320,6 +272,8 @@ All fields are optional. Only `description` is recommended so Claude knows when 
 | `context` | No | Set to `fork` to run in a forked subagent context. |
 | `agent` | No | Which subagent type to use when `context: fork` is set. |
 | `hooks` | No | Hooks scoped to this skill’s lifecycle. See [Hooks in skills and agents](/docs/en/hooks#hooks-in-skills-and-agents) for configuration format. |
+| `paths` | No | Glob patterns that limit when this skill is activated. Accepts a comma-separated string or a YAML list. When set, Claude loads the skill automatically only when working with files matching the patterns. Uses the same format as [path-specific rules](/docs/en/memory#path-specific-rules). |
+| `shell` | No | Shell to use for `` !`command` `` blocks in this skill. Accepts `bash` (default) or `powershell`. Setting `powershell` runs inline shell commands via PowerShell on Windows. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`. |
 
 #### [​](#available-string-substitutions) Available string substitutions
 
@@ -334,12 +288,6 @@ Skills support string substitution for dynamic values in the skill content:
 | `${CLAUDE_SKILL_DIR}` | The directory containing the skill’s `SKILL.md` file. For plugin skills, this is the skill’s subdirectory within the plugin, not the plugin root. Use this in bash injection commands to reference scripts or files bundled with the skill, regardless of the current working directory. |
 
 **Example using substitutions:**
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -356,12 +304,6 @@ $ARGUMENTS
 
 Skills can include multiple files in their directory. This keeps `SKILL.md` focused on the essentials while letting Claude access detailed reference material only when needed. Large reference docs, API specifications, or example collections don’t need to load into context every time the skill runs.
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 my-skill/
 ├── SKILL.md (required - overview and navigation)
@@ -372,12 +314,6 @@ my-skill/
 ```
 
 Reference supporting files from `SKILL.md` so Claude knows what each file contains and when to load it:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ## Additional resources
@@ -396,12 +332,6 @@ By default, both you and Claude can invoke any skill. You can type `/skill-name`
 * **`user-invocable: false`**: Only Claude can invoke the skill. Use this for background knowledge that isn’t actionable as a command. A `legacy-system-context` skill explains how an old system works. Claude should know this when relevant, but `/legacy-system-context` isn’t a meaningful action for users to take.
 
 This example creates a deploy skill that only you can trigger. The `disable-model-invocation: true` field prevents Claude from running it automatically:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -432,12 +362,6 @@ In a regular session, skill descriptions are loaded into context so Claude knows
 
 Use the `allowed-tools` field to limit which tools Claude can use when a skill is active. This skill creates a read-only mode where Claude can explore files but not modify them:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 ---
 name: safe-reader
@@ -450,12 +374,6 @@ allowed-tools: Read, Grep, Glob
 
 Both you and Claude can pass arguments when invoking a skill. Arguments are available via the `$ARGUMENTS` placeholder.
 This skill fixes a GitHub issue by number. The `$ARGUMENTS` placeholder gets replaced with whatever follows the skill name:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -477,12 +395,6 @@ When you run `/fix-issue 123`, Claude receives “Fix GitHub issue 123 following
 If you invoke a skill with arguments but the skill doesn’t include `$ARGUMENTS`, Claude Code appends `ARGUMENTS: <your input>` to the end of the skill content so Claude still sees what you typed.
 To access individual arguments by position, use `$ARGUMENTS[N]` or the shorter `$N`:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 ---
 name: migrate-component
@@ -494,12 +406,6 @@ Preserve all existing behavior and tests.
 ```
 
 Running `/migrate-component SearchBar React Vue` replaces `$ARGUMENTS[0]` with `SearchBar`, `$ARGUMENTS[1]` with `React`, and `$ARGUMENTS[2]` with `Vue`. The same skill using the `$N` shorthand:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -518,12 +424,6 @@ Preserve all existing behavior and tests.
 
 The `` !`<command>` `` syntax runs shell commands before the skill content is sent to Claude. The command output replaces the placeholder, so Claude receives actual data, not the command itself.
 This skill summarizes a pull request by fetching live PR data with the GitHub CLI. The `` !`gh pr diff` `` and other commands run first, and their output gets inserted into the prompt:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -572,12 +472,6 @@ With `context: fork`, you write the task in your skill and pick an agent type to
 
 This skill runs research in a forked Explore agent. The skill content becomes the task, and the agent provides read-only tools optimized for codebase exploration:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 ---
 name: deep-research
@@ -608,24 +502,12 @@ By default, Claude can invoke any skill that doesn’t have `disable-model-invoc
 Three ways to control which skills Claude can invoke:
 **Disable all skills** by denying the Skill tool in `/permissions`:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 # Add to deny rules:
 Skill
 ```
 
 **Allow or deny specific skills** using [permission rules](/docs/en/permissions):
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 # Allow only specific skills
@@ -656,23 +538,11 @@ Skills can bundle and run scripts in any language, giving Claude capabilities be
 This example creates a codebase explorer: an interactive tree view where you can expand and collapse directories, see file sizes at a glance, and identify file types by color.
 Create the Skill directory:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 mkdir -p ~/.claude/skills/codebase-visualizer/scripts
 ```
 
 Create `~/.claude/skills/codebase-visualizer/SKILL.md`. The description tells Claude when to activate this Skill, and the instructions tell Claude to run the bundled script:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -710,12 +580,6 @@ Create `~/.claude/skills/codebase-visualizer/scripts/visualize.py`. This script 
 * A **collapsible tree** where you can expand and collapse directories, with color-coded file type indicators
 
 The script requires Python but uses only built-in libraries, so there are no packages to install:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 #!/usr/bin/env python3
@@ -875,10 +739,10 @@ If Claude uses your skill when you don’t want it:
 1. Make the description more specific
 2. Add `disable-model-invocation: true` if you only want manual invocation
 
-### [​](#claude-doesn’t-see-all-my-skills) Claude doesn’t see all my skills
+### [​](#skill-descriptions-are-cut-short) Skill descriptions are cut short
 
-Skill descriptions are loaded into context so Claude knows what’s available. If you have many skills, they may exceed the character budget. The budget scales dynamically at 2% of the context window, with a fallback of 16,000 characters. Run `/context` to check for a warning about excluded skills.
-To override the limit, set the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable.
+Skill descriptions are loaded into context so Claude knows what’s available. All skill names are always included, but if you have many skills, descriptions are shortened to fit the character budget, which can strip the keywords Claude needs to match your request. The budget scales dynamically at 1% of the context window, with a fallback of 8,000 characters.
+To raise the limit, set the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable. Or trim descriptions at the source: front-load the key use case, since each entry is capped at 250 characters regardless of budget.
 
 [​](#related-resources) Related resources
 -----------------------------------------

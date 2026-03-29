@@ -18,7 +18,7 @@ Search...
 
 Navigation
 
-Core concepts
+Use Claude Code
 
 Best Practices for Claude Code
 
@@ -34,14 +34,21 @@ Best Practices for Claude Code
 
 * [How Claude Code works](/docs/en/how-claude-code-works)
 * [Extend Claude Code](/docs/en/features-overview)
+* [Explore the .claude directory](/docs/en/claude-directory)
+* [Explore the context window](/docs/en/context-window)
+
+##### Use Claude Code
+
 * [Store instructions and memories](/docs/en/memory)
+* [Permission modes](/docs/en/permission-modes)
 * [Common workflows](/docs/en/common-workflows)
 * [Best practices](/docs/en/best-practices)
 
 ##### Platforms and integrations
 
+* [Overview](/docs/en/platforms)
 * [Remote Control](/docs/en/remote-control)
-* [Claude Code on the web](/docs/en/claude-code-on-the-web)
+* Claude Code on the web
 * Claude Code on desktop
 * [Chrome extension (beta)](/docs/en/chrome)
 * [Visual Studio Code](/docs/en/vs-code)
@@ -77,11 +84,12 @@ On this page
 * [Run non-interactive mode](#run-non-interactive-mode)
 * [Run multiple Claude sessions](#run-multiple-claude-sessions)
 * [Fan out across files](#fan-out-across-files)
+* [Run autonomously with auto mode](#run-autonomously-with-auto-mode)
 * [Avoid common failure patterns](#avoid-common-failure-patterns)
 * [Develop your intuition](#develop-your-intuition)
 * [Related resources](#related-resources)
 
-Core concepts
+Use Claude Code
 
 Best Practices for Claude Code
 ==============================
@@ -102,7 +110,7 @@ This guide covers patterns that have proven effective across Anthropic’s inter
 
 Most best practices are based on one constraint: Claude’s context window fills up fast, and performance degrades as it fills.
 Claude’s context window holds your entire conversation, including every message, every file Claude reads, and every command output. However, this can fill up fast. A single debugging session or codebase exploration might generate and consume tens of thousands of tokens.
-This matters since LLM performance degrades as context fills. When the context window is getting full, Claude may start “forgetting” earlier instructions or making more mistakes. The context window is the most important resource to manage. Track context usage continuously with a [custom status line](/docs/en/statusline), and see [Reduce token usage](/docs/en/costs#reduce-token-usage) for strategies on reducing token usage.
+This matters since LLM performance degrades as context fills. When the context window is getting full, Claude may start “forgetting” earlier instructions or making more mistakes. The context window is the most important resource to manage. To see how a session fills up in practice, [watch an interactive walkthrough](/docs/en/context-window) of what loads at startup and what each file read costs. Track context usage continuously with a [custom status line](/docs/en/statusline), and see [Reduce token usage](/docs/en/costs#reduce-token-usage) for strategies on reducing token usage.
 
 
 ---
@@ -117,7 +125,7 @@ Without clear success criteria, it might produce something that looks right but 
 
 | Strategy | Before | After |
 | --- | --- | --- |
-| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#b9cccadccbf9dcc1d8d4c9d5dc97dad6d4) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#5a2f293f281a74393537) is false. run the tests after implementing”* |
+| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#88fdfbedfac8edf0e9e5f8e4eda6ebe7e5) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#582d2b3d2a18763b3735) is false. run the tests after implementing”* |
 | **Verify UI changes visually** | *”make the dashboard look better"* | *"[paste screenshot] implement this design. take a screenshot of the result and compare it to the original. list differences and fix them”* |
 | **Address root causes, not symptoms** | *”the build is failing"* | *"the build fails with this error: [paste error]. fix it and verify the build succeeds. address the root cause, don’t suppress the error”* |
 
@@ -143,12 +151,6 @@ Enter Plan Mode. Claude reads files and answers questions without making changes
 
 claude (Plan Mode)
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 read /src/auth and understand how we handle sessions and login.
 also look at how we manage environment variables for secrets.
@@ -161,12 +163,6 @@ Plan
 Ask Claude to create a detailed implementation plan.
 
 claude (Plan Mode)
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 I want to add Google OAuth. What files need to change?
@@ -183,12 +179,6 @@ Switch back to Normal Mode and let Claude code, verifying against its plan.
 
 claude (Normal Mode)
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 implement the OAuth flow from your plan. write tests for the
 callback handler, run the test suite and fix any failures.
@@ -201,12 +191,6 @@ Commit
 Ask Claude to commit with a descriptive message and create a PR.
 
 claude (Normal Mode)
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 commit with a descriptive message and open a PR
@@ -261,12 +245,6 @@ There’s no required format for CLAUDE.md files, but keep it short and human-re
 
 CLAUDE.md
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 # Code style
 - Use ES modules (import/export) syntax, not CommonJS (require)
@@ -296,12 +274,6 @@ CLAUDE.md files can import additional files using `@path/to/import` syntax:
 
 CLAUDE.md
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 See @README.md for project overview and @package.json for available npm commands.
 
@@ -319,18 +291,15 @@ You can place CLAUDE.md files in several locations:
 
 ### [​](#configure-permissions) Configure permissions
 
-Use `/permissions` to allowlist safe commands or `/sandbox` for OS-level isolation. This reduces interruptions while keeping you in control.
+Use [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) to let a classifier handle approvals, `/permissions` to allowlist specific commands, or `/sandbox` for OS-level isolation. Each reduces interruptions while keeping you in control.
 
-By default, Claude Code requests permission for actions that might modify your system: file writes, Bash commands, MCP tools, etc. This is safe but tedious. After the tenth approval you’re not really reviewing anymore, you’re just clicking through. There are two ways to reduce these interruptions:
+By default, Claude Code requests permission for actions that might modify your system: file writes, Bash commands, MCP tools, etc. This is safe but tedious. After the tenth approval you’re not really reviewing anymore, you’re just clicking through. There are three ways to reduce these interruptions:
 
-* **Permission allowlists**: permit specific tools you know are safe (like `npm run lint` or `git commit`)
+* **Auto mode**: a separate classifier model reviews commands and blocks only what looks risky: scope escalation, unknown infrastructure, or hostile-content-driven actions. Best when you trust the general direction of a task but don’t want to click through every step
+* **Permission allowlists**: permit specific tools you know are safe, like `npm run lint` or `git commit`
 * **Sandboxing**: enable OS-level isolation that restricts filesystem and network access, allowing Claude to work more freely within defined boundaries
 
-Alternatively, use `--dangerously-skip-permissions` to bypass permission prompts for contained workflows like fixing lint errors or generating boilerplate. See [permission modes](/docs/en/permissions#permission-modes) for what is and isn’t skipped.
-
-Letting Claude run arbitrary commands can result in data loss, system corruption, or data exfiltration via prompt injection. Only use `--dangerously-skip-permissions` in a sandbox without internet access.
-
-Read more about [configuring permissions](/docs/en/permissions) and [enabling sandboxing](/docs/en/sandboxing).
+Read more about [permission modes](/docs/en/permission-modes), [permission rules](/docs/en/permissions), and [sandboxing](/docs/en/sandboxing).
 
 ### [​](#use-cli-tools) Use CLI tools
 
@@ -361,12 +330,6 @@ Create a skill by adding a directory with a `SKILL.md` to `.claude/skills/`:
 
 .claude/skills/api-conventions/SKILL.md
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 ---
 name: api-conventions
@@ -382,12 +345,6 @@ description: REST API design conventions for our services
 Skills can also define repeatable workflows you invoke directly:
 
 .claude/skills/fix-issue/SKILL.md
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -416,12 +373,6 @@ Define specialized assistants in `.claude/agents/` that Claude can delegate to f
 [Subagents](/docs/en/sub-agents) run in their own context with their own set of allowed tools. They’re useful for tasks that read many files or need specialized focus without cluttering your main conversation.
 
 .claude/agents/security-reviewer.md
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 ---
@@ -476,12 +427,6 @@ For larger features, have Claude interview you first. Start with a minimal promp
 
 Claude asks about things you might not have considered yet, including technical implementation, UI/UX, edge cases, and tradeoffs.
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 I want to build [brief description]. Interview me in detail using the AskUserQuestion tool.
 
@@ -533,12 +478,6 @@ Delegate research with `"use subagents to investigate X"`. They explore in a sep
 
 Since context is your fundamental constraint, subagents are one of the most powerful tools available. When Claude researches a codebase it reads lots of files, all of which consume your context. Subagents run in separate context windows and report back summaries:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 Use subagents to investigate how our authentication system handles token
 refresh, and whether we have any existing OAuth utilities I should reuse.
@@ -546,12 +485,6 @@ refresh, and whether we have any existing OAuth utilities I should reuse.
 
 The subagent explores the codebase, reads relevant files, and reports back with findings, all without cluttering your main conversation.
 You can also use subagents for verification after Claude implements something:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 use a subagent to review this code for edge cases
@@ -571,12 +504,6 @@ Checkpoints only track changes made *by Claude*, not external processes. This is
 Run `claude --continue` to pick up where you left off, or `--resume` to choose from recent sessions.
 
 Claude Code saves conversations locally. When a task spans multiple sessions, you don’t have to re-explain the context:
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 claude --continue    # Resume the most recent conversation
@@ -599,12 +526,6 @@ Everything so far assumes one human, one Claude, and one conversation. But Claud
 Use `claude -p "prompt"` in CI, pre-commit hooks, or scripts. Add `--output-format stream-json` for streaming JSON output.
 
 With `claude -p "your prompt"`, you can run Claude non-interactively, without a session. Non-interactive mode is how you integrate Claude into CI pipelines, pre-commit hooks, or any automated workflow. The output formats let you parse results programmatically: plain text, JSON, or streaming JSON.
-
-Report incorrect code
-
-Copy
-
-Ask AI
 
 ```
 # One-off queries
@@ -654,12 +575,6 @@ Have Claude list all files that need migrating (e.g., `list all 2,000 Python fil
 
 Write a script to loop through the list
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 for file in $(cat files.txt); do
   claude -p "Migrate $file from React to Vue. Return OK or FAIL." \
@@ -675,17 +590,21 @@ Refine your prompt based on what goes wrong with the first 2-3 files, then run o
 
 You can also integrate Claude into existing data/processing pipelines:
 
-Report incorrect code
-
-Copy
-
-Ask AI
-
 ```
 claude -p "<your prompt>" --output-format json | your_command
 ```
 
 Use `--verbose` for debugging during development, and turn it off in production.
+
+### [​](#run-autonomously-with-auto-mode) Run autonomously with auto mode
+
+For uninterrupted execution with background safety checks, use [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode). A classifier model reviews commands before they run, blocking scope escalation, unknown infrastructure, and hostile-content-driven actions while letting routine work proceed without prompts.
+
+```
+claude --permission-mode auto -p "fix all lint errors"
+```
+
+For non-interactive runs with the `-p` flag, auto mode aborts if the classifier repeatedly blocks actions, since there is no user to fall back to. See [when auto mode falls back](/docs/en/permission-modes#when-auto-mode-falls-back) for thresholds.
 
 
 ---
@@ -728,7 +647,7 @@ Was this page helpful?
 
 YesNo
 
-[Common workflows](/docs/en/common-workflows)[Remote Control](/docs/en/remote-control)
+[Common workflows](/docs/en/common-workflows)[Overview](/docs/en/platforms)
 
 ⌘I
 
