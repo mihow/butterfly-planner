@@ -22,7 +22,7 @@ Tools and plugins
 
 Extend Claude with skills
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Agents
 
@@ -198,7 +198,8 @@ Files in `.claude/commands/` still work and support the same [frontmatter](#fron
 
 #### [​](#skills-from-additional-directories) Skills from additional directories
 
-Skills defined in `.claude/skills/` within directories added via `--add-dir` are loaded automatically and picked up by live change detection, so you can edit them during a session without restarting.
+The `--add-dir` flag [grants file access](/docs/en/permissions#additional-directories-grant-file-access-not-configuration) rather than configuration discovery, but skills are an exception: `.claude/skills/` within an added directory is loaded automatically and picked up by live change detection, so you can edit those skills during a session without restarting.
+Other `.claude/` configuration such as subagents, commands, and output styles is not loaded from additional directories. See the [exceptions table](/docs/en/permissions#additional-directories-grant-file-access-not-configuration) for the complete list of what is and isn’t loaded, and the recommended ways to share configuration across projects.
 
 CLAUDE.md files from `--add-dir` directories are not loaded by default. To load them, set `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`. See [Load from additional directories](/docs/en/memory#load-from-additional-directories).
 
@@ -251,7 +252,7 @@ Beyond the markdown content, you can configure skill behavior using YAML frontma
 name: my-skill
 description: What this skill does
 disable-model-invocation: true
-allowed-tools: Read, Grep
+allowed-tools: Read Grep
 ---
 
 Your skill instructions here...
@@ -266,14 +267,14 @@ All fields are optional. Only `description` is recommended so Claude knows when 
 | `argument-hint` | No | Hint shown during autocomplete to indicate expected arguments. Example: `[issue-number]` or `[filename] [format]`. |
 | `disable-model-invocation` | No | Set to `true` to prevent Claude from automatically loading this skill. Use for workflows you want to trigger manually with `/name`. Default: `false`. |
 | `user-invocable` | No | Set to `false` to hide from the `/` menu. Use for background knowledge users shouldn’t invoke directly. Default: `true`. |
-| `allowed-tools` | No | Tools Claude can use without asking permission when this skill is active. |
+| `allowed-tools` | No | Tools Claude can use without asking permission when this skill is active. Accepts a space-separated string or a YAML list. |
 | `model` | No | Model to use when this skill is active. |
 | `effort` | No | [Effort level](/docs/en/model-config#adjust-effort-level) when this skill is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `max` (Opus 4.6 only). |
 | `context` | No | Set to `fork` to run in a forked subagent context. |
 | `agent` | No | Which subagent type to use when `context: fork` is set. |
 | `hooks` | No | Hooks scoped to this skill’s lifecycle. See [Hooks in skills and agents](/docs/en/hooks#hooks-in-skills-and-agents) for configuration format. |
 | `paths` | No | Glob patterns that limit when this skill is activated. Accepts a comma-separated string or a YAML list. When set, Claude loads the skill automatically only when working with files matching the patterns. Uses the same format as [path-specific rules](/docs/en/memory#path-specific-rules). |
-| `shell` | No | Shell to use for `` !`command` `` blocks in this skill. Accepts `bash` (default) or `powershell`. Setting `powershell` runs inline shell commands via PowerShell on Windows. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`. |
+| `shell` | No | Shell to use for `` !`command` `` and ```` ```! ```` blocks in this skill. Accepts `bash` (default) or `powershell`. Setting `powershell` runs inline shell commands via PowerShell on Windows. Requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`. |
 
 #### [​](#available-string-substitutions) Available string substitutions
 
@@ -366,7 +367,7 @@ Use the `allowed-tools` field to limit which tools Claude can use when a skill i
 ---
 name: safe-reader
 description: Read files without making changes
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read Grep Glob
 ---
 ```
 
@@ -450,6 +451,18 @@ When this skill runs:
 3. Claude receives the fully-rendered prompt with actual PR data
 
 This is preprocessing, not something Claude executes. Claude only sees the final result.
+For multi-line commands, use a fenced code block opened with ```` ```! ```` instead of the inline form:
+
+```
+## Environment
+```!
+node --version
+npm --version
+git status --short
+```
+```
+
+To disable this behavior for skills and custom commands from user, project, plugin, or [additional-directory](#skills-from-additional-directories) sources, set `"disableSkillShellExecution": true` in [settings](/docs/en/settings). Each command is replaced with `[shell command execution disabled by policy]` instead of being run. Bundled and managed skills are not affected. This setting is most useful in [managed settings](/docs/en/permissions#managed-settings), where users cannot override it.
 
 To enable [extended thinking](/docs/en/common-workflows#use-extended-thinking-thinking-mode) in a skill, include the word “ultrathink” anywhere in your skill content.
 

@@ -22,7 +22,7 @@ Use Claude Code
 
 Best Practices for Claude Code
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Getting started
 
@@ -51,6 +51,7 @@ Best Practices for Claude Code
 * Claude Code on the web
 * Claude Code on desktop
 * [Chrome extension (beta)](/docs/en/chrome)
+* [Computer use (preview)](/docs/en/computer-use)
 * [Visual Studio Code](/docs/en/vs-code)
 * [JetBrains IDEs](/docs/en/jetbrains)
 * Code review & CI/CD
@@ -125,7 +126,7 @@ Without clear success criteria, it might produce something that looks right but 
 
 | Strategy | Before | After |
 | --- | --- | --- |
-| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#88fdfbedfac8edf0e9e5f8e4eda6ebe7e5) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#582d2b3d2a18763b3735) is false. run the tests after implementing”* |
+| **Provide verification criteria** | *”implement a function that validates email addresses"* | *"write a validateEmail function. example test cases: [[email protected]](/cdn-cgi/l/email-protection#97e2e4f2e5d7f2eff6fae7fbf2b9f4f8fa) is true, invalid is false, [[email protected]](/cdn-cgi/l/email-protection#c3b6b0a6b183eda0acae) is false. run the tests after implementing”* |
 | **Verify UI changes visually** | *”make the dashboard look better"* | *"[paste screenshot] implement this design. take a screenshot of the result and compare it to the original. list differences and fix them”* |
 | **Address root causes, not symptoms** | *”the build is failing"* | *"the build fails with this error: [paste error]. fix it and verify the build succeeds. address the root cause, don’t suppress the error”* |
 
@@ -286,6 +287,7 @@ You can place CLAUDE.md files in several locations:
 
 * **Home folder (`~/.claude/CLAUDE.md`)**: applies to all Claude sessions
 * **Project root (`./CLAUDE.md`)**: check into git to share with your team
+* **Project root (`./CLAUDE.local.md`)**: personal project-specific notes; add this file to your `.gitignore` so it isn’t shared with your team
 * **Parent directories**: useful for monorepos where both `root/CLAUDE.md` and `root/foo/CLAUDE.md` are pulled in automatically
 * **Child directories**: Claude pulls in child CLAUDE.md files on demand when working with files in those directories
 
