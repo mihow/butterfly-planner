@@ -22,7 +22,7 @@ Use Claude Code
 
 How Claude remembers your project
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Getting started
 
@@ -61,6 +61,7 @@ On this page
 
 * [CLAUDE.md vs auto memory](#claude-md-vs-auto-memory)
 * [CLAUDE.md files](#claude-md-files)
+* [When to add to CLAUDE.md](#when-to-add-to-claude-md)
 * [Choose where to put CLAUDE.md files](#choose-where-to-put-claude-md-files)
 * [Set up a project CLAUDE.md](#set-up-a-project-claude-md)
 * [Write effective instructions](#write-effective-instructions)
@@ -132,6 +133,17 @@ Subagents can also maintain their own auto memory. See [subagent configuration](
 -------------------------------------
 
 CLAUDE.md files are markdown files that give Claude persistent instructions for a project, your personal workflow, or your entire organization. You write these files in plain text; Claude reads them at the start of every session.
+
+### [​](#when-to-add-to-claude-md) When to add to CLAUDE.md
+
+Treat CLAUDE.md as the place you write down what you’d otherwise re-explain. Add to it when:
+
+* Claude makes the same mistake a second time
+* A code review catches something Claude should have known about this codebase
+* You type the same correction or clarification into chat that you typed last session
+* A new teammate would need the same context to be productive
+
+Keep it to facts Claude should hold in every session: build commands, conventions, project layout, “always do X” rules. If an entry is a multi-step procedure or only matters for one part of the codebase, move it to a [skill](/docs/en/skills) or a [path-scoped rule](#organize-rules-with-claude/rules/) instead. The [extension overview](/docs/en/features-overview#build-your-setup-over-time) covers when to use each mechanism.
 
 ### [​](#choose-where-to-put-claude-md-files) Choose where to put CLAUDE.md files
 
@@ -449,7 +461,8 @@ Files over 200 lines consume more context and may reduce adherence. Move detaile
 
 ### [​](#instructions-seem-lost-after-/compact) Instructions seem lost after `/compact`
 
-CLAUDE.md fully survives compaction. After `/compact`, Claude re-reads your CLAUDE.md from disk and re-injects it fresh into the session. If an instruction disappeared after compaction, it was given only in conversation, not written to CLAUDE.md. Add it to CLAUDE.md to make it persist across sessions.
+Project-root CLAUDE.md survives compaction: after `/compact`, Claude re-reads it from disk and re-injects it into the session. Nested CLAUDE.md files in subdirectories are not re-injected automatically; they reload the next time Claude reads a file in that subdirectory.
+If an instruction disappeared after compaction, it was either given only in conversation or lives in a nested CLAUDE.md that hasn’t reloaded yet. Add conversation-only instructions to CLAUDE.md to make them persist. See [What survives compaction](/docs/en/context-window#what-survives-compaction) for the full breakdown.
 See [Write effective instructions](#write-effective-instructions) for guidance on size, structure, and specificity.
 
 [​](#related-resources) Related resources
@@ -457,7 +470,6 @@ See [Write effective instructions](#write-effective-instructions) for guidance o
 
 * [Skills](/docs/en/skills): package repeatable workflows that load on demand
 * [Settings](/docs/en/settings): configure Claude Code behavior with settings files
-* [Manage sessions](/docs/en/sessions): manage context, resume conversations, and run parallel sessions
 * [Subagent memory](/docs/en/sub-agents#enable-persistent-memory): let subagents maintain their own auto memory
 
 Was this page helpful?

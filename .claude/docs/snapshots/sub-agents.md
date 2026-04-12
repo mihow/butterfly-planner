@@ -22,7 +22,7 @@ Agents
 
 Create custom subagents
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Agents
 
@@ -99,7 +99,8 @@ Create and use specialized AI subagents in Claude Code for task-specific workflo
 
 Copy page
 
-Subagents are specialized AI assistants that handle specific types of tasks. Each subagent runs in its own context window with a custom system prompt, specific tool access, and independent permissions. When Claude encounters a task that matches a subagent’s description, it delegates to that subagent, which works independently and returns results. To see the context savings in practice, the [context window visualization](/docs/en/context-window) walks through a session where a subagent handles research in its own separate window.
+Subagents are specialized AI assistants that handle specific types of tasks. Use one when a side task would flood your main conversation with search results, logs, or file contents you won’t reference again: the subagent does that work in its own context and returns only the summary. Define a custom subagent when you keep spawning the same kind of worker with the same instructions.
+Each subagent runs in its own context window with a custom system prompt, specific tool access, and independent permissions. When Claude encounters a task that matches a subagent’s description, it delegates to that subagent, which works independently and returns results. To see the context savings in practice, the [context window visualization](/docs/en/context-window) walks through a session where a subagent handles research in its own separate window.
 
 If you need multiple agents working in parallel and communicating with each other, see [agent teams](/docs/en/agent-teams) instead. Subagents work within a single session; agent teams coordinate across separate sessions.
 
@@ -177,7 +178,7 @@ In Claude Code, run:
 
 Choose a location
 
-Select **Create new agent**, then choose **Personal**. This saves the subagent to `~/.claude/agents/` so it’s available in all your projects.
+Switch to the **Library** tab, select **Create new agent**, then choose **Personal**. This saves the subagent to `~/.claude/agents/` so it’s available in all your projects.
 
 3
 
@@ -237,7 +238,7 @@ You can also create subagents manually as Markdown files, define them via CLI fl
 
 ### [​](#use-the-/agents-command) Use the /agents command
 
-The `/agents` command provides an interactive interface for managing subagents. Run `/agents` to:
+The `/agents` command opens a tabbed interface for managing subagents. The **Running** tab shows live subagents and lets you open or stop them. The **Library** tab lets you:
 
 * View all available subagents (built-in, user, project, and plugin)
 * Create new subagents with guided setup or Claude generation
@@ -307,6 +308,7 @@ specific, actionable feedback on quality, security, and best practices.
 ```
 
 The frontmatter defines the subagent’s metadata and configuration. The body becomes the system prompt that guides the subagent’s behavior. Subagents receive only this system prompt (plus basic environment details like working directory), not the full Claude Code system prompt.
+A subagent starts in the main conversation’s current working directory. Within a subagent, `cd` commands do not persist between Bash or PowerShell tool calls and do not affect the main conversation’s working directory. To give the subagent an isolated copy of the repository instead, set [`isolation: worktree`](#supported-frontmatter-fields).
 
 #### [​](#supported-frontmatter-fields) Supported frontmatter fields
 
@@ -431,7 +433,7 @@ The `permissionMode` field controls how the subagent handles permission prompts.
 | Mode | Behavior |
 | --- | --- |
 | `default` | Standard permission checking with prompts |
-| `acceptEdits` | Auto-accept file edits except in protected directories |
+| `acceptEdits` | Auto-accept file edits and common filesystem commands for paths in the working directory or `additionalDirectories` |
 | `auto` | [Auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode): a background classifier reviews commands and protected-directory writes |
 | `dontAsk` | Auto-deny permission prompts (explicitly allowed tools still work) |
 | `bypassPermissions` | Skip permission prompts |
