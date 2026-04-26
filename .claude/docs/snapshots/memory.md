@@ -22,7 +22,7 @@ Use Claude Code
 
 How Claude remembers your project
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Getting started
 
@@ -168,7 +168,7 @@ Run `/init` to generate a starting CLAUDE.md automatically. Claude analyzes your
 ### [​](#write-effective-instructions) Write effective instructions
 
 CLAUDE.md files are loaded into the context window at the start of every session, consuming tokens alongside your conversation. The [context window visualization](/docs/en/context-window) shows where CLAUDE.md loads relative to the rest of the startup context. Because they’re context rather than enforced configuration, how you write instructions affects how reliably Claude follows them. Specific, concise, well-structured instructions work best.
-**Size**: target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence. If your instructions are growing large, split them using [imports](#import-additional-files) or [`.claude/rules/`](#organize-rules-with-claude/rules/) files.
+**Size**: target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence. If your instructions are growing large, use [path-scoped rules](#path-specific-rules) so instructions load only when Claude works with matching files. You can also split content into [imports](#import-additional-files) for organization, though imported files still load and enter the context window at launch.
 **Structure**: use markdown headers and bullets to group related instructions. Claude scans structure the same way readers do: organized sections are easier to follow than dense paragraphs.
 **Specificity**: write instructions that are concrete enough to verify. For example:
 
@@ -457,7 +457,7 @@ Run `/memory` and select the auto memory folder to browse what Claude has saved.
 
 ### [​](#my-claude-md-is-too-large) My CLAUDE.md is too large
 
-Files over 200 lines consume more context and may reduce adherence. Move detailed content into separate files referenced with `@path` imports (see [Import additional files](#import-additional-files)), or split your instructions across `.claude/rules/` files.
+Files over 200 lines consume more context and may reduce adherence. Use [path-scoped rules](#path-specific-rules) to load instructions only when Claude works with matching files, or trim content that isn’t needed in every session. Splitting into [`@path` imports](#import-additional-files) helps organization but does not reduce context, since imported files load at launch.
 
 ### [​](#instructions-seem-lost-after-/compact) Instructions seem lost after `/compact`
 
@@ -468,6 +468,7 @@ See [Write effective instructions](#write-effective-instructions) for guidance o
 [​](#related-resources) Related resources
 -----------------------------------------
 
+* [Debug your configuration](/docs/en/debug-your-config): diagnose why CLAUDE.md or settings aren’t taking effect
 * [Skills](/docs/en/skills): package repeatable workflows that load on demand
 * [Settings](/docs/en/settings): configure Claude Code behavior with settings files
 * [Subagent memory](/docs/en/sub-agents#enable-persistent-memory): let subagents maintain their own auto memory
