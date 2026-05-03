@@ -22,7 +22,7 @@ Agents
 
 Create custom subagents
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Deployment](/docs/en/third-party-integrations)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Agents
 
@@ -42,10 +42,12 @@ Create custom subagents
 * [Push external events to Claude](/docs/en/channels)
 * [Run prompts on a schedule](/docs/en/scheduled-tasks)
 * [Programmatic usage](/docs/en/headless)
+* [Launch sessions from links](/docs/en/deep-links)
 
 ##### Troubleshooting
 
-* [Troubleshooting](/docs/en/troubleshooting)
+* [Troubleshoot installation and login](/docs/en/troubleshoot-install)
+* [Troubleshoot performance and stability](/docs/en/troubleshooting)
 * [Debug configuration](/docs/en/debug-your-config)
 * [Error reference](/docs/en/errors)
 
@@ -105,6 +107,13 @@ Create and use specialized AI subagents in Claude Code for task-specific workflo
 
 Copy page
 
+> Documentation Index
+> -------------------
+>
+> Fetch the complete documentation index at: <https://code.claude.com/docs/llms.txt>
+>
+> Use this file to discover all available pages before exploring further.
+
 Subagents are specialized AI assistants that handle specific types of tasks. Use one when a side task would flood your main conversation with search results, logs, or file contents you won’t reference again: the subagent does that work in its own context and returns only the summary. Define a custom subagent when you keep spawning the same kind of worker with the same instructions.
 Each subagent runs in its own context window with a custom system prompt, specific tool access, and independent permissions. When Claude encounters a task that matches a subagent’s description, it delegates to that subagent, which works independently and returns results. To see the context savings in practice, the [context window visualization](/docs/en/context-window) walks through a session where a subagent handles research in its own separate window.
 
@@ -146,7 +155,7 @@ A fast, read-only agent optimized for searching and analyzing codebases.
 
 Claude delegates to Explore when it needs to search or understand a codebase without making changes. This keeps exploration results out of your main conversation context.When invoking Explore, Claude specifies a thoroughness level: **quick** for targeted lookups, **medium** for balanced exploration, or **very thorough** for comprehensive analysis.
 
-A research agent used during [plan mode](/docs/en/common-workflows#use-plan-mode-for-safe-code-analysis) to gather context before presenting a plan.
+A research agent used during [plan mode](/docs/en/permission-modes#analyze-before-you-edit-with-plan-mode) to gather context before presenting a plan.
 
 * **Model**: Inherits from main conversation
 * **Tools**: Read-only tools (denied access to Write and Edit tools)
@@ -334,15 +343,15 @@ The following fields can be used in the YAML frontmatter. Only `name` and `descr
 | `tools` | No | [Tools](#available-tools) the subagent can use. Inherits all tools if omitted |
 | `disallowedTools` | No | Tools to deny, removed from inherited or specified list |
 | `model` | No | [Model](#choose-a-model) to use: `sonnet`, `opus`, `haiku`, a full model ID (for example, `claude-opus-4-7`), or `inherit`. Defaults to `inherit` |
-| `permissionMode` | No | [Permission mode](#permission-modes): `default`, `acceptEdits`, `auto`, `dontAsk`, `bypassPermissions`, or `plan` |
+| `permissionMode` | No | [Permission mode](#permission-modes): `default`, `acceptEdits`, `auto`, `dontAsk`, `bypassPermissions`, or `plan`. Ignored for [plugin subagents](#choose-the-subagent-scope) |
 | `maxTurns` | No | Maximum number of agentic turns before the subagent stops |
 | `skills` | No | [Skills](/docs/en/skills) to load into the subagent’s context at startup. The full skill content is injected, not just made available for invocation. Subagents don’t inherit skills from the parent conversation |
-| `mcpServers` | No | [MCP servers](/docs/en/mcp) available to this subagent. Each entry is either a server name referencing an already-configured server (e.g., `"slack"`) or an inline definition with the server name as key and a full [MCP server config](/docs/en/mcp#installing-mcp-servers) as value |
-| `hooks` | No | [Lifecycle hooks](#define-hooks-for-subagents) scoped to this subagent |
+| `mcpServers` | No | [MCP servers](/docs/en/mcp) available to this subagent. Each entry is either a server name referencing an already-configured server (e.g., `"slack"`) or an inline definition with the server name as key and a full [MCP server config](/docs/en/mcp#installing-mcp-servers) as value. Ignored for [plugin subagents](#choose-the-subagent-scope) |
+| `hooks` | No | [Lifecycle hooks](#define-hooks-for-subagents) scoped to this subagent. Ignored for [plugin subagents](#choose-the-subagent-scope) |
 | `memory` | No | [Persistent memory scope](#enable-persistent-memory): `user`, `project`, or `local`. Enables cross-session learning |
 | `background` | No | Set to `true` to always run this subagent as a [background task](#run-subagents-in-foreground-or-background). Default: `false` |
 | `effort` | No | Effort level when this subagent is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `xhigh`, `max`; available levels depend on the model |
-| `isolation` | No | Set to `worktree` to run the subagent in a temporary [git worktree](/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees), giving it an isolated copy of the repository. The worktree is automatically cleaned up if the subagent makes no changes |
+| `isolation` | No | Set to `worktree` to run the subagent in a temporary [git worktree](/docs/en/worktrees), giving it an isolated copy of the repository. The worktree is automatically cleaned up if the subagent makes no changes |
 | `color` | No | Display color for the subagent in the task list and transcript. Accepts `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink`, or `cyan` |
 | `initialPrompt` | No | Auto-submitted as the first user turn when this agent runs as the main session agent (via `--agent` or the `agent` setting). [Commands](/docs/en/commands) and [skills](/docs/en/skills) are processed. Prepended to any user-provided prompt |
 
@@ -460,7 +469,7 @@ The `permissionMode` field controls how the subagent handles permission prompts.
 | `bypassPermissions` | Skip permission prompts |
 | `plan` | Plan mode (read-only exploration) |
 
-Use `bypassPermissions` with caution. It skips permission prompts, allowing the subagent to execute operations without approval. Writes to `.git`, `.claude`, `.vscode`, `.idea`, and `.husky` directories still prompt for confirmation, except for `.claude/commands`, `.claude/agents`, and `.claude/skills`. See [permission modes](/docs/en/permission-modes#skip-all-checks-with-bypasspermissions-mode) for details.
+Use `bypassPermissions` with caution. It skips all permission prompts, allowing the subagent to execute operations without approval, including writes to `.git`, `.claude`, `.vscode`, `.idea`, and `.husky`. Root and home directory removals such as `rm -rf /` still prompt as a circuit breaker. See [permission modes](/docs/en/permission-modes#skip-all-checks-with-bypasspermissions-mode) for details.
 
 If the parent uses `bypassPermissions` or `acceptEdits`, this takes precedence and cannot be overridden. If the parent uses [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), the subagent inherits auto mode and any `permissionMode` in its frontmatter is ignored: the classifier evaluates the subagent’s tool calls with the same block and allow rules as the parent session.
 
@@ -828,7 +837,7 @@ The `preTokens` value shows how many tokens were used before compaction occurred
 [​](#fork-the-current-conversation) Fork the current conversation
 -----------------------------------------------------------------
 
-Forked subagents are experimental and require Claude Code v2.1.117 or later. Behavior and configuration may change in future releases. Enable them by setting the [`CLAUDE_CODE_FORK_SUBAGENT`](/docs/en/env-vars) environment variable to `1`.
+Forked subagents are experimental and require Claude Code v2.1.117 or later. Behavior and configuration may change in future releases. Enable them by setting the [`CLAUDE_CODE_FORK_SUBAGENT`](/docs/en/env-vars) environment variable to `1`. The variable is honored in interactive mode and via the SDK or `claude -p`.
 
 A fork is a subagent that inherits the entire conversation so far instead of starting fresh. This drops the input isolation that subagents otherwise provide: a fork sees the same system prompt, tools, model, and message history as the main session, so you can hand it a side task without re-explaining the situation. The fork’s own tool calls still stay out of your conversation and only its final result comes back, so your main context window stays clean. Use a fork when a named subagent would need too much background to be useful, or when you want to try several approaches in parallel from the same starting point.
 Enabling fork mode changes Claude Code in three ways:
@@ -873,7 +882,7 @@ When Claude spawns a fork through the Agent tool, it can pass `isolation: "workt
 
 ### [​](#limitations) Limitations
 
-Fork mode works only in interactive sessions. It is disabled in [non-interactive mode](/docs/en/headless), which includes the Agent SDK. A fork cannot spawn further forks.
+Setting `CLAUDE_CODE_FORK_SUBAGENT=1` enables fork mode in interactive sessions, [non-interactive mode](/docs/en/headless), and the Agent SDK. A fork cannot spawn further forks.
 
 [​](#example-subagents) Example subagents
 -----------------------------------------
