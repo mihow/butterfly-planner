@@ -74,6 +74,7 @@ On this page
 * [Run skills in a subagent](#run-skills-in-a-subagent)
 * [Example: Research skill using Explore agent](#example-research-skill-using-explore-agent)
 * [Restrict Claude’s skill access](#restrict-claude%E2%80%99s-skill-access)
+* [Override skill visibility from settings](#override-skill-visibility-from-settings)
 * [Share skills](#share-skills)
 * [Generate visual output](#generate-visual-output)
 * [Troubleshooting](#troubleshooting)
@@ -252,6 +253,7 @@ Deploy the application:
 ```
 
 Your `SKILL.md` can contain anything, but thinking through how you want the skill invoked (by you, by Claude, or both) and where you want it to run (inline or in a subagent) helps guide what to include. For complex skills, you can also [add supporting files](#add-supporting-files) to keep the main skill focused.
+Keep the body itself concise. Once a skill loads, its content [stays in context across turns](#skill-content-lifecycle), so every line is a recurring token cost. State what to do rather than narrating how or why, and apply the same conciseness test you would for [CLAUDE.md content](/docs/en/best-practices#write-an-effective-claude-md).
 
 ### [​](#frontmatter-reference) Frontmatter reference
 
@@ -562,6 +564,31 @@ Permission syntax: `Skill(name)` for exact match, `Skill(name *)` for prefix mat
 
 The `user-invocable` field only controls menu visibility, not Skill tool access. Use `disable-model-invocation: true` to block programmatic invocation.
 
+### [​](#override-skill-visibility-from-settings) Override skill visibility from settings
+
+The `skillOverrides` setting controls skill visibility from your [settings](/docs/en/settings) instead of the skill’s own frontmatter. Use it for skills whose SKILL.md you don’t want to edit, such as ones checked into a shared project repo or provided by an MCP server. The `/skills` menu writes it for you: highlight a skill and press `Space` to cycle states, then `Enter` to save to `.claude/settings.local.json`.
+Each key is a skill name and each value is one of four states:
+
+| Value | Listed to Claude | In `/` menu |
+| --- | --- | --- |
+| `"on"` | Name and description | Yes |
+| `"name-only"` | Name only | Yes |
+| `"user-invocable-only"` | Hidden | Yes |
+| `"off"` | Hidden | Hidden |
+
+A skill that is absent from `skillOverrides` is treated as `"on"`. The example below collapses one skill to its name and turns another off entirely:
+
+```
+{
+  "skillOverrides": {
+    "legacy-context": "name-only",
+    "deploy": "off"
+  }
+}
+```
+
+Plugin skills are not affected by `skillOverrides`. Manage those through `/plugin` instead.
+
 [​](#share-skills) Share skills
 -------------------------------
 
@@ -783,7 +810,7 @@ If Claude uses your skill when you don’t want it:
 ### [​](#skill-descriptions-are-cut-short) Skill descriptions are cut short
 
 Skill descriptions are loaded into context so Claude knows what’s available. All skill names are always included, but if you have many skills, descriptions are shortened to fit the character budget, which can strip the keywords Claude needs to match your request. The budget scales dynamically at 1% of the context window, with a fallback of 8,000 characters.
-To raise the limit, set the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable. Or trim the `description` and `when_to_use` text at the source: put the key use case first, since each entry’s combined text is capped at 1,536 characters regardless of budget.
+To raise the limit, set the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable. To free budget for other skills, set low-priority entries to `"name-only"` in [`skillOverrides`](#override-skill-visibility-from-settings) so they list without a description. You can also trim the `description` and `when_to_use` text at the source: put the key use case first, since each entry’s combined text is capped at 1,536 characters regardless of budget.
 
 [​](#related-resources) Related resources
 -----------------------------------------

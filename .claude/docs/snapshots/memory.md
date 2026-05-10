@@ -224,6 +224,15 @@ CLAUDE.md
 Use plan mode for changes under `src/billing/`.
 ```
 
+A symlink also works if you don’t need to add Claude-specific content:
+
+```
+ln -s AGENTS.md CLAUDE.md
+```
+
+On Windows, creating a symlink requires Administrator privileges or Developer Mode, so use the `@AGENTS.md` import instead.
+Running [`/init`](/docs/en/commands) in a repo that already has an `AGENTS.md` reads it and incorporates the relevant parts into the generated `CLAUDE.md`. It also reads other tool configs like `.cursorrules` and `.windsurfrules`.
+
 ### [​](#how-claude-md-files-load) How CLAUDE.md files load
 
 Claude Code reads CLAUDE.md files by walking up the directory tree from your current working directory, checking each directory along the way for `CLAUDE.md` and `CLAUDE.local.md` files. This means if you run Claude Code in `foo/bar/`, it loads instructions from `foo/bar/CLAUDE.md`, `foo/CLAUDE.md`, and any `CLAUDE.local.md` files alongside them.
@@ -400,7 +409,7 @@ To disable auto memory via environment variable, set `CLAUDE_CODE_DISABLE_AUTO_M
 ### [​](#storage-location) Storage location
 
 Each project gets its own memory directory at `~/.claude/projects/<project>/memory/`. The `<project>` path is derived from the git repository, so all worktrees and subdirectories within the same repo share one auto memory directory. Outside a git repo, the project root is used instead.
-To store auto memory in a different location, set `autoMemoryDirectory` in your user or local settings:
+To store auto memory in a different location, set `autoMemoryDirectory` in your user settings at `~/.claude/settings.json`:
 
 ```
 {
@@ -408,7 +417,7 @@ To store auto memory in a different location, set `autoMemoryDirectory` in your 
 }
 ```
 
-This setting is accepted from policy, local, and user settings. It is not accepted from project settings (`.claude/settings.json`) to prevent a shared project from redirecting auto memory writes to sensitive locations.
+The value must be an absolute path or start with `~/`. This setting is accepted from policy and user settings, and from the `--settings` flag. It is not accepted from project or local settings, since both files live inside the project directory and a cloned repository could supply either to redirect auto memory writes to sensitive locations.
 The directory contains a `MEMORY.md` entrypoint and optional topic files:
 
 ```
@@ -454,6 +463,7 @@ To debug:
 * Make instructions more specific. “Use 2-space indentation” works better than “format code nicely.”
 * Look for conflicting instructions across CLAUDE.md files. If two files give different guidance for the same behavior, Claude may pick one arbitrarily.
 
+If the instruction is something that must run at a specific point, such as before every commit or after each file edit, write it as a [hook](/docs/en/hooks-guide) instead. Hooks execute as shell commands at fixed lifecycle events and apply regardless of what Claude decides to do.
 For instructions you want at the system prompt level, use [`--append-system-prompt`](/docs/en/cli-reference#system-prompt-flags). This must be passed every invocation, so it’s better suited to scripts and automation than interactive use.
 
 Use the [`InstructionsLoaded` hook](/docs/en/hooks#instructionsloaded) to log exactly which instruction files are loaded, when they load, and why. This is useful for debugging path-specific rules or lazy-loaded files in subdirectories.

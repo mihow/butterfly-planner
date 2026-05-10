@@ -176,7 +176,7 @@ Claude Code includes additional helper agents for specific tasks. These are typi
 | Agent | Model | When Claude uses it |
 | --- | --- | --- |
 | statusline-setup | Sonnet | When you run `/statusline` to configure your status line |
-| Claude Code Guide | Haiku | When you ask questions about Claude Code features |
+| claude-code-guide | Haiku | When you ask questions about Claude Code features |
 
 Beyond these built-in subagents, you can create your own with custom prompts, tool restrictions, permission modes, hooks, and skills. The following sections show how to get started and customize subagents.
 
@@ -288,6 +288,9 @@ Project subagents are discovered by walking up from the current working director
 **User subagents** (`~/.claude/agents/`) are personal subagents available in all your projects.
 **CLI-defined subagents** are passed as JSON when launching Claude Code. They exist only for that session and aren’t saved to disk, making them useful for quick testing or automation scripts. You can define multiple subagents in a single `--agents` call:
 
+* macOS, Linux, WSL
+* Windows PowerShell
+
 ```
 claude --agents '{
   "code-reviewer": {
@@ -303,6 +306,23 @@ claude --agents '{
 }'
 ```
 
+```
+claude --agents @'
+{
+  "code-reviewer": {
+    "description": "Expert code reviewer. Use proactively after code changes.",
+    "prompt": "You are a senior code reviewer. Focus on code quality, security, and best practices.",
+    "tools": ["Read", "Grep", "Glob", "Bash"],
+    "model": "sonnet"
+  },
+  "debugger": {
+    "description": "Debugging specialist for errors and test failures.",
+    "prompt": "You are an expert debugger. Analyze errors, identify root causes, and provide fixes."
+  }
+}
+'@
+```
+
 The `--agents` flag accepts JSON with the same [frontmatter](#supported-frontmatter-fields) fields as file-based subagents: `description`, `prompt`, `tools`, `disallowedTools`, `model`, `permissionMode`, `mcpServers`, `hooks`, `maxTurns`, `skills`, `initialPrompt`, `memory`, `effort`, `background`, `isolation`, and `color`. Use `prompt` for the system prompt, equivalent to the markdown body in file-based subagents.
 **Managed subagents** are deployed by organization administrators. Place markdown files in `.claude/agents/` inside the [managed settings directory](/docs/en/settings#settings-files), using the same frontmatter format as project and user subagents. Managed definitions take precedence over project and user subagents with the same name.
 **Plugin subagents** come from [plugins](/docs/en/plugins) you’ve installed. They appear in `/agents` alongside your custom subagents. See the [plugin components reference](/docs/en/plugins-reference#agents) for details on creating plugin subagents.
@@ -315,7 +335,7 @@ Subagent definitions from any of these scopes are also available to [agent teams
 
 Subagent files use YAML frontmatter for configuration, followed by the system prompt in Markdown:
 
-Subagents are loaded at session start. If you create a subagent by manually adding a file, restart your session or use `/agents` to load it immediately.
+Subagents are loaded at session start. If you add or edit a subagent file directly on disk, restart your session to load it. Subagents created through the `/agents` interface take effect immediately without a restart.
 
 ```
 ---
@@ -340,12 +360,12 @@ The following fields can be used in the YAML frontmatter. Only `name` and `descr
 | --- | --- | --- |
 | `name` | Yes | Unique identifier using lowercase letters and hyphens |
 | `description` | Yes | When Claude should delegate to this subagent |
-| `tools` | No | [Tools](#available-tools) the subagent can use. Inherits all tools if omitted |
+| `tools` | No | [Tools](#available-tools) the subagent can use. Inherits all tools if omitted. To preload Skills into context, use the `skills` field rather than listing `Skill` here |
 | `disallowedTools` | No | Tools to deny, removed from inherited or specified list |
 | `model` | No | [Model](#choose-a-model) to use: `sonnet`, `opus`, `haiku`, a full model ID (for example, `claude-opus-4-7`), or `inherit`. Defaults to `inherit` |
 | `permissionMode` | No | [Permission mode](#permission-modes): `default`, `acceptEdits`, `auto`, `dontAsk`, `bypassPermissions`, or `plan`. Ignored for [plugin subagents](#choose-the-subagent-scope) |
 | `maxTurns` | No | Maximum number of agentic turns before the subagent stops |
-| `skills` | No | [Skills](/docs/en/skills) to load into the subagent’s context at startup. The full skill content is injected, not just made available for invocation. Subagents don’t inherit skills from the parent conversation |
+| `skills` | No | [Skills](/docs/en/skills) to preload into the subagent’s context at startup. The full skill content is injected, not just the description. Subagents can still invoke unlisted project, user, and plugin skills through the Skill tool |
 | `mcpServers` | No | [MCP servers](/docs/en/mcp) available to this subagent. Each entry is either a server name referencing an already-configured server (e.g., `"slack"`) or an inline definition with the server name as key and a full [MCP server config](/docs/en/mcp#installing-mcp-servers) as value. Ignored for [plugin subagents](#choose-the-subagent-scope) |
 | `hooks` | No | [Lifecycle hooks](#define-hooks-for-subagents) scoped to this subagent. Ignored for [plugin subagents](#choose-the-subagent-scope) |
 | `memory` | No | [Persistent memory scope](#enable-persistent-memory): `user`, `project`, or `local`. Enables cross-session learning |
@@ -489,7 +509,7 @@ skills:
 Implement API endpoints. Follow the conventions and patterns from the preloaded skills.
 ```
 
-The full content of each skill is injected into the subagent’s context, not just made available for invocation. Subagents don’t inherit skills from the parent conversation; you must list them explicitly.
+The full content of each listed skill is injected into the subagent’s context at startup. This field controls which skills are preloaded, not which skills the subagent can access: without it, the subagent can still discover and invoke project, user, and plugin skills through the Skill tool during execution. To prevent a subagent from invoking skills entirely, omit `Skill` from the [`tools`](#available-tools) list or add it to `disallowedTools`.
 You cannot preload skills that set [`disable-model-invocation: true`](/docs/en/skills#control-who-invokes-a-skill), since preloading draws from the same set of skills Claude can invoke. If a listed skill is missing or disabled, Claude Code skips it and logs a warning to the debug log.
 
 This is the inverse of [running a skill in a subagent](/docs/en/skills#run-skills-in-a-subagent). With `skills` in a subagent, the subagent controls the system prompt and loads skill content. With `context: fork` in a skill, the skill content is injected into the agent you specify. Both use the same underlying system.
@@ -574,7 +594,7 @@ fi
 exit 0
 ```
 
-See [Hook input](/docs/en/hooks#pretooluse-input) for the complete input schema and [exit codes](/docs/en/hooks#exit-code-output) for how exit codes affect behavior.
+See [Hook input](/docs/en/hooks#pretooluse-input) for the complete input schema and [exit codes](/docs/en/hooks#exit-code-output) for how exit codes affect behavior. On Windows, write hook scripts in PowerShell and add `shell: powershell` to the hook entry as shown in [running hooks in PowerShell](/docs/en/hooks#windows-powershell-tool).
 
 #### [​](#disable-specific-subagents) Disable specific subagents
 
@@ -1060,12 +1080,13 @@ fi
 exit 0
 ```
 
-Make the script executable:
+On macOS and Linux, make the script executable:
 
 ```
 chmod +x ./scripts/validate-readonly-query.sh
 ```
 
+On Windows, write the validation script in PowerShell and add `shell: powershell` to the hook entry. See [running hooks in PowerShell](/docs/en/hooks#windows-powershell-tool).
 The hook receives JSON via stdin with the Bash command in `tool_input.command`. Exit code 2 blocks the operation and feeds the error message back to Claude. See [Hooks](/docs/en/hooks#exit-code-output) for details on exit codes and [Hook input](/docs/en/hooks#pretooluse-input) for the complete input schema.
 
 [​](#next-steps) Next steps
