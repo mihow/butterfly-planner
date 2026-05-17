@@ -954,3 +954,50 @@ class TestBuildAllFlow:
         assert "16-Day Sunshine Forecast" in html_content
         assert "Butterfly Sightings" in html_content
         assert "Painted Lady" in html_content
+
+
+# =============================================================================
+# Tests for #33 — fetched_at empty-string runtime bug
+# =============================================================================
+
+
+class TestBuildHtmlFetchedAtFallback:
+    """build_html must not crash when fetched_at is empty or missing.
+
+    Calls build_html.fn() directly to bypass the Prefect task runner,
+    which requires a live Prefect server in this environment.
+    """
+
+    def test_build_html_empty_fetched_at_does_not_raise(self) -> None:
+        """build_html with fetched_at='' should not raise ValueError."""
+        weather_data = {
+            "fetched_at": "",  # triggers datetime.fromisoformat("") → ValueError
+            "data": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "temperature_2m_max": [15.0],
+                    "temperature_2m_min": [5.0],
+                    "precipitation_sum": [0],
+                    "weather_code": [0],
+                }
+            },
+        }
+        # Call .fn() to bypass the Prefect task runner (no server needed)
+        result = build.build_html.fn(weather_data, None)
+        assert "<!DOCTYPE html>" in result
+
+    def test_build_html_missing_fetched_at_does_not_raise(self) -> None:
+        """build_html with no fetched_at key should not raise KeyError/ValueError."""
+        weather_data = {
+            "data": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "temperature_2m_max": [15.0],
+                    "temperature_2m_min": [5.0],
+                    "precipitation_sum": [0],
+                    "weather_code": [0],
+                }
+            }
+        }
+        result = build.build_html.fn(weather_data, None)
+        assert "<!DOCTYPE html>" in result
