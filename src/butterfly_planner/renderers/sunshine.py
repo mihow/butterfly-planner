@@ -185,7 +185,7 @@ def build_sunshine_16day_html(
             bar = f'<div class="sunshine-bar" style="width: {bar_width}px;"></div>'
 
         w = weather_by_date.get(date_str)
-        if w and w["high_c"] is not None:
+        if w and w["high_c"] is not None and w["low_c"] is not None:
             temp_cell = (
                 f'<span class="temp-high">{w["high_c"]:.0f}\u00b0C</span> / '
                 f'<span class="temp-low">{w["low_c"]:.0f}\u00b0C</span>'
