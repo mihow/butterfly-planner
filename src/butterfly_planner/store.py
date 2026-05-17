@@ -84,7 +84,7 @@ class DataStore:
         if valid_until is not None:
             meta["valid_until"] = valid_until.isoformat()
         if params:
-            meta.update(params)
+            meta["params"] = dict(params)
 
         envelope = {"meta": meta, "data": data}
         with full.open("w") as f:
@@ -110,7 +110,7 @@ class DataStore:
             src: Source file to copy into the store.
             source: Data source identifier.
             valid_until: Expiry timestamp.
-            **params: Extra metadata fields.
+            **params: Extra metadata fields stored under ``meta["params"]``.
 
         Returns:
             Absolute path of the stored file.
@@ -126,7 +126,7 @@ class DataStore:
         if valid_until is not None:
             meta["valid_until"] = valid_until.isoformat()
         if params:
-            meta.update(params)
+            meta["params"] = dict(params)
 
         meta_path = full.with_suffix(full.suffix + ".meta.json")
         with meta_path.open("w") as f:
