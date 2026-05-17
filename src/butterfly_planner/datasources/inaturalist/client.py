@@ -100,25 +100,50 @@ def get_observations_paginated(
     params: dict[str, Any],
     *,
     max_pages: int = 5,
+    newest_first: bool = False,
 ) -> list[dict[str, Any]]:
     """
-    Fetch observations with automatic pagination via ``id_above``.
+    Fetch observations with automatic pagination.
 
-    Uses the recommended ``id_above`` + ``order_by=id`` + ``order=asc``
-    strategy to page through results without hitting the 10k ceiling.
+    Default (``newest_first=False``): uses ``id_above`` + ``order=asc``
+    strategy to page oldest-first without hitting the 10k ceiling.
+
+    When ``newest_first=True``: uses ``id_below`` + ``order=desc`` so the
+    first pages contain the most recent observations.  Use this for sightings
+    queries where recency matters more than completeness.
 
     Returns a flat list of observation dicts (``results`` concatenated).
     """
+    if newest_first:
+        page_params = {
+            **params,
+            "order_by": "id",
+            "order": "desc",
+            "per_page": MAX_PER_PAGE,
+        }
+        all_results: list[dict[str, Any]] = []
+        for _ in range(max_pages):
+            data = get_observations(page_params)
+            results: list[dict[str, Any]] = data.get("results", [])
+            if not results:
+                break
+            all_results.extend(results)
+            # Advance cursor using the smallest (oldest) id seen — page backward in id space
+            min_id = results[-1]["id"]
+            page_params["id_below"] = min_id
+        return all_results
+
+    # Default: oldest-first via id_above
     page_params = {
         **params,
         "order_by": "id",
         "order": "asc",
         "per_page": MAX_PER_PAGE,
     }
-    all_results: list[dict[str, Any]] = []
+    all_results = []
     for _ in range(max_pages):
         data = get_observations(page_params)
-        results: list[dict[str, Any]] = data.get("results", [])
+        results = data.get("results", [])
         if not results:
             break
         all_results.extend(results)
