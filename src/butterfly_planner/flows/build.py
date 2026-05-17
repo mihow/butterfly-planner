@@ -28,7 +28,7 @@ from butterfly_planner.renderers.sunshine import (
     build_sunshine_16day_html,
     build_sunshine_today_html,
 )
-from butterfly_planner.serialization.daily_data import build_daily_data
+from butterfly_planner.serialization.daily_data import DailyData, build_daily_data
 from butterfly_planner.store import DataStore
 
 # Store and output paths
@@ -216,6 +216,24 @@ def write_daily_data(daily_data: dict[str, Any]) -> Path:
     return date_path
 
 
+@task(name="write-daily-schema")
+def write_daily_schema() -> Path:
+    """Export the DailyData JSON Schema as a build artifact.
+
+    Written next to today.json (data/derived/daily/) so a consumer can
+    fetch the contract alongside the data. This is the #66 deliverable:
+    a published JSON Schema, not just an in-test assertion.
+    """
+    daily_dir = store.derived / "daily"
+    daily_dir.mkdir(parents=True, exist_ok=True)
+
+    schema_path = daily_dir / "daily-data.schema.json"
+    with schema_path.open("w") as f:
+        json_mod.dump(DailyData.model_json_schema(), f, indent=2)
+
+    return schema_path
+
+
 @task(name="write-site")
 def write_site(html: str) -> Path:
     """Write HTML to site directory."""
@@ -277,8 +295,17 @@ def build_all() -> dict[str, Any]:
     daily_path = write_daily_data(daily_data)
     print(f"Daily data written: {daily_path}")
 
+    print("Exporting daily-data JSON Schema...")
+    schema_path = write_daily_schema()
+    print(f"Daily data schema written: {schema_path}")
+
     print(f"Site built: {output_path}")
-    return {"pages": 1, "output": str(output_path), "daily_data": str(daily_path)}
+    return {
+        "pages": 1,
+        "output": str(output_path),
+        "daily_data": str(daily_path),
+        "daily_schema": str(schema_path),
+    }
 
 
 if __name__ == "__main__":
