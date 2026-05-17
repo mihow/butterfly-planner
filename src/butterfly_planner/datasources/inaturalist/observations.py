@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from butterfly_planner.datasources.inaturalist import client
@@ -116,9 +116,13 @@ def fetch_observations_for_month(
 
     month_str = ",".join(str(m) for m in month) if isinstance(month, list) else str(month)
 
-    # Date floor: only include observations from the last RECENT_YEARS years.
+    # Date floor: only include observations from roughly the last RECENT_YEARS
+    # years. This is an approximate floor (365-day years, ignores leap days),
+    # which is fine since it only gates a coarse recency window. Using a
+    # timedelta avoids the ValueError that date(year - N, 2, 29) raises when
+    # the target year is not a leap year.
     today = date.today()
-    d1 = date(today.year - RECENT_YEARS, today.month, today.day).isoformat()
+    d1 = (today - timedelta(days=365 * RECENT_YEARS)).isoformat()
 
     params: dict[str, Any] = {
         "taxon_id": client.BUTTERFLIES,

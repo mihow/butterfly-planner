@@ -776,6 +776,26 @@ class TestFetchObservationsRecentYears:
             "fetch_observations_for_month must pass newest_first=True to the paginator"
         )
 
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
+    @patch("butterfly_planner.datasources.inaturalist.observations.date")
+    def test_d1_leap_day_does_not_raise(self, mock_date: object, mock_paginated: object) -> None:
+        """Feb 29 today must not raise (date(year-N, 2, 29) is invalid off leap years).
+
+        2024 is a leap year; 2024 - 10 = 2014 is not. The naive
+        date(today.year - RECENT_YEARS, 2, 29) would raise ValueError.
+        """
+        leap_day = date(2024, 2, 29)
+        mock_date.today.return_value = leap_day  # type: ignore[union-attr]
+        mock_paginated.return_value = []  # type: ignore[union-attr]
+
+        # Must not raise ValueError
+        inaturalist.fetch_observations_for_month(month=6)
+
+        call_args = mock_paginated.call_args[0][0]  # type: ignore[union-attr]
+        d1 = date.fromisoformat(call_args["d1"])
+        # ~10 years before 2024-02-29 lands in early 2014
+        assert d1.year == 2024 - RECENT_YEARS
+
 
 class TestYearRangeIncludesCurrentYear:
     """year_range() reflects current year when recent data is present."""
