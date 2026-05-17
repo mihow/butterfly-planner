@@ -2,8 +2,6 @@
 
 [Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/c5r9_6tjPMzFdDDT/logo/light.svg?fit=max&auto=format&n=c5r9_6tjPMzFdDDT&q=85&s=78fd01ff4f4340295a4f66e2ea54903c)![dark logo](https://mintcdn.com/claude-code/c5r9_6tjPMzFdDDT/logo/dark.svg?fit=max&auto=format&n=c5r9_6tjPMzFdDDT&q=85&s=1298a0c3b3a1da603b190d0de0e31712)](/docs/en/overview)
 
-![US](https://d3gk2c5xim1je2.cloudfront.net/flags/US.svg)
-
 English
 
 Search...
@@ -22,7 +20,7 @@ Use Claude Code
 
 How Claude remembers your project
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/agents)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
 ##### Getting started
 
@@ -129,7 +127,7 @@ Claude Code has two complementary memory systems. Both are loaded at the start o
 | --- | --- | --- |
 | **Who writes it** | You | Claude |
 | **What it contains** | Instructions and rules | Learnings and patterns |
-| **Scope** | Project, user, or org | Per working tree |
+| **Scope** | Project, user, or org | Per repository, shared across worktrees |
 | **Loaded into** | Every session | Every session (first 200 lines or 25KB) |
 | **Use for** | Coding standards, workflows, project architecture | Build commands, debugging insights, preferences Claude discovers |
 
@@ -154,13 +152,13 @@ Keep it to facts Claude should hold in every session: build commands, convention
 
 ### [​](#choose-where-to-put-claude-md-files) Choose where to put CLAUDE.md files
 
-CLAUDE.md files can live in several locations, each with a different scope. More specific locations take precedence over broader ones.
+CLAUDE.md files can live in several locations, each with a different scope. The table below lists them in load order, from broadest scope to most specific, so a project instruction appears in context after a user instruction.
 
 | Scope | Location | Purpose | Use case examples | Shared with |
 | --- | --- | --- | --- | --- |
 | **Managed policy** | • macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md` • Linux and WSL: `/etc/claude-code/CLAUDE.md` • Windows: `C:\Program Files\ClaudeCode\CLAUDE.md` | Organization-wide instructions managed by IT/DevOps | Company coding standards, security policies, compliance requirements | All users in organization |
-| **Project instructions** | `./CLAUDE.md` or `./.claude/CLAUDE.md` | Team-shared instructions for the project | Project architecture, coding standards, common workflows | Team members via source control |
 | **User instructions** | `~/.claude/CLAUDE.md` | Personal preferences for all projects | Code styling preferences, personal tooling shortcuts | Just you (all projects) |
+| **Project instructions** | `./CLAUDE.md` or `./.claude/CLAUDE.md` | Team-shared instructions for the project | Project architecture, coding standards, common workflows | Team members via source control |
 | **Local instructions** | `./CLAUDE.local.md` | Personal project-specific preferences; add to `.gitignore` | Your sandbox URLs, preferred test data | Just you (current project) |
 
 CLAUDE.md and CLAUDE.local.md files in the directory hierarchy above the working directory are loaded in full at launch. Files in subdirectories load on demand when Claude reads files in those directories. See [How CLAUDE.md files load](#how-claude-md-files-load) for the full resolution order.
@@ -355,6 +353,18 @@ Create the file at the managed policy location
 Deploy with your configuration management system
 
 Use MDM, Group Policy, Ansible, or similar tools to distribute the file across developer machines. See [managed settings](/docs/en/permissions#managed-settings) for other organization-wide configuration options.
+
+The `claudeMd` key lets you put managed CLAUDE.md content directly inside `managed-settings.json` instead of deploying a separate file.
+**Scope**: every Claude Code session on the machine, in every repository. For repository-specific guidance, commit a project CLAUDE.md instead.
+**Precedence**: same as a managed CLAUDE.md file. Loads before user and project CLAUDE.md.
+**Where it’s honored**: managed and policy settings only. Setting `claudeMd` in user, project, or local settings has no effect.
+The example below adds behavioral instructions directly in a managed settings file:
+
+```
+{
+  "claudeMd": "Always run `make lint` before committing.\nNever push directly to main."
+}
+```
 
 A managed CLAUDE.md and [managed settings](/docs/en/settings#settings-files) serve different purposes. Use settings for technical enforcement and CLAUDE.md for behavioral guidance:
 

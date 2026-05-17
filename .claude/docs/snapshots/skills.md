@@ -2,8 +2,6 @@
 
 [Claude Code Docs home page![light logo](https://mintcdn.com/claude-code/c5r9_6tjPMzFdDDT/logo/light.svg?fit=max&auto=format&n=c5r9_6tjPMzFdDDT&q=85&s=78fd01ff4f4340295a4f66e2ea54903c)![dark logo](https://mintcdn.com/claude-code/c5r9_6tjPMzFdDDT/logo/dark.svg?fit=max&auto=format&n=c5r9_6tjPMzFdDDT&q=85&s=1298a0c3b3a1da603b190d0de0e31712)](/docs/en/overview)
 
-![US](https://d3gk2c5xim1je2.cloudfront.net/flags/US.svg)
-
 English
 
 Search...
@@ -22,12 +20,15 @@ Tools and plugins
 
 Extend Claude with skills
 
-[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/sub-agents)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
+[Getting started](/docs/en/overview)[Build with Claude Code](/docs/en/agents)[Administration](/docs/en/admin-setup)[Configuration](/docs/en/settings)[Reference](/docs/en/cli-reference)[Agent SDK](/docs/en/agent-sdk/overview)[What's New](/docs/en/whats-new)[Resources](/docs/en/legal-and-compliance)
 
-##### Agents
+##### Agents and parallel work
 
+* [Overview](/docs/en/agents)
 * [Create custom subagents](/docs/en/sub-agents)
+* [Agent view](/docs/en/agent-view)
 * [Run agent teams](/docs/en/agent-teams)
+* [Isolate sessions with worktrees](/docs/en/worktrees)
 
 ##### Tools and plugins
 
@@ -41,6 +42,7 @@ Extend Claude with skills
 * [Automate with hooks](/docs/en/hooks-guide)
 * [Push external events to Claude](/docs/en/channels)
 * [Run prompts on a schedule](/docs/en/scheduled-tasks)
+* [Goals](/docs/en/goal)
 * [Programmatic usage](/docs/en/headless)
 * [Launch sessions from links](/docs/en/deep-links)
 
@@ -58,7 +60,7 @@ On this page
 * [Create your first skill](#create-your-first-skill)
 * [Where skills live](#where-skills-live)
 * [Live change detection](#live-change-detection)
-* [Automatic discovery from nested directories](#automatic-discovery-from-nested-directories)
+* [Automatic discovery from parent and nested directories](#automatic-discovery-from-parent-and-nested-directories)
 * [Skills from additional directories](#skills-from-additional-directories)
 * [Configure skills](#configure-skills)
 * [Types of skill content](#types-of-skill-content)
@@ -188,9 +190,9 @@ When skills share the same name across levels, enterprise overrides personal, an
 
 Claude Code watches skill directories for file changes. Adding, editing, or removing a skill under `~/.claude/skills/`, the project `.claude/skills/`, or a `.claude/skills/` inside an `--add-dir` directory takes effect within the current session without restarting. Creating a top-level skills directory that did not exist when the session started requires restarting Claude Code so the new directory can be watched.
 
-#### [​](#automatic-discovery-from-nested-directories) Automatic discovery from nested directories
+#### [​](#automatic-discovery-from-parent-and-nested-directories) Automatic discovery from parent and nested directories
 
-When you work with files in subdirectories, Claude Code automatically discovers skills from nested `.claude/skills/` directories. For example, if you’re editing a file in `packages/frontend/`, Claude Code also looks for skills in `packages/frontend/.claude/skills/`. This supports monorepo setups where packages have their own skills.
+Project skills load from `.claude/skills/` in your starting directory and in every parent directory up to the repository root, so starting Claude in a subdirectory still picks up skills defined at the root. When you work with files in subdirectories below your starting directory, Claude Code also discovers skills from nested `.claude/skills/` directories on demand. For example, if you’re editing a file in `packages/frontend/`, Claude Code also looks for skills in `packages/frontend/.claude/skills/`. This supports monorepo setups where packages have their own skills.
 Each skill is a directory with `SKILL.md` as the entrypoint:
 
 ```
@@ -479,6 +481,7 @@ When this skill runs:
 3. Claude receives the fully-rendered prompt with actual PR data
 
 This is preprocessing, not something Claude executes. Claude only sees the final result.
+Substitution runs once over the original file. Command output is inserted as plain text and is not re-scanned for further `` !`<command>` `` placeholders, so a command cannot emit a placeholder for a later pass to expand.
 For multi-line commands, use a fenced code block opened with ```` ```! ```` instead of the inline form:
 
 ```
@@ -809,8 +812,8 @@ If Claude uses your skill when you don’t want it:
 
 ### [​](#skill-descriptions-are-cut-short) Skill descriptions are cut short
 
-Skill descriptions are loaded into context so Claude knows what’s available. All skill names are always included, but if you have many skills, descriptions are shortened to fit the character budget, which can strip the keywords Claude needs to match your request. The budget scales dynamically at 1% of the context window, with a fallback of 8,000 characters.
-To raise the limit, set the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable. To free budget for other skills, set low-priority entries to `"name-only"` in [`skillOverrides`](#override-skill-visibility-from-settings) so they list without a description. You can also trim the `description` and `when_to_use` text at the source: put the key use case first, since each entry’s combined text is capped at 1,536 characters regardless of budget.
+Skill descriptions are loaded into context so Claude knows what’s available. All skill names are always included, but if you have many skills, descriptions are shortened to fit the character budget, which can strip the keywords Claude needs to match your request. The budget scales at 1% of the model’s context window. When it overflows, descriptions for the skills you invoke least are dropped first, so the skills you actually use keep their full text. Run `/doctor` to see whether the budget is overflowing and which skills are affected.
+To raise the budget, set the [`skillListingBudgetFraction`](/docs/en/settings#available-settings) setting (e.g. `0.02` = 2%) or the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable to a fixed character count. To free budget for other skills, set low-priority entries to `"name-only"` in [`skillOverrides`](#override-skill-visibility-from-settings) so they list without a description. You can also trim the `description` and `when_to_use` text at the source: put the key use case first, since each entry’s combined text is capped at 1,536 characters regardless of budget. The cap is configurable with [`maxSkillDescriptionChars`](/docs/en/settings#available-settings).
 
 [​](#related-resources) Related resources
 -----------------------------------------
