@@ -514,6 +514,134 @@ class TestRendering:
         kwargs = mock_render.call_args[1]
         assert kwargs["current_gdd"] == "0"
 
+    def _make_gdd_data_with_comparison(
+        self,
+        current_accumulated: float,
+        previous_accumulated: float,
+        current_year: int = 2026,
+        previous_year: int = 2025,
+    ) -> dict:
+        """Build minimal GDD data structure for slider direction tests.
+
+        Uses May 17 as the reference date (DOY 137) so that the previous year's
+        same-DOY entry is found correctly by build_gdd_today_html's lookup loop.
+        """
+        # Use May 17 as a stable reference date that matches today's DOY (137)
+        curr_date = f"{current_year}-05-17"
+        prev_date = f"{previous_year}-05-17"
+        return {
+            "fetched_at": f"{current_year}-05-17T10:00:00",
+            "source": "test",
+            "data": {
+                "location": {"lat": 45.5, "lon": -122.6},
+                "base_temp_f": 50.0,
+                "upper_cutoff_f": 86.0,
+                "current_year": {
+                    "year": current_year,
+                    "total_gdd": current_accumulated,
+                    "daily": [
+                        {
+                            "date": curr_date,
+                            "tmax": 68.0,
+                            "tmin": 50.0,
+                            "gdd": 9.0,
+                            "accumulated": current_accumulated,
+                        }
+                    ],
+                },
+                "previous_year": {
+                    "year": previous_year,
+                    "total_gdd": 1200.0,
+                    "daily": [
+                        {
+                            "date": prev_date,
+                            "tmax": 65.0,
+                            "tmin": 48.0,
+                            "gdd": 6.5,
+                            "accumulated": previous_accumulated,
+                        },
+                        {
+                            "date": f"{previous_year}-12-31",
+                            "tmax": 42.0,
+                            "tmin": 30.0,
+                            "gdd": 0.0,
+                            "accumulated": 1200.0,
+                        },
+                    ],
+                },
+            },
+        }
+
+    def test_slider_ahead_season_marker_on_early_left_side(self, mock_render):
+        """When the season is ahead (ratio > 1.05), status_pct should be < 50 (early/left)."""
+        # current=62 GDD, previous=40 GDD → ratio ≈ 1.55 → clearly ahead
+        data = self._make_gdd_data_with_comparison(
+            current_accumulated=62.0, previous_accumulated=40.0
+        )
+        build_gdd_today_html(data)
+        kwargs = mock_render.call_args[1]
+        status_pct = float(kwargs["status_pct"])
+        assert "ahead" in kwargs["status_text"].lower(), (
+            "Expected 'ahead' in status text for early season"
+        )
+        assert status_pct < 50, (
+            f"Ahead season should place marker on early/left side (pct < 50), got {status_pct}"
+        )
+
+    def test_slider_behind_season_marker_on_late_right_side(self, mock_render):
+        """When the season is behind (ratio < 0.95), status_pct should be > 50 (late/right)."""
+        # current=30 GDD, previous=60 GDD → ratio = 0.5 → clearly behind
+        data = self._make_gdd_data_with_comparison(
+            current_accumulated=30.0, previous_accumulated=60.0
+        )
+        build_gdd_today_html(data)
+        kwargs = mock_render.call_args[1]
+        status_pct = float(kwargs["status_pct"])
+        assert "behind" in kwargs["status_text"].lower(), (
+            "Expected 'behind' in status text for late season"
+        )
+        assert status_pct > 50, (
+            f"Behind season should place marker on late/right side (pct > 50), got {status_pct}"
+        )
+
+    def test_slider_on_track_season_marker_centered(self, mock_render):
+        """When on-track (ratio ≈ 1.0), status_pct should be 50 (centered)."""
+        # current=50 GDD, previous=50 GDD → ratio = 1.0 → on track
+        data = self._make_gdd_data_with_comparison(
+            current_accumulated=50.0, previous_accumulated=50.0
+        )
+        build_gdd_today_html(data)
+        kwargs = mock_render.call_args[1]
+        status_pct = float(kwargs["status_pct"])
+        assert "tracking" in kwargs["status_text"].lower(), (
+            "Expected 'tracking' in status text for on-track season"
+        )
+        assert status_pct == 50, f"On-track season should center marker at 50, got {status_pct}"
+
+    def test_slider_ahead_pct_clamped_to_minimum(self, mock_render):
+        """An extremely early season should not push pct below the minimum clamp (15)."""
+        # current=200 GDD, previous=10 GDD → ratio = 20 → extreme ahead
+        data = self._make_gdd_data_with_comparison(
+            current_accumulated=200.0, previous_accumulated=10.0
+        )
+        build_gdd_today_html(data)
+        kwargs = mock_render.call_args[1]
+        status_pct = float(kwargs["status_pct"])
+        assert status_pct >= 15, f"Ahead pct should clamp to at least 15, got {status_pct}"
+        assert status_pct < 50, f"Extreme ahead should still be on early side, got {status_pct}"
+
+    def test_slider_behind_pct_clamped_to_maximum(self, mock_render):
+        """An extremely late season should not push pct above the maximum clamp (85)."""
+        # current=5 GDD, previous=200 GDD → ratio ≈ 0.025 → extreme behind
+        data = self._make_gdd_data_with_comparison(
+            current_accumulated=5.0, previous_accumulated=200.0
+        )
+        build_gdd_today_html(data)
+        kwargs = mock_render.call_args[1]
+        status_pct = float(kwargs["status_pct"])
+        assert status_pct <= 85, f"Behind pct should clamp to at most 85, got {status_pct}"
+        assert status_pct > 50, f"Extreme behind should still be on late side, got {status_pct}"
+
 
 # =============================================================================
 # Utility
