@@ -651,10 +651,10 @@ class TestBuildButterflyMapHtml:
         # Weather should appear for the matching date
         assert "Clear" in map_script
         assert "22/10" in map_script
-        # Object-based markers (not array)
-        assert "lat:" in map_script
-        assert "name:" in map_script
-        assert "weather:" in map_script
+        # Object-based markers serialized as JSON (quoted property names)
+        assert '"lat":' in map_script
+        assert '"name":' in map_script
+        assert '"weather":' in map_script
 
     def test_map_without_historical_weather(self) -> None:
         """Test map works without historical weather data."""
@@ -742,6 +742,24 @@ class TestHeatMapIntensitySlider:
         _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
 
         assert "heat.setOptions" in map_script
+
+    def test_slider_direction_ascending(self) -> None:
+        """Slider must ascend left-to-right (min < max, label increases with position).
+
+        The slider value is an inverse scale 1-20; higher slider position means
+        lower heat ``max`` which produces higher displayed intensity %. The label
+        must read 100% at the left end (slider=1) and up to 2000% at the right
+        (slider=20).
+        """
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+
+        # Slider input range must be inverted scale (1 to 20), not raw heat max
+        assert 'min="1"' in map_script
+        assert 'max="20"' in map_script
+        # On change, val = 1/slider so heat max stays in [0.05, 1.0]
+        assert "1 / parseFloat(this.value)" in map_script
+        # Label reflects slider * 100 (ascending: 100% at slider=1, 2000% at slider=20)
+        assert "parseFloat(this.value) * 100" in map_script
 
 
 class TestBuildButterflySightingsHtml:
