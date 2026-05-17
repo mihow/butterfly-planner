@@ -20,7 +20,6 @@ from prefect import flow, task
 from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.renderers import render_template
-from butterfly_planner.renderers.daily_data import build_daily_data
 from butterfly_planner.renderers.gdd import build_gdd_timeline_html, build_gdd_today_html
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
 from butterfly_planner.renderers.sightings_table import build_butterfly_sightings_html
@@ -29,6 +28,7 @@ from butterfly_planner.renderers.sunshine import (
     build_sunshine_16day_html,
     build_sunshine_today_html,
 )
+from butterfly_planner.serialization.daily_data import build_daily_data
 from butterfly_planner.store import DataStore
 
 # Store and output paths

@@ -226,15 +226,16 @@ class TestSunshineExtraction:
         # 50% sunshine > 40% threshold → good day
         assert sun["is_good_day"] is True
 
-    def test_sunrise_sunset(self) -> None:
+    def test_window_start_end(self) -> None:
         result = build_daily_data(
             sunshine_data=_sunshine_data(),
             target_date=date(2026, 3, 16),
         )
         sun = result["sunshine"]
         assert sun is not None
-        assert sun["sunrise"] == "08:00"
-        assert sun["sunset"] == "09:45"
+        # Renamed: window_start/window_end replace sunrise/sunset (v1.0)
+        assert sun["window_start"] == "08:00"
+        assert sun["window_end"] == "09:45"
 
     def test_hourly_breakdown(self) -> None:
         result = build_daily_data(
@@ -266,7 +267,7 @@ class TestWeatherExtraction:
         assert w["low_c"] == 6.1
         assert w["precip_mm"] == 0.0
         assert w["weather_code"] == 1
-        assert "Mostly Clear" in w["conditions"]
+        # conditions field removed in v1.0; use WMO_DESCRIPTIONS[weather_code] instead
 
     def test_no_matching_date(self) -> None:
         result = build_daily_data(
@@ -413,7 +414,8 @@ class TestForecastExtraction:
         assert "high_c" in day
         assert "low_c" in day
         assert "precip_mm" in day
-        assert "conditions" in day
+        # conditions removed in v1.0; weather_code is the machine-readable field
+        assert "weather_code" in day
         assert "is_good_day" in day
 
     def test_forecast_with_sunshine(self) -> None:
