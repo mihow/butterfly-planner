@@ -9,13 +9,17 @@ from unittest.mock import patch
 
 from butterfly_planner.datasources import inaturalist
 from butterfly_planner.datasources.inaturalist import client as inat_client
-from butterfly_planner.datasources.inaturalist.observations import _parse_observation
+from butterfly_planner.datasources.inaturalist.observations import (
+    RECENT_YEARS,
+    _parse_observation,
+)
 from butterfly_planner.datasources.inaturalist.species import _parse_species_record
 from butterfly_planner.datasources.inaturalist.weekly import (
     _week_range,
     _week_to_months,
     _weeks_to_months,
 )
+from butterfly_planner.renderers.date_utils import year_range
 
 # =============================================================================
 # Fixtures / Sample API Responses
@@ -667,3 +671,142 @@ class TestDefaultBoundingBox:
         bbox = inaturalist.NW_OREGON_SW_WASHINGTON
         assert bbox["swlat"] <= 45.63 <= bbox["nelat"]
         assert bbox["swlng"] <= -122.67 <= bbox["nelng"]
+
+
+# =============================================================================
+# Regression Tests: recent-years fix (sightings map year range bug)
+# =============================================================================
+
+
+class TestPaginatorNewestFirst:
+    """Paginator newest-first mode uses order=desc + id_below cursor."""
+
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
+    def test_newest_first_uses_desc_order(self, mock_get: object) -> None:
+        """When newest_first=True, first request must include order=desc."""
+        mock_resp = mock_get.return_value  # type: ignore[union-attr]
+        mock_resp.json.return_value = {"results": [], "total_results": 0}
+        mock_resp.raise_for_status.return_value = None
+        inat_client._last_request_time = 0.0
+
+        inat_client.get_observations_paginated({"taxon_id": 47224}, newest_first=True)
+
+        first_call_params = mock_get.call_args_list[0][1]["params"]  # type: ignore[union-attr]
+        assert first_call_params["order"] == "desc"
+        assert first_call_params["order_by"] == "id"
+
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
+    def test_newest_first_uses_id_below_cursor(self, mock_get: object) -> None:
+        """Subsequent pages in newest-first mode use id_below, not id_above."""
+        page1 = {"results": [{"id": 9000}, {"id": 8000}], "total_results": 2}
+        page2 = {"results": [], "total_results": 0}
+
+        mock_resp = mock_get.return_value  # type: ignore[union-attr]
+        mock_resp.json.side_effect = [page1, page2]
+        mock_resp.raise_for_status.return_value = None
+        inat_client._last_request_time = 0.0
+
+        results = inat_client.get_observations_paginated(
+            {"taxon_id": 47224}, max_pages=5, newest_first=True
+        )
+        assert len(results) == 2
+
+        second_call_params = mock_get.call_args_list[1][1]["params"]  # type: ignore[union-attr]
+        # cursor should advance using id_below the minimum id seen (oldest in page)
+        assert "id_below" in second_call_params
+        assert second_call_params["id_below"] == 8000
+        assert "id_above" not in second_call_params
+
+    @patch("butterfly_planner.datasources.inaturalist.client.session.get")
+    def test_default_asc_behaviour_unchanged(self, mock_get: object) -> None:
+        """Default call (no newest_first) still uses asc + id_above."""
+        page1 = {"results": [{"id": 100}, {"id": 200}], "total_results": 2}
+        page2 = {"results": [], "total_results": 0}
+
+        mock_resp = mock_get.return_value  # type: ignore[union-attr]
+        mock_resp.json.side_effect = [page1, page2]
+        mock_resp.raise_for_status.return_value = None
+        inat_client._last_request_time = 0.0
+
+        inat_client.get_observations_paginated({"taxon_id": 47224}, max_pages=5)
+
+        first_call_params = mock_get.call_args_list[0][1]["params"]  # type: ignore[union-attr]
+        assert first_call_params["order"] == "asc"
+        second_call_params = mock_get.call_args_list[1][1]["params"]  # type: ignore[union-attr]
+        assert "id_above" in second_call_params
+        assert "id_below" not in second_call_params
+
+
+class TestFetchObservationsRecentYears:
+    """fetch_observations_for_month passes d1 date floor ~RECENT_YEARS back."""
+
+    def test_recent_years_constant_exists(self) -> None:
+        """RECENT_YEARS constant is defined and is a positive integer."""
+        assert isinstance(RECENT_YEARS, int)
+        assert RECENT_YEARS > 0
+
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
+    def test_d1_param_is_recent_floor(self, mock_paginated: object) -> None:
+        """d1 param must be roughly RECENT_YEARS before today (within 1 year tolerance)."""
+        mock_paginated.return_value = []  # type: ignore[union-attr]
+
+        inaturalist.fetch_observations_for_month(month=6)
+
+        call_args = mock_paginated.call_args[0][0]  # type: ignore[union-attr]
+        assert "d1" in call_args, "fetch_observations_for_month must pass a d1 date floor"
+
+        d1_str: str = call_args["d1"]
+        d1 = date.fromisoformat(d1_str)
+        today = date.today()
+        expected_year = today.year - RECENT_YEARS
+        # Allow ±1 year tolerance for boundary cases
+        assert abs(d1.year - expected_year) <= 1, (
+            f"d1 year {d1.year} should be around {expected_year} (today={today})"
+        )
+
+    @patch("butterfly_planner.datasources.inaturalist.client.get_observations_paginated")
+    def test_newest_first_is_passed(self, mock_paginated: object) -> None:
+        """fetch_observations_for_month must request newest-first pagination."""
+        mock_paginated.return_value = []  # type: ignore[union-attr]
+
+        inaturalist.fetch_observations_for_month(month=6)
+
+        call_kwargs = mock_paginated.call_args[1]  # keyword args
+        assert call_kwargs.get("newest_first") is True, (
+            "fetch_observations_for_month must pass newest_first=True to the paginator"
+        )
+
+
+class TestYearRangeIncludesCurrentYear:
+    """year_range() reflects current year when recent data is present."""
+
+    def test_year_range_upper_bound_is_max_year(self) -> None:
+        """year_range over a dataset that includes 2026 reports upper bound 2026."""
+        observations = [
+            {"observed_on": "1995-06-15"},
+            {"observed_on": "2016-06-20"},
+            {"observed_on": "2026-06-10"},
+        ]
+        result = year_range(observations)
+        assert "2026" in result, f"Expected 2026 in year_range output, got: {result!r}"
+
+    def test_year_range_lower_bound(self) -> None:
+        """year_range reports min year correctly."""
+        observations = [
+            {"observed_on": "2018-06-01"},
+            {"observed_on": "2025-07-04"},
+        ]
+        result = year_range(observations)
+        assert result == "2018\u20132025"
+
+    def test_year_range_current_year(self) -> None:
+        """year_range includes the current year when observations exist for it."""
+        current_year = date.today().year
+        observations = [
+            {"observed_on": f"{current_year - 5}-05-01"},
+            {"observed_on": f"{current_year}-06-15"},
+        ]
+        result = year_range(observations)
+        assert str(current_year) in result, (
+            f"Current year {current_year} should appear in year_range output: {result!r}"
+        )
