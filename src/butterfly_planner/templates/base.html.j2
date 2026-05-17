@@ -100,12 +100,12 @@
         .tl-seg { flex: 1; min-width: 0; transition: opacity 0.15s; }
         .tl-seg:hover { opacity: 0.65; }
 
-        /* --- Sunshine color scale (muddy pale → bright lemon) --- */
-        .sunshine-none { background: #e8e8e8; }
-        .sunshine-low  { background: #f5eec2; }
-        .sunshine-med  { background: #f0e068; }
-        .sunshine-high { background: #f5e642; }
-        .sunshine-full { background: #fff44f; }
+        /* --- Sunshine color scale (warm sequential, monotonic lightness) --- */
+        .sunshine-none { background: #ececec; }
+        .sunshine-low  { background: #ffe8a3; }
+        .sunshine-med  { background: #ffc94d; }
+        .sunshine-high { background: #ff9e2c; }
+        .sunshine-full { background: #f4641b; }
 
         /* --- Inline hourly bar (16-day table) --- */
         .hour-bar { display: inline-flex; gap: 1px; vertical-align: middle; }
@@ -212,7 +212,7 @@
         .gdd-track-bar {
             flex: 1;
             height: 6px;
-            background: linear-gradient(to right, #4363d8, #ffd43b, #ff6b2b);
+            background: linear-gradient(to right, #4363d8, #ffc94d, #f4641b);
             border-radius: 3px;
             position: relative;
         }
@@ -329,8 +329,6 @@
                 font-weight: 600;
             }
             table.forecast-table tbody td:nth-child(2)::before { content: "Sun: "; }
-            table.forecast-table tbody td:nth-child(3)::before { content: ""; }
-            table.forecast-table tbody td:nth-child(4)::before { content: ""; }
             table.forecast-table tbody td:nth-child(5)::before { content: "Rain: "; }
             table.forecast-table tbody td:nth-child(6) {
                 grid-column: 1 / -1;
