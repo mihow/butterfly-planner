@@ -18,8 +18,11 @@ from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.reference.viewing import MIN_GOOD_SUNSHINE_HOURS, MIN_GOOD_SUNSHINE_PCT
 from butterfly_planner.renderers.weather_utils import wmo_code_to_conditions
 
-# Schema version — bump on breaking changes
-SCHEMA_VERSION = "1.0"
+# Schema version. 0.x = unstable/internal: fields (e.g. emoji in
+# `conditions`, window-vs-day `sunrise`/`sunset` semantics) may change
+# without a breaking bump until a real consumer validates the contract
+# and it is promoted to 1.0. Bump the major on breaking changes thereafter.
+SCHEMA_VERSION = "0.1"
 
 # Timezone for local display
 _PST = ZoneInfo("America/Los_Angeles")
@@ -54,7 +57,10 @@ def build_daily_data(
     Returns:
         Structured daily data dict with schema version.
     """
-    today = target_date or date.today()
+    # Default to the Pacific calendar day to match `generated_at` below;
+    # date.today() uses the (often UTC) runner clock, which writes the
+    # next day's file just after local midnight.
+    today = target_date or datetime.now(_PST).date()
     today_str = today.isoformat()
     now = datetime.now(_PST)
 

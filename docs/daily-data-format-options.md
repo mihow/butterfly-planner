@@ -26,7 +26,7 @@ the HTML renderers use, then writes it to the derived/ tier.
 
 ```json
 {
-  "version": "1.0",
+  "version": "0.1",
   "date": "2026-03-16",
   "location": {"name": "Portland, OR", "lat": 45.5, "lon": -122.6},
   "generated_at": "2026-03-16T10:30:00-07:00",
