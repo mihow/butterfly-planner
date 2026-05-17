@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=202605171318"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin="" />
     <style>
@@ -168,6 +168,36 @@
             line-height: 22px;
             color: #fff;
             text-shadow: 0 0 3px rgba(0,0,0,0.5);
+        }
+
+        /* --- Map layer control --- */
+        .leaflet-control-layers {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 0.82rem;
+            border-radius: 4px;
+        }
+        .leaflet-control-layers-separator { display: none; }
+
+        /* --- Heat map intensity slider --- */
+        .heat-intensity-control {
+            background: #fff;
+            padding: 6px 10px;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: 0.78rem;
+            color: #555;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .heat-intensity-control label { white-space: nowrap; }
+        .heat-intensity-control input[type="range"] { width: 80px; cursor: pointer; }
+        .heat-intensity-value {
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+            font-size: 0.75rem;
+            min-width: 3.5em;
+            text-align: right;
         }
 
         /* --- Observation popup --- */
@@ -361,7 +391,7 @@
     <header>
         <h1>Butterfly Planner</h1>
         <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
-        <div class="updated">Last updated 2026-05-17 13:07 PST</div>
+        <div class="updated">Last updated 2026-05-17 13:17 PST</div>
     </header>
 
     <main>
@@ -869,7 +899,8 @@
     <h2>Butterfly Sightings Map &mdash; May 3–24 (1992–2021)</h2>
 <p>Research-grade butterfly observations in NW Oregon / SW Washington
 during May 3–24, 1992–2021. 411 observations shown.
-Colors match the species table below.</p>
+Colors match the species table below. Use the layer control to toggle
+the density heat map and individual sightings.</p>
 <div id="sightings-map"></div>
 
     <h2>Butterfly Sightings &mdash; May 3–24 (1992–2021)</h2>
@@ -1021,8 +1052,10 @@ Species ranked by research-grade observation frequency.</p>
         Forecast models may not reflect actual conditions.</p>
     </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=202605171318"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js?v=202605171318"
             crossorigin=""></script>
     <script>
 (function() {
@@ -1050,7 +1083,8 @@ Species ranked by research-grade observation frequency.</p>
     return html;
   }
 
-  var group = L.layerGroup();
+  // --- Sightings marker layer ---
+  var markers = L.layerGroup();
   for (var i = 0; i < obs.length; i++) {
     var o = obs[i];
     var m = L.circleMarker([o.lat, o.lon], {
@@ -1060,9 +1094,58 @@ Species ranked by research-grade observation frequency.</p>
     m.bindPopup(buildPopup(o), {maxWidth: 280, minWidth: 200});
     m.bindTooltip(o.initials, {permanent: true, direction: "center",
       className: "map-label", offset: [0, 0]});
-    group.addLayer(m);
+    markers.addLayer(m);
   }
-  group.addTo(map);
+
+  // --- Density heat map layer ---
+  var heatPoints = [];
+  for (var j = 0; j < obs.length; j++) {
+    heatPoints.push([obs[j].lat, obs[j].lon]);
+  }
+  // Auto-scale intensity: fewer observations → lower max → more vivid colors.
+  // With 5 obs, max ≈ 0.15; with 20, max ≈ 0.35; with 80+, max ≈ 1.0.
+  var defaultMax = Math.max(0.08, Math.min(1.0, 0.05 + obs.length * 0.02));
+  var heat = L.heatLayer(heatPoints, {
+    radius: 18,
+    blur: 22,
+    maxZoom: 12,
+    max: defaultMax,
+    gradient: {0.2: '#ffffb2', 0.4: '#fecc5c', 0.6: '#fd8d3c', 0.8: '#f03b20', 1.0: '#bd0026'}
+  });
+
+  // --- Intensity slider control ---
+  var IntensityControl = L.Control.extend({
+    options: { position: 'bottomright' },
+    onAdd: function() {
+      var container = L.DomUtil.create('div', 'leaflet-bar heat-intensity-control');
+      container.innerHTML =
+        '<label for="heat-intensity-slider">Intensity</label>' +
+        '<input id="heat-intensity-slider" type="range" min="0.05" max="1.0" step="0.01" value="' + defaultMax.toFixed(2) + '">' +
+        '<span class="heat-intensity-value">' + Math.round((1 / defaultMax) * 100) + '%</span>';
+      var slider = container.querySelector('input');
+      var label = container.querySelector('.heat-intensity-value');
+      L.DomEvent.disableClickPropagation(container);
+      slider.addEventListener('input', function() {
+        var val = parseFloat(this.value);
+        heat.setOptions({max: val});
+        label.textContent = Math.round((1 / val) * 100) + '%';
+      });
+      return container;
+    }
+  });
+
+  // --- Layer control ---
+  var overlays = {
+    "Sightings": markers,
+    "Density": heat
+  };
+  L.control.layers(null, overlays, {collapsed: false, position: 'topright'}).addTo(map);
+  new IntensityControl().addTo(map);
+
+  // Both layers on by default; heat underneath markers
+  heat.addTo(map);
+  markers.addTo(map);
+
   L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
     color: '#555', weight: 1.5, dashArray: '6 4',
     fill: false, opacity: 0.5
