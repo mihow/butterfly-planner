@@ -1,10 +1,19 @@
-"""Structured daily data contract for multi-consumer use (v1.0).
+"""Structured daily data contract for multi-consumer use (v0.2, release candidate).
 
 Transforms raw API data into a versioned, consumer-friendly JSON format.
 The output is independent of both upstream API shapes and downstream HTML
 rendering, suitable for widgets, mobile apps, and APIs.
 
-Design decisions (v1.0):
+Status: v0.2 is a hardened release candidate, NOT the stable 1.0 contract.
+This revision is a structural refactor (contract relocated out of
+``renderers/`` into ``serialization/``) plus correctness/typing hardening
+(fully-typed Pydantic models, JSON Schema exported as a build artifact).
+Promotion to 1.0 is deferred until a real consumer (widget / CLI / API)
+has validated the contract end to end. The schema may still change before
+1.0 based on consumer feedback.
+
+Design decisions (carried into v0.2, kept stable through 1.0 unless a
+consumer forces a change):
 - ``conditions``: removed. Was a UI label with embedded emoji. Consumers
   should look up ``weather_code`` in ``WMO_DESCRIPTIONS`` for a plain-text
   label, or use the numeric code directly.  Single source of truth; no
@@ -27,8 +36,10 @@ from pydantic import BaseModel, Field
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.reference.viewing import MIN_GOOD_SUNSHINE_HOURS, MIN_GOOD_SUNSHINE_PCT
 
-# Schema version.  Bump the major on breaking changes.
-SCHEMA_VERSION = "1.0"
+# Schema version.  v0.2 = release candidate (structural + hardening).
+# Promotion to "1.0" is deferred until a real consumer validates the
+# contract end to end.  Bump the major on breaking changes after 1.0.
+SCHEMA_VERSION = "0.2"
 
 # Timezone for local display
 _PST = ZoneInfo("America/Los_Angeles")
@@ -141,22 +152,52 @@ class DailyButterflies(BaseModel):
     recent_observations_count: int
 
 
+class DailyLocation(BaseModel):
+    """Location label and coordinates."""
+
+    name: str = Field(..., description="Human-readable location label")
+    lat: float = Field(..., description="Latitude")
+    lon: float = Field(..., description="Longitude")
+
+
+class DailyForecastDay(BaseModel):
+    """A single future day in the forecast array.
+
+    Fields match the dict produced by ``_extract_forecast``. Sunshine
+    fields are absent when no sunshine data is available, hence optional.
+    """
+
+    date: str = Field(..., description="ISO date string (YYYY-MM-DD)")
+    high_c: float | None = Field(None, description="Daily high temperature in Celsius")
+    low_c: float | None = Field(None, description="Daily low temperature in Celsius")
+    precip_mm: float | None = Field(None, description="Total precipitation in mm")
+    weather_code: int | None = Field(
+        None, description="WMO weather interpretation code; see WMO_DESCRIPTIONS"
+    )
+    sunshine_hours: float | None = Field(None, description="Sunshine hours from daily aggregate")
+    daylight_hours: float | None = Field(None, description="Daylight duration in hours")
+    sunshine_pct: float | None = Field(None, description="Sunshine as percent of daylight")
+    is_good_day: bool = Field(
+        ..., description="True when sunshine meets butterfly-viewing thresholds"
+    )
+
+
 class DailyData(BaseModel):
-    """Top-level daily data snapshot (v1.0).
+    """Top-level daily data snapshot (v0.2, release candidate).
 
     This is the single source of truth for the daily-data contract.
     Export the JSON Schema with ``DailyData.model_json_schema()``.
     """
 
-    version: str = Field(..., description="Schema version, e.g. '1.0'")
+    version: str = Field(..., description="Schema version, e.g. '0.2'")
     date: str = Field(..., description="ISO date string (YYYY-MM-DD)")
-    location: dict[str, Any] = Field(..., description="name, lat, lon")
+    location: DailyLocation = Field(..., description="Location label and coordinates")
     generated_at: str = Field(..., description="ISO datetime when this record was built")
     sunshine: DailySunshine | None = None
     weather: DailyWeather | None = None
     gdd: DailyGDD | None = None
     butterflies: DailyButterflies | None = None
-    forecast: list[dict[str, Any]] = Field(
+    forecast: list[DailyForecastDay] = Field(
         default_factory=list, description="Next 7 days forecast array"
     )
 
@@ -182,7 +223,14 @@ def build_daily_data(
     It produces a versioned JSON-serializable dict suitable for file output,
     API responses, or widget consumption.
 
-    The returned dict validates against ``DailyData``.
+    The raw extracted dict is validated through ``DailyData`` (Pydantic) and
+    the function returns ``DailyData.model_dump(mode="json")``.  Returning a
+    plain dict (rather than the model instance) keeps ``today.json`` byte-
+    stable: ``model_dump(mode="json")`` emits the same JSON-native primitives
+    the hand-built dict did, so existing ``json.dump`` call sites and tests
+    that index the result (``result["weather"]["weather_code"]``) keep
+    working unchanged.  The validation step is the enforcement gate — a
+    schema regression raises ``ValidationError`` here, on the build path.
 
     Args:
         weather_data: Weather forecast envelope (with ``data.daily`` arrays).
@@ -195,7 +243,8 @@ def build_daily_data(
         lon: Longitude.
 
     Returns:
-        Structured daily data dict with schema version.
+        Validated, JSON-native daily data dict (``DailyData.model_dump(
+        mode="json")``) with schema version.
     """
     today = target_date or datetime.now(_PST).date()
     today_str = today.isoformat()
@@ -214,7 +263,9 @@ def build_daily_data(
     result["butterflies"] = _extract_butterflies(inat_data)
     result["forecast"] = _extract_forecast(weather_data, sunshine_data, today_str)
 
-    return result
+    # Validate against the contract, then return a plain JSON-native dict.
+    # model_dump(mode="json") is byte-stable vs. the hand-built dict.
+    return DailyData.model_validate(result).model_dump(mode="json")
 
 
 def _extract_sunshine(
