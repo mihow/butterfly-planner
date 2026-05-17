@@ -18,7 +18,7 @@ Extension points — see each package's docstring for step-by-step guides:
 """
 
 __version__ = "0.1.0"
-__author__ = "Michael Howden"
+__author__ = "Michael Bunsen"
 
 from butterfly_planner.config import Settings
 from butterfly_planner.schemas import Example
