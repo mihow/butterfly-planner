@@ -60,8 +60,8 @@
     onAdd: function() {
       var container = L.DomUtil.create('div', 'leaflet-bar heat-intensity-control');
       container.innerHTML =
-        '<label>Intensity</label>' +
-        '<input type="range" min="0.05" max="1.0" step="0.01" value="' + defaultMax.toFixed(2) + '">' +
+        '<label for="heat-intensity-slider">Intensity</label>' +
+        '<input id="heat-intensity-slider" type="range" min="0.05" max="1.0" step="0.01" value="' + defaultMax.toFixed(2) + '">' +
         '<span class="heat-intensity-value">' + Math.round((1 / defaultMax) * 100) + '%</span>';
       var slider = container.querySelector('input');
       var label = container.querySelector('.heat-intensity-value');

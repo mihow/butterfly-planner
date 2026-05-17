@@ -5,6 +5,7 @@ Tests for the build flow module and renderer modules.
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -393,9 +394,10 @@ class TestBuildHtml:
         }
         result = build.build_html(weather_data, None)
 
-        assert "leaflet.css?v=202602" in result
-        assert "leaflet.js?v=202602" in result
-        assert "leaflet-heat.js?v=202602" in result
+        # build_version is the rebuild time (YYYYMMDDHHMM), not the weather
+        # fetch time, so assert the format rather than a fixed value.
+        for asset in ("leaflet.css", "leaflet.js", "leaflet-heat.js"):
+            assert re.search(rf"{re.escape(asset)}\?v=\d{{12}}", result)
 
     def test_build_html_without_sunshine(self) -> None:
         """Test building HTML without sunshine data."""

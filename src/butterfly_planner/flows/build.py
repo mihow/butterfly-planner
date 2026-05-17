@@ -160,7 +160,9 @@ def build_html(
         gdd_today_html = build_gdd_today_html(gdd_data)
         gdd_timeline_html = build_gdd_timeline_html(gdd_data)
 
-    build_version = local_dt.strftime("%Y%m%d%H%M")
+    # Cache-bust on every rebuild (not weather fetch time), so template/JS/CSS
+    # edits invalidate CDN-cached assets even when weather data is cached.
+    build_version = datetime.now(pst).strftime("%Y%m%d%H%M")
 
     return render_template(
         "base.html.j2",
