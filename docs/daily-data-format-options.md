@@ -1,7 +1,10 @@
 # Structured Daily Data Format — Options
 
-**Date**: 2026-03-16 (updated 2026-05-17 for v1.0)
-**Status**: Option A implemented (v1.0); others documented for future consideration
+**Date**: 2026-03-16 (updated 2026-05-17 for v0.2 release candidate)
+**Status**: Option A implemented (v0.2, release candidate). v0.2 is a
+structural refactor + hardening. Promotion to a stable 1.0 contract is
+**deferred** until a real consumer (widget / CLI / API) validates the
+contract end to end. The schema may still change before 1.0.
 
 ## Problem
 
@@ -14,17 +17,21 @@ is independent of both the upstream API shapes and the downstream HTML rendering
 
 ### Option A: Daily Data Snapshot in Build Flow (Implemented)
 
-**Where**: `src/butterfly_planner/serialization/daily_data.py` (v1.0; moved from renderers/)
+**Where**: `src/butterfly_planner/serialization/daily_data.py` (v0.2; moved from renderers/)
 **When**: Runs as a task in `flows/build.py`, alongside HTML generation
-**Output**: `data/derived/daily/<date>.json` + `data/derived/daily/today.json` (symlink/copy)
+**Output**: `data/derived/daily/<date>.json` + `data/derived/daily/today.json`
+plus `data/derived/daily/daily-data.schema.json` (the exported JSON Schema,
+written next to today.json so consumers can fetch the contract alongside
+the data)
 
 The build flow already loads and transforms all the data. This option adds a
 pure function that extracts a structured `DailyData` dict from the same inputs
 the HTML renderers use, then writes it to the derived/ tier.
 
-**Schema v1.0** (canonical definition in `src/butterfly_planner/serialization/daily_data.py`):
+**Schema v0.2** (canonical definition in `src/butterfly_planner/serialization/daily_data.py`;
+the JSON Schema is exported to `daily-data.schema.json` on every build):
 
-Breaking changes from v0.1:
+Changes from v0.1 (kept stable through 1.0 unless a consumer forces a change):
 - `conditions` field removed from `weather` and `forecast` entries.
   Consumers should look up `weather_code` in `WMO_DESCRIPTIONS` (exported
   from the module) for a plain-text label.
@@ -35,7 +42,7 @@ Breaking changes from v0.1:
 
 ```json
 {
-  "version": "1.0",
+  "version": "0.2",
   "date": "2026-03-16",
   "location": {"name": "Portland, OR", "lat": 45.5, "lon": -122.6},
   "generated_at": "2026-03-16T10:30:00-07:00",

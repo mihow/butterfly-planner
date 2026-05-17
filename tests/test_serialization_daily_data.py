@@ -1,4 +1,4 @@
-"""Tests for the serialization.daily_data module (v1.0 contract).
+"""Tests for the serialization.daily_data module (v0.2 release candidate).
 
 TDD: these tests were written before the implementation.
 """
@@ -13,6 +13,8 @@ from butterfly_planner.serialization.daily_data import (
     SCHEMA_VERSION,
     WMO_DESCRIPTIONS,
     DailyData,
+    DailyForecastDay,
+    DailyLocation,
     build_daily_data,
 )
 
@@ -140,8 +142,10 @@ class TestNewModuleLocation:
     def test_importable_from_serialization(self) -> None:
         assert callable(build_daily_data)
 
-    def test_schema_version_is_1_0(self) -> None:
-        assert SCHEMA_VERSION == "1.0"
+    def test_schema_version_is_0_2_rc(self) -> None:
+        # v0.2 = release candidate; promotion to 1.0 deferred until a real
+        # consumer validates the contract end to end.
+        assert SCHEMA_VERSION == "0.2"
 
 
 # =============================================================================
@@ -164,7 +168,7 @@ class TestPydanticModels:
             target_date=date(2026, 3, 16),
         )
         model = DailyData.model_validate(raw)
-        assert model.version == "1.0"
+        assert model.version == SCHEMA_VERSION
 
     def test_model_validates_empty_inputs(self) -> None:
         raw = build_daily_data(target_date=date(2026, 3, 16))
@@ -282,7 +286,7 @@ class TestSunshineWindowSemantics:
 class TestSchemaVersion:
     def test_version_in_output(self) -> None:
         result = build_daily_data(target_date=date(2026, 3, 16))
-        assert result["version"] == "1.0"
+        assert result["version"] == SCHEMA_VERSION
 
 
 # =============================================================================
@@ -413,7 +417,7 @@ class TestDriftGuard:
         }
         assert doc_sunshine_keys <= set(result["sunshine"].keys())
 
-        # Weather section — conditions removed in v1.0
+        # Weather section — conditions removed (kept stable through 1.0)
         doc_weather_keys = {"high_c", "low_c", "precip_mm", "weather_code"}
         assert doc_weather_keys <= set(result["weather"].keys())
 
@@ -440,13 +444,16 @@ class TestPydanticRoundTrip:
         parsed = json.loads(json_str)
         model = DailyData.model_validate(parsed)
         # Verify key fields accessible via model
-        assert model.version == "1.0"
+        assert model.version == SCHEMA_VERSION
         assert model.date == "2026-03-16"
-        assert model.location["name"] == "Portland, OR"
+        assert model.location.name == "Portland, OR"
+        assert model.location.lat == 45.5
         assert model.weather is not None
         assert model.weather.weather_code == 1
         assert model.sunshine is not None
         assert model.sunshine.today_hours == 1.6
+        assert len(model.forecast) > 0
+        assert isinstance(model.forecast[0], DailyForecastDay)
 
     def test_model_serializes_back_to_json(self) -> None:
         raw = build_daily_data(
@@ -458,4 +465,93 @@ class TestPydanticRoundTrip:
         # model_dump_json should not raise
         dumped = model.model_dump_json()
         reparsed = json.loads(dumped)
-        assert reparsed["version"] == "1.0"
+        assert reparsed["version"] == SCHEMA_VERSION
+
+
+# =============================================================================
+# Fully-typed nested models (DailyLocation, DailyForecastDay)
+# =============================================================================
+
+
+class TestTypedNestedModels:
+    """location and forecast must be typed models, not list[dict]/dict."""
+
+    def test_location_is_typed_model(self) -> None:
+        result = build_daily_data(target_date=date(2026, 3, 16))
+        model = DailyData.model_validate(result)
+        # location is a DailyLocation, not a bare dict
+        assert isinstance(model.location, DailyLocation)
+        assert model.location.name == "Portland, OR"
+
+    def test_location_rejects_missing_field(self) -> None:
+        import pytest  # noqa: PLC0415
+        from pydantic import ValidationError  # noqa: PLC0415
+
+        with pytest.raises(ValidationError):
+            DailyLocation.model_validate({"name": "X", "lat": 1.0})  # no lon
+
+    def test_forecast_is_list_of_typed_models(self) -> None:
+        result = build_daily_data(
+            weather_data=_weather_envelope(),
+            sunshine_data=_sunshine_data(),
+            target_date=date(2026, 3, 16),
+        )
+        model = DailyData.model_validate(result)
+        assert len(model.forecast) > 0
+        assert all(isinstance(d, DailyForecastDay) for d in model.forecast)
+
+    def test_forecast_day_all_keys_present_without_sunshine(self) -> None:
+        """model_dump emits a stable forecast shape even with no sunshine data.
+
+        Sunshine fields are null (not absent) when sunshine data is missing.
+        """
+        result = build_daily_data(
+            weather_data=_weather_envelope(),
+            target_date=date(2026, 3, 16),
+        )
+        day = result["forecast"][0]
+        assert day["sunshine_hours"] is None
+        assert day["daylight_hours"] is None
+        assert day["sunshine_pct"] is None
+        assert day["weather_code"] is not None
+
+    def test_forecast_day_rejects_missing_required(self) -> None:
+        import pytest  # noqa: PLC0415
+        from pydantic import ValidationError  # noqa: PLC0415
+
+        with pytest.raises(ValidationError):
+            # date and is_good_day are required
+            DailyForecastDay.model_validate({"high_c": 10.0})
+
+
+# =============================================================================
+# JSON Schema exported as a build artifact (#66 deliverable)
+# =============================================================================
+
+
+class TestSchemaBuildArtifact:
+    """build.py must write daily-data.schema.json next to today.json."""
+
+    def test_write_daily_schema_produces_valid_json(self, tmp_path: Any) -> None:
+        from butterfly_planner.flows import build  # noqa: PLC0415
+
+        # Point the store at a temp dir so we don't touch real data/
+        monkey_store = build.DataStore(tmp_path)
+        original = build.store
+        build.store = monkey_store
+        try:
+            # Call the undecorated function to avoid the Prefect engine
+            schema_path = build.write_daily_schema.fn()
+        finally:
+            build.store = original
+
+        assert schema_path.exists()
+        assert schema_path.name == "daily-data.schema.json"
+        # Written next to where today.json lives (derived/daily/)
+        assert schema_path.parent.name == "daily"
+
+        # File is valid JSON and a usable JSON Schema
+        loaded = json.loads(schema_path.read_text())
+        assert "properties" in loaded
+        assert "version" in loaded["properties"]
+        assert loaded == DailyData.model_json_schema()

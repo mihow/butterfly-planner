@@ -233,7 +233,7 @@ class TestSunshineExtraction:
         )
         sun = result["sunshine"]
         assert sun is not None
-        # Renamed: window_start/window_end replace sunrise/sunset (v1.0)
+        # Renamed: window_start/window_end replace sunrise/sunset (v0.2)
         assert sun["window_start"] == "08:00"
         assert sun["window_end"] == "09:45"
 
@@ -267,7 +267,7 @@ class TestWeatherExtraction:
         assert w["low_c"] == 6.1
         assert w["precip_mm"] == 0.0
         assert w["weather_code"] == 1
-        # conditions field removed in v1.0; use WMO_DESCRIPTIONS[weather_code] instead
+        # conditions field removed (v0.2); use WMO_DESCRIPTIONS[weather_code] instead
 
     def test_no_matching_date(self) -> None:
         result = build_daily_data(
@@ -414,7 +414,7 @@ class TestForecastExtraction:
         assert "high_c" in day
         assert "low_c" in day
         assert "precip_mm" in day
-        # conditions removed in v1.0; weather_code is the machine-readable field
+        # conditions removed (v0.2); weather_code is the machine-readable field
         assert "weather_code" in day
         assert "is_good_day" in day
 
