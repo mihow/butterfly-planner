@@ -15,6 +15,7 @@ from butterfly_planner.serialization.daily_data import (
     DailyData,
     DailyForecastDay,
     DailyLocation,
+    _extract_weather,
     build_daily_data,
 )
 
@@ -555,3 +556,137 @@ class TestSchemaBuildArtifact:
         assert "properties" in loaded
         assert "version" in loaded["properties"]
         assert loaded == DailyData.model_json_schema()
+
+
+# =============================================================================
+# Defensive extraction: malformed / ragged upstream arrays (CodeRabbit #3, #4)
+# =============================================================================
+
+
+class TestWeatherRaggedArrays:
+    """_extract_weather must not IndexError when a metric array is short."""
+
+    def test_short_metric_array_no_exception(self) -> None:
+        # dates has 3 entries but temperature_2m_max has only 1.
+        # today is the first date, so index 0 exists for max but the
+        # other arrays are empty / shorter → must not raise.
+        envelope: dict[str, Any] = {
+            "fetched_at": "2026-03-16T12:00:00+00:00",
+            "source": "open-meteo.com",
+            "data": {
+                "daily": {
+                    "time": ["2026-03-16", "2026-03-17", "2026-03-18"],
+                    "temperature_2m_max": [14.2],
+                    "temperature_2m_min": [],
+                    "precipitation_sum": [0.0],
+                    "weather_code": [],
+                }
+            },
+        }
+        # Scoped to _extract_weather (CodeRabbit #3). The full
+        # build_daily_data path also touches merge_sunshine_weather,
+        # which has a separate pre-existing raggedness bug tracked apart.
+        w = _extract_weather(envelope, "2026-03-16")
+        assert w is not None
+        assert w["high_c"] == 14.2
+        assert w["low_c"] is None
+        assert w["precip_mm"] == 0.0
+        assert w["weather_code"] is None
+
+    def test_today_is_later_index_with_short_arrays(self) -> None:
+        # today is the 3rd date (index 2) but every metric array has 1
+        # element → all values must be None, no IndexError.
+        envelope: dict[str, Any] = {
+            "fetched_at": "2026-03-16T12:00:00+00:00",
+            "source": "open-meteo.com",
+            "data": {
+                "daily": {
+                    "time": ["2026-03-14", "2026-03-15", "2026-03-16"],
+                    "temperature_2m_max": [10.0],
+                    "temperature_2m_min": [2.0],
+                    "precipitation_sum": [1.0],
+                    "weather_code": [3],
+                }
+            },
+        }
+        w = _extract_weather(envelope, "2026-03-16")
+        assert w is not None
+        assert w["high_c"] is None
+        assert w["low_c"] is None
+        assert w["precip_mm"] is None
+        assert w["weather_code"] is None
+
+
+class TestGddMalformedPreviousYearRows:
+    """_extract_gdd must skip prev-year rows with missing/bad date."""
+
+    def test_missing_and_malformed_prev_year_dates(self) -> None:
+        gdd: dict[str, Any] = {
+            "fetched_at": "2026-03-16T12:00:00",
+            "source": "open-meteo.com (archive)",
+            "data": {
+                "base_temp_f": 50,
+                "current_year": {
+                    "year": 2026,
+                    "total_gdd": 142.5,
+                    "daily": [
+                        {"date": "2026-03-16", "daily_gdd": 8.3, "accumulated": 142.5},
+                    ],
+                },
+                "previous_year": {
+                    "year": 2025,
+                    "total_gdd": 280.0,
+                    "daily": [
+                        # row with no "date"
+                        {"daily_gdd": 5.0, "accumulated": 100.0},
+                        # malformed date
+                        {"date": "not-a-date", "daily_gdd": 4.0, "accumulated": 105.0},
+                        # good row at/after today's day-of-year
+                        {"date": "2025-03-16", "daily_gdd": 4.5, "accumulated": 114.5},
+                    ],
+                },
+            },
+        }
+        # Must not raise and must still use the good row for comparison.
+        result = build_daily_data(
+            gdd_data=gdd,
+            target_date=date(2026, 3, 16),
+        )
+        g = result["gdd"]
+        assert g is not None
+        # 142.5 vs 114.5 → +28, ratio 1.24 > 1.05 → "ahead"
+        assert g["year_comparison"] is not None
+        assert "ahead" in g["year_comparison"]
+
+    def test_all_prev_year_rows_malformed_no_exception(self) -> None:
+        gdd: dict[str, Any] = {
+            "fetched_at": "2026-03-16T12:00:00",
+            "source": "open-meteo.com (archive)",
+            "data": {
+                "base_temp_f": 50,
+                "current_year": {
+                    "year": 2026,
+                    "total_gdd": 142.5,
+                    "daily": [
+                        {"date": "2026-03-16", "daily_gdd": 8.3, "accumulated": 142.5},
+                    ],
+                },
+                "previous_year": {
+                    "year": 2025,
+                    "total_gdd": 280.0,
+                    "daily": [
+                        {"daily_gdd": 5.0, "accumulated": 100.0},
+                        {"date": "", "daily_gdd": 4.0, "accumulated": 105.0},
+                        {"date": "garbage", "daily_gdd": 4.5, "accumulated": 114.5},
+                    ],
+                },
+            },
+        }
+        result = build_daily_data(
+            gdd_data=gdd,
+            target_date=date(2026, 3, 16),
+        )
+        g = result["gdd"]
+        assert g is not None
+        # No usable prev-year row → no comparison, but no exception.
+        assert g["year_comparison"] is None

@@ -357,17 +357,20 @@ def _extract_weather(weather_data: dict[str, Any] | None, today_str: str) -> dic
     daily = weather_data.get("data", {}).get("daily", {})
     dates = daily.get("time", [])
 
+    highs = daily.get("temperature_2m_max", [])
+    lows = daily.get("temperature_2m_min", [])
+    precips = daily.get("precipitation_sum", [])
+    codes = daily.get("weather_code", [])
+
     for i, d in enumerate(dates):
         if d == today_str:
-            high = daily.get("temperature_2m_max", [None])[i]
-            low = daily.get("temperature_2m_min", [None])[i]
-            precip = daily.get("precipitation_sum", [None])[i]
-            code = daily.get("weather_code", [None])[i]
+            # Bounds-check each metric independently: upstream arrays can be
+            # shorter than `dates` (mirrors the pattern in _extract_sunshine).
             return {
-                "high_c": high,
-                "low_c": low,
-                "precip_mm": precip,
-                "weather_code": code,
+                "high_c": highs[i] if i < len(highs) else None,
+                "low_c": lows[i] if i < len(lows) else None,
+                "precip_mm": precips[i] if i < len(precips) else None,
+                "weather_code": codes[i] if i < len(codes) else None,
             }
 
     return None
@@ -395,7 +398,15 @@ def _extract_gdd(gdd_data: dict[str, Any] | None, today: date) -> dict[str, Any]
     today_doy = today.timetuple().tm_yday
     previous_at_doy: float | None = None
     for entry in previous.get("daily", []):
-        entry_date = date.fromisoformat(entry["date"])
+        raw_date = entry.get("date")
+        if not raw_date:
+            continue
+        try:
+            entry_date = date.fromisoformat(raw_date)
+        except (ValueError, TypeError):
+            # Skip rows with a missing/malformed date rather than
+            # aborting the whole serialization.
+            continue
         if entry_date.timetuple().tm_yday >= today_doy:
             previous_at_doy = entry.get("accumulated", 0)
             break
