@@ -19,6 +19,23 @@ from butterfly_planner.serialization.daily_data import (
     build_daily_data,
 )
 
+# Emoji / pictographic symbol ranges. Includes 0x2600-0x26FF so common
+# weather glyphs like U+2600 (sun), the kind the removed `conditions`
+# field embedded, are actually caught by the no-emoji guard.
+_EMOJI_RANGES = (
+    (0x1F300, 0x1F9FF),  # misc symbols and pictographs / supplemental
+    (0x1FA00, 0x1FAFF),  # symbols and pictographs extended-A
+    (0x1F000, 0x1F02F),  # mahjong / dominoes
+    (0x2600, 0x26FF),  # misc symbols (sun, cloud, umbrella, etc.)
+    (0x2700, 0x27BF),  # dingbats
+    (0x1F1E6, 0x1F1FF),  # regional indicators
+)
+
+
+def _is_emoji(code_point: int) -> bool:
+    return any(lo <= code_point <= hi for lo, hi in _EMOJI_RANGES)
+
+
 # =============================================================================
 # Fixtures shared across test classes
 # =============================================================================
@@ -224,9 +241,7 @@ class TestConditionsFieldRemoved:
         serialized = json.dumps(result, ensure_ascii=False)
         for char in serialized:
             code_point = ord(char)
-            assert not (0x1F300 <= code_point <= 0x1F9FF), (
-                f"Emoji U+{code_point:04X} found in output"
-            )
+            assert not _is_emoji(code_point), f"Emoji U+{code_point:04X} found in output"
 
     def test_wmo_description_map_exported(self) -> None:
         """A plain-text WMO code → description map must be available for consumers."""
@@ -237,7 +252,7 @@ class TestConditionsFieldRemoved:
         for v in WMO_DESCRIPTIONS.values():
             for char in v:
                 code_point = ord(char)
-                assert not (0x1F300 <= code_point <= 0x1F9FF)
+                assert not _is_emoji(code_point)
 
 
 # =============================================================================

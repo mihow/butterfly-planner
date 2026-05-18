@@ -31,7 +31,7 @@ from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.reference.viewing import MIN_GOOD_SUNSHINE_HOURS, MIN_GOOD_SUNSHINE_PCT
@@ -87,7 +87,18 @@ WMO_DESCRIPTIONS: dict[int, str] = {
 # =============================================================================
 
 
-class DailySunshine(BaseModel):
+class _StrictModel(BaseModel):
+    """Base for all contract models.
+
+    ``extra="forbid"`` makes validation reject unknown fields, so
+    ``build_daily_data()``'s ``model_validate`` gate catches schema drift
+    (a renamed/added key) instead of silently dropping it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DailySunshine(_StrictModel):
     """Sunshine summary for a single day."""
 
     today_hours: float = Field(..., description="Measured sunshine hours from 15-min data")
@@ -108,7 +119,7 @@ class DailySunshine(BaseModel):
     )
 
 
-class DailyWeather(BaseModel):
+class DailyWeather(_StrictModel):
     """Weather summary for a single day (no presentation strings)."""
 
     high_c: float | None = Field(None, description="Daily high temperature in Celsius")
@@ -119,7 +130,7 @@ class DailyWeather(BaseModel):
     )
 
 
-class DailyGDD(BaseModel):
+class DailyGDD(_StrictModel):
     """Growing Degree Days summary."""
 
     accumulated: float = Field(..., description="Accumulated GDD for the current year to date")
@@ -132,7 +143,7 @@ class DailyGDD(BaseModel):
     )
 
 
-class SpeciesRecord(BaseModel):
+class SpeciesRecord(_StrictModel):
     """A butterfly species from recent observations."""
 
     common_name: str
@@ -141,7 +152,7 @@ class SpeciesRecord(BaseModel):
     photo_url: str | None = None
 
 
-class DailyButterflies(BaseModel):
+class DailyButterflies(_StrictModel):
     """Butterfly observation summary for the recent window."""
 
     observation_window: dict[str, str] = Field(
@@ -152,7 +163,7 @@ class DailyButterflies(BaseModel):
     recent_observations_count: int
 
 
-class DailyLocation(BaseModel):
+class DailyLocation(_StrictModel):
     """Location label and coordinates."""
 
     name: str = Field(..., description="Human-readable location label")
@@ -160,7 +171,7 @@ class DailyLocation(BaseModel):
     lon: float = Field(..., description="Longitude")
 
 
-class DailyForecastDay(BaseModel):
+class DailyForecastDay(_StrictModel):
     """A single future day in the forecast array.
 
     Fields match the dict produced by ``_extract_forecast``. Sunshine
@@ -182,7 +193,7 @@ class DailyForecastDay(BaseModel):
     )
 
 
-class DailyData(BaseModel):
+class DailyData(_StrictModel):
     """Top-level daily data snapshot (v0.2, release candidate).
 
     This is the single source of truth for the daily-data contract.
@@ -290,7 +301,8 @@ def _extract_sunshine(
     daylight_slots: list[tuple[str, int]] = []
     for i, t in enumerate(times):
         if t[:10] == today_str and i < len(is_day) and is_day[i]:
-            daylight_slots.append((t, durations[i] if i < len(durations) else 0))
+            dur = durations[i] if i < len(durations) else 0
+            daylight_slots.append((t, dur or 0))
 
     # Hourly aggregation
     hours: dict[int, int] = {}
@@ -323,8 +335,8 @@ def _extract_sunshine(
     sunshine_pct = 0.0
     for i, d in enumerate(daily_dates):
         if d == today_str:
-            day_sec = daylight_secs_list[i] if i < len(daylight_secs_list) else 0
-            sun_sec = sunshine_secs_list[i] if i < len(sunshine_secs_list) else 0
+            day_sec = (daylight_secs_list[i] if i < len(daylight_secs_list) else 0) or 0
+            sun_sec = (sunshine_secs_list[i] if i < len(sunshine_secs_list) else 0) or 0
             daylight_hours = (day_sec or 0) / 3600
             sunshine_pct = (sun_sec / day_sec * 100) if day_sec else 0.0
             if not daylight_slots and sun_sec:
