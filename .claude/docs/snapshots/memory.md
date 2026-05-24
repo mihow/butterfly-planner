@@ -34,12 +34,15 @@ How Claude remembers your project
 * [Extend Claude Code](/docs/en/features-overview)
 * [Explore the .claude directory](/docs/en/claude-directory)
 * [Explore the context window](/docs/en/context-window)
+* [Prompt caching](/docs/en/prompt-caching)
 
 ##### Use Claude Code
 
 * [Store instructions and memories](/docs/en/memory)
 * [Permission modes](/docs/en/permission-modes)
+* [Manage sessions](/docs/en/sessions)
 * [Common workflows](/docs/en/common-workflows)
+* [Prompt library](/docs/en/prompt-library)
 * [Best practices](/docs/en/best-practices)
 
 ##### Platforms and integrations
@@ -56,36 +59,37 @@ How Claude remembers your project
 * [Claude Code in Slack](/docs/en/slack)
 
 On this page
+------------
 
 * [CLAUDE.md vs auto memory](#claude-md-vs-auto-memory)
 * [CLAUDE.md files](#claude-md-files)
-* [When to add to CLAUDE.md](#when-to-add-to-claude-md)
-* [Choose where to put CLAUDE.md files](#choose-where-to-put-claude-md-files)
-* [Set up a project CLAUDE.md](#set-up-a-project-claude-md)
-* [Write effective instructions](#write-effective-instructions)
-* [Import additional files](#import-additional-files)
-* [AGENTS.md](#agents-md)
-* [How CLAUDE.md files load](#how-claude-md-files-load)
-* [Load from additional directories](#load-from-additional-directories)
-* [Organize rules with .claude/rules/](#organize-rules-with-claude%2Frules%2F)
-* [Set up rules](#set-up-rules)
-* [Path-specific rules](#path-specific-rules)
-* [Share rules across projects with symlinks](#share-rules-across-projects-with-symlinks)
-* [User-level rules](#user-level-rules)
-* [Manage CLAUDE.md for large teams](#manage-claude-md-for-large-teams)
-* [Deploy organization-wide CLAUDE.md](#deploy-organization-wide-claude-md)
-* [Exclude specific CLAUDE.md files](#exclude-specific-claude-md-files)
+  + [When to add to CLAUDE.md](#when-to-add-to-claude-md)
+  + [Choose where to put CLAUDE.md files](#choose-where-to-put-claude-md-files)
+  + [Set up a project CLAUDE.md](#set-up-a-project-claude-md)
+  + [Write effective instructions](#write-effective-instructions)
+  + [Import additional files](#import-additional-files)
+  + [AGENTS.md](#agents-md)
+  + [How CLAUDE.md files load](#how-claude-md-files-load)
+  + [Load from additional directories](#load-from-additional-directories)
+  + [Organize rules with .claude/rules/](#organize-rules-with-claude%2Frules%2F)
+  + [Set up rules](#set-up-rules)
+  + [Path-specific rules](#path-specific-rules)
+  + [Share rules across projects with symlinks](#share-rules-across-projects-with-symlinks)
+  + [User-level rules](#user-level-rules)
+  + [Manage CLAUDE.md for large teams](#manage-claude-md-for-large-teams)
+  + [Deploy organization-wide CLAUDE.md](#deploy-organization-wide-claude-md)
+  + [Exclude specific CLAUDE.md files](#exclude-specific-claude-md-files)
 * [Auto memory](#auto-memory)
-* [Enable or disable auto memory](#enable-or-disable-auto-memory)
-* [Storage location](#storage-location)
-* [How it works](#how-it-works)
-* [Audit and edit your memory](#audit-and-edit-your-memory)
+  + [Enable or disable auto memory](#enable-or-disable-auto-memory)
+  + [Storage location](#storage-location)
+  + [How it works](#how-it-works)
+  + [Audit and edit your memory](#audit-and-edit-your-memory)
 * [View and edit with /memory](#view-and-edit-with-%2Fmemory)
 * [Troubleshoot memory issues](#troubleshoot-memory-issues)
-* [Claude isn’t following my CLAUDE.md](#claude-isn%E2%80%99t-following-my-claude-md)
-* [I don’t know what auto memory saved](#i-don%E2%80%99t-know-what-auto-memory-saved)
-* [My CLAUDE.md is too large](#my-claude-md-is-too-large)
-* [Instructions seem lost after /compact](#instructions-seem-lost-after-%2Fcompact)
+  + [Claude isn’t following my CLAUDE.md](#claude-isn%E2%80%99t-following-my-claude-md)
+  + [I don’t know what auto memory saved](#i-don%E2%80%99t-know-what-auto-memory-saved)
+  + [My CLAUDE.md is too large](#my-claude-md-is-too-large)
+  + [Instructions seem lost after /compact](#instructions-seem-lost-after-%2Fcompact)
 * [Related resources](#related-resources)
 
 Use Claude Code
@@ -504,7 +508,7 @@ Was this page helpful?
 
 YesNo
 
-[Explore the context window](/docs/en/context-window)[Permission modes](/docs/en/permission-modes)
+[Prompt caching](/docs/en/prompt-caching)[Permission modes](/docs/en/permission-modes)
 
 ⌘I
 

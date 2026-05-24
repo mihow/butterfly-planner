@@ -54,35 +54,37 @@ Extend Claude with skills
 * [Error reference](/docs/en/errors)
 
 On this page
+------------
 
 * [Bundled skills](#bundled-skills)
+  + [Run and verify your app](#run-and-verify-your-app)
 * [Getting started](#getting-started)
-* [Create your first skill](#create-your-first-skill)
-* [Where skills live](#where-skills-live)
-* [Live change detection](#live-change-detection)
-* [Automatic discovery from parent and nested directories](#automatic-discovery-from-parent-and-nested-directories)
-* [Skills from additional directories](#skills-from-additional-directories)
+  + [Create your first skill](#create-your-first-skill)
+  + [Where skills live](#where-skills-live)
+  + [Live change detection](#live-change-detection)
+  + [Automatic discovery from parent and nested directories](#automatic-discovery-from-parent-and-nested-directories)
+  + [Skills from additional directories](#skills-from-additional-directories)
 * [Configure skills](#configure-skills)
-* [Types of skill content](#types-of-skill-content)
-* [Frontmatter reference](#frontmatter-reference)
-* [Available string substitutions](#available-string-substitutions)
-* [Add supporting files](#add-supporting-files)
-* [Control who invokes a skill](#control-who-invokes-a-skill)
-* [Skill content lifecycle](#skill-content-lifecycle)
-* [Pre-approve tools for a skill](#pre-approve-tools-for-a-skill)
-* [Pass arguments to skills](#pass-arguments-to-skills)
+  + [Types of skill content](#types-of-skill-content)
+  + [Frontmatter reference](#frontmatter-reference)
+  + [Available string substitutions](#available-string-substitutions)
+  + [Add supporting files](#add-supporting-files)
+  + [Control who invokes a skill](#control-who-invokes-a-skill)
+  + [Skill content lifecycle](#skill-content-lifecycle)
+  + [Pre-approve tools for a skill](#pre-approve-tools-for-a-skill)
+  + [Pass arguments to skills](#pass-arguments-to-skills)
 * [Advanced patterns](#advanced-patterns)
-* [Inject dynamic context](#inject-dynamic-context)
-* [Run skills in a subagent](#run-skills-in-a-subagent)
-* [Example: Research skill using Explore agent](#example-research-skill-using-explore-agent)
-* [Restrict Claude’s skill access](#restrict-claude%E2%80%99s-skill-access)
-* [Override skill visibility from settings](#override-skill-visibility-from-settings)
+  + [Inject dynamic context](#inject-dynamic-context)
+  + [Run skills in a subagent](#run-skills-in-a-subagent)
+  + [Example: Research skill using Explore agent](#example-research-skill-using-explore-agent)
+  + [Restrict Claude’s skill access](#restrict-claude%E2%80%99s-skill-access)
+  + [Override skill visibility from settings](#override-skill-visibility-from-settings)
 * [Share skills](#share-skills)
-* [Generate visual output](#generate-visual-output)
+  + [Generate visual output](#generate-visual-output)
 * [Troubleshooting](#troubleshooting)
-* [Skill not triggering](#skill-not-triggering)
-* [Skill triggers too often](#skill-triggers-too-often)
-* [Skill descriptions are cut short](#skill-descriptions-are-cut-short)
+  + [Skill not triggering](#skill-not-triggering)
+  + [Skill triggers too often](#skill-triggers-too-often)
+  + [Skill descriptions are cut short](#skill-descriptions-are-cut-short)
 * [Related resources](#related-resources)
 
 Tools and plugins
@@ -106,15 +108,29 @@ Copy page
 Skills extend what Claude can do. Create a `SKILL.md` file with instructions, and Claude adds it to its toolkit. Claude uses skills when relevant, or you can invoke one directly with `/skill-name`.
 Create a skill when you keep pasting the same instructions, checklist, or multi-step procedure into chat, or when a section of CLAUDE.md has grown into a procedure rather than a fact. Unlike CLAUDE.md content, a skill’s body loads only when it’s used, so long reference material costs almost nothing until you need it.
 
-For built-in commands like `/help` and `/compact`, and bundled skills like `/debug` and `/simplify`, see the [commands reference](/docs/en/commands).**Custom commands have been merged into skills.** A file at `.claude/commands/deploy.md` and a skill at `.claude/skills/deploy/SKILL.md` both create `/deploy` and work the same way. Your existing `.claude/commands/` files keep working. Skills add optional features: a directory for supporting files, frontmatter to [control whether you or Claude invokes them](#control-who-invokes-a-skill), and the ability for Claude to load them automatically when relevant.
+For built-in commands like `/help` and `/compact`, and bundled skills like `/debug` and `/code-review`, see the [commands reference](/docs/en/commands).**Custom commands have been merged into skills.** A file at `.claude/commands/deploy.md` and a skill at `.claude/skills/deploy/SKILL.md` both create `/deploy` and work the same way. Your existing `.claude/commands/` files keep working. Skills add optional features: a directory for supporting files, frontmatter to [control whether you or Claude invokes them](#control-who-invokes-a-skill), and the ability for Claude to load them automatically when relevant.
 
 Claude Code skills follow the [Agent Skills](https://agentskills.io) open standard, which works across multiple AI tools. Claude Code extends the standard with additional features like [invocation control](#control-who-invokes-a-skill), [subagent execution](#run-skills-in-a-subagent), and [dynamic context injection](#inject-dynamic-context).
 
 [​](#bundled-skills) Bundled skills
 -----------------------------------
 
-Claude Code includes a set of bundled skills that are available in every session, including `/simplify`, `/batch`, `/debug`, `/loop`, and `/claude-api`. Unlike most built-in commands, which execute fixed logic directly, bundled skills are prompt-based: they give Claude detailed instructions and let it orchestrate the work using its tools. You invoke them the same way as any other skill, by typing `/` followed by the skill name.
+Claude Code includes a set of bundled skills that are available in every session, including `/code-review`, `/batch`, `/debug`, `/loop`, and `/claude-api`. Unlike most built-in commands, which execute fixed logic directly, bundled skills are prompt-based: they give Claude detailed instructions and let it orchestrate the work using its tools. You invoke them the same way as any other skill, by typing `/` followed by the skill name.
 Bundled skills are listed alongside built-in commands in the [commands reference](/docs/en/commands), marked **Skill** in the Purpose column.
+
+### [​](#run-and-verify-your-app) Run and verify your app
+
+Three bundled skills work together to launch your app and confirm changes against the running app instead of just tests:
+
+| Skill | Purpose |
+| --- | --- |
+| `/run` | Launch and drive your app to see a change working |
+| `/verify` | Build and run your app to confirm a code change does what it should, without falling back to tests or type checks |
+| `/run-skill-generator` | Teach `/run` and `/verify` how to build and launch your project |
+
+All three skills require Claude Code v2.1.145 or later.
+`/run` and `/verify` work without setup. They infer the launch from your project type (CLI, server, TUI, browser-driven) and from what’s in your README, `package.json`, or `Makefile`. That inference gets unreliable for projects that need anything beyond a standard launch: a database, an env file, a graphical session, a multi-step build.
+`/run-skill-generator` records the recipe instead. It gets your app running from a clean environment, captures what worked (the install commands, the env vars, the launch script), and commits it as a per-project skill at `.claude/skills/run-<name>/`. After that, `/run`, `/verify`, and any other agent in the repo follow the recorded recipe instead of rediscovering it. Run `/run-skill-generator` once per project, and again if the build or launch process changes.
 
 [​](#getting-started) Getting started
 -------------------------------------
@@ -482,6 +498,7 @@ When this skill runs:
 
 This is preprocessing, not something Claude executes. Claude only sees the final result.
 Substitution runs once over the original file. Command output is inserted as plain text and is not re-scanned for further `` !`<command>` `` placeholders, so a command cannot emit a placeholder for a later pass to expand.
+The inline form is only recognized when `!` appears at the start of a line or immediately after whitespace. If `!` follows another character, as in `` KEY=!`cmd` ``, the placeholder is left as literal text and the command does not run.
 For multi-line commands, use a fenced code block opened with ```` ```! ```` instead of the inline form:
 
 ```
@@ -507,10 +524,10 @@ Skills and [subagents](/docs/en/sub-agents) work together in two directions:
 
 | Approach | System prompt | Task | Also loads |
 | --- | --- | --- | --- |
-| Skill with `context: fork` | From agent type (`Explore`, `Plan`, etc.) | SKILL.md content | CLAUDE.md |
+| Skill with `context: fork` | From agent type | SKILL.md content | CLAUDE.md, except when the agent is Explore or Plan |
 | Subagent with `skills` field | Subagent’s markdown body | Claude’s delegation message | Preloaded skills + CLAUDE.md |
 
-With `context: fork`, you write the task in your skill and pick an agent type to execute it. For the inverse (defining a custom subagent that uses skills as reference material), see [Subagents](/docs/en/sub-agents#preload-skills-into-subagents).
+With `context: fork`, you write the task in your skill and pick an agent type to execute it. The built-in Explore and Plan agents [skip CLAUDE.md and git status](/docs/en/sub-agents#what-loads-at-startup) to keep their context small, so a forked skill using `agent: Explore` sees only the SKILL.md content and the agent’s own system prompt. For the inverse, where you define a custom subagent that uses skills as reference material, see [Subagents](/docs/en/sub-agents#preload-skills-into-subagents).
 
 #### [​](#example-research-skill-using-explore-agent) Example: Research skill using Explore agent
 

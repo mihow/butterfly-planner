@@ -34,12 +34,15 @@ Best practices for Claude Code
 * [Extend Claude Code](/docs/en/features-overview)
 * [Explore the .claude directory](/docs/en/claude-directory)
 * [Explore the context window](/docs/en/context-window)
+* [Prompt caching](/docs/en/prompt-caching)
 
 ##### Use Claude Code
 
 * [Store instructions and memories](/docs/en/memory)
 * [Permission modes](/docs/en/permission-modes)
+* [Manage sessions](/docs/en/sessions)
 * [Common workflows](/docs/en/common-workflows)
+* [Prompt library](/docs/en/prompt-library)
 * [Best practices](/docs/en/best-practices)
 
 ##### Platforms and integrations
@@ -56,34 +59,35 @@ Best practices for Claude Code
 * [Claude Code in Slack](/docs/en/slack)
 
 On this page
+------------
 
 * [Give Claude a way to verify its work](#give-claude-a-way-to-verify-its-work)
 * [Explore first, then plan, then code](#explore-first-then-plan-then-code)
 * [Provide specific context in your prompts](#provide-specific-context-in-your-prompts)
-* [Provide rich content](#provide-rich-content)
+  + [Provide rich content](#provide-rich-content)
 * [Configure your environment](#configure-your-environment)
-* [Write an effective CLAUDE.md](#write-an-effective-claude-md)
-* [Configure permissions](#configure-permissions)
-* [Use CLI tools](#use-cli-tools)
-* [Connect MCP servers](#connect-mcp-servers)
-* [Set up hooks](#set-up-hooks)
-* [Create skills](#create-skills)
-* [Create custom subagents](#create-custom-subagents)
-* [Install plugins](#install-plugins)
+  + [Write an effective CLAUDE.md](#write-an-effective-claude-md)
+  + [Configure permissions](#configure-permissions)
+  + [Use CLI tools](#use-cli-tools)
+  + [Connect MCP servers](#connect-mcp-servers)
+  + [Set up hooks](#set-up-hooks)
+  + [Create skills](#create-skills)
+  + [Create custom subagents](#create-custom-subagents)
+  + [Install plugins](#install-plugins)
 * [Communicate effectively](#communicate-effectively)
-* [Ask codebase questions](#ask-codebase-questions)
-* [Let Claude interview you](#let-claude-interview-you)
+  + [Ask codebase questions](#ask-codebase-questions)
+  + [Let Claude interview you](#let-claude-interview-you)
 * [Manage your session](#manage-your-session)
-* [Course-correct early and often](#course-correct-early-and-often)
-* [Manage context aggressively](#manage-context-aggressively)
-* [Use subagents for investigation](#use-subagents-for-investigation)
-* [Rewind with checkpoints](#rewind-with-checkpoints)
-* [Resume conversations](#resume-conversations)
+  + [Course-correct early and often](#course-correct-early-and-often)
+  + [Manage context aggressively](#manage-context-aggressively)
+  + [Use subagents for investigation](#use-subagents-for-investigation)
+  + [Rewind with checkpoints](#rewind-with-checkpoints)
+  + [Resume conversations](#resume-conversations)
 * [Automate and scale](#automate-and-scale)
-* [Run non-interactive mode](#run-non-interactive-mode)
-* [Run multiple Claude sessions](#run-multiple-claude-sessions)
-* [Fan out across files](#fan-out-across-files)
-* [Run autonomously with auto mode](#run-autonomously-with-auto-mode)
+  + [Run non-interactive mode](#run-non-interactive-mode)
+  + [Run multiple Claude sessions](#run-multiple-claude-sessions)
+  + [Fan out across files](#fan-out-across-files)
+  + [Run autonomously with auto mode](#run-autonomously-with-auto-mode)
 * [Avoid common failure patterns](#avoid-common-failure-patterns)
 * [Develop your intuition](#develop-your-intuition)
 * [Related resources](#related-resources)
@@ -648,7 +652,7 @@ Was this page helpful?
 
 YesNo
 
-[Common workflows](/docs/en/common-workflows)[Overview](/docs/en/platforms)
+[Prompt library](/docs/en/prompt-library)[Overview](/docs/en/platforms)
 
 ⌘I
 
