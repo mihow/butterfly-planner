@@ -24,8 +24,9 @@
     return html;
   }
 
-  // --- Sightings marker layer ---
+  // --- Sightings marker layer + heat map points (built in one pass) ---
   var markers = L.layerGroup();
+  var heatPoints = [];
   for (var i = 0; i < obs.length; i++) {
     var o = obs[i];
     var m = L.circleMarker([o.lat, o.lon], {
@@ -36,15 +37,10 @@
     m.bindTooltip(o.initials, {permanent: true, direction: "center",
       className: "map-label", offset: [0, 0]});
     markers.addLayer(m);
-  }
-
-  // --- Density heat map layer ---
-  var heatPoints = [];
-  for (var j = 0; j < obs.length; j++) {
-    heatPoints.push([obs[j].lat, obs[j].lon]);
+    heatPoints.push([o.lat, o.lon]);
   }
   // Auto-scale intensity: fewer observations → lower max → more vivid colors.
-  // With 5 obs, max ≈ 0.15; with 20, max ≈ 0.35; with 80+, max ≈ 1.0.
+  // With 5 obs, max ≈ 0.15; with 20, max ≈ 0.45; with 48+, max ≈ 1.0.
   var defaultMax = Math.max(0.08, Math.min(1.0, 0.05 + obs.length * 0.02));
   var heat = L.heatLayer(heatPoints, {
     radius: 18,
@@ -59,17 +55,21 @@
     options: { position: 'bottomright' },
     onAdd: function() {
       var container = L.DomUtil.create('div', 'leaflet-bar heat-intensity-control');
+      // Slider value is the "reciprocal scale" 1–20: leftmost=1 (heat max 1.0,
+      // 100% intensity), rightmost=20 (heat max 0.05, 2000% intensity).
+      // This ensures the label ascends left→right (100%→2000%).
+      var initSlider = Math.round(1 / defaultMax);
       container.innerHTML =
         '<label for="heat-intensity-slider">Intensity</label>' +
-        '<input id="heat-intensity-slider" type="range" min="0.05" max="1.0" step="0.01" value="' + defaultMax.toFixed(2) + '">' +
+        '<input id="heat-intensity-slider" type="range" min="1" max="20" step="1" value="' + initSlider + '">' +
         '<span class="heat-intensity-value">' + Math.round((1 / defaultMax) * 100) + '%</span>';
       var slider = container.querySelector('input');
       var label = container.querySelector('.heat-intensity-value');
       L.DomEvent.disableClickPropagation(container);
       slider.addEventListener('input', function() {
-        var val = parseFloat(this.value);
+        var val = 1 / parseFloat(this.value);
         heat.setOptions({max: val});
-        label.textContent = Math.round((1 / val) * 100) + '%';
+        label.textContent = Math.round(parseFloat(this.value) * 100) + '%';
       });
       return container;
     }

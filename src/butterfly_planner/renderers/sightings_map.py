@@ -6,7 +6,10 @@ for rich popups with thumbnail images and weather info.
 
 from __future__ import annotations
 
+import json
 from typing import Any
+
+from pydantic import BaseModel
 
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.date_utils import date_range_label, year_range
@@ -17,9 +20,46 @@ from butterfly_planner.renderers.species_palette import (
 from butterfly_planner.renderers.weather_utils import wmo_code_to_conditions
 
 
-def _escape_js(text: str) -> str:
-    """Escape a string for safe embedding inside a JS double-quoted string."""
-    return text.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+class _MarkerData(BaseModel):
+    """Structured marker data serialized as JSON into the map script."""
+
+    lat: float
+    lon: float
+    name: str
+    species: str
+    date: str
+    url: str
+    photo: str
+    color: str
+    initials: str
+    weather: str
+
+
+def _safe_json(obj: Any) -> str:
+    """Serialize *obj* to a JSON string safe for embedding in a <script> block.
+
+    json.dumps escapes ``"`` and ``\\`` by default.  Three additional sequences
+    are unsafe inside a ``<script>`` block even inside a string literal:
+
+    * ``</`` — closes the enclosing ``<script>`` element when the browser
+      HTML-parses the document before executing JS.
+    * U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) — treated as
+      line terminators by JS engines; they break string literals when
+      unescaped.  Python's json.dumps does NOT escape them by default.
+
+    ``ensure_ascii=False`` is intentional: non-ASCII characters in names are
+    preserved as UTF-8 rather than being mangled into ``\\uXXXX`` sequences,
+    which keeps popup text readable.  The three dangerous sequences above are
+    the only ones that need explicit post-processing.
+    """
+    serialized = json.dumps(obj, ensure_ascii=False)
+    # Escape </script> injection: replace </ with <\/
+    # (the backslash is legal in a JSON string and ignored by JS)
+    serialized = serialized.replace("</", "<\\/")
+    # Escape U+2028 / U+2029 — illegal unescaped in JS string literals
+    serialized = serialized.replace(chr(0x2028), "\\u2028")
+    serialized = serialized.replace(chr(0x2029), "\\u2029")
+    return serialized
 
 
 def _build_weather_html(w: dict[str, Any]) -> str:
@@ -28,7 +68,7 @@ def _build_weather_html(w: dict[str, Any]) -> str:
     if w.get("weather_code") is not None:
         parts.append(wmo_code_to_conditions(w["weather_code"]))
     if w.get("high_c") is not None and w.get("low_c") is not None:
-        parts.append(f"{w['high_c']:.0f}/{w['low_c']:.0f}\u00b0C")
+        parts.append(f"{w['high_c']:.0f}/{w['low_c']:.0f}°C")
     if w.get("precip_mm") is not None and w["precip_mm"] > 0:
         parts.append(f"{w['precip_mm']:.1f}mm")
     return " &middot; ".join(parts)
@@ -64,8 +104,8 @@ def build_butterfly_map_html(
         species_list: list[dict[str, Any]] = data.get("species", [])
         palette = build_species_palette(species_list)
 
-    # Build JS array of marker objects for the template.
-    markers_js_parts: list[str] = []
+    # Build list of typed marker objects; serialize once with _safe_json.
+    markers: list[_MarkerData] = []
     for obs in observations:
         lat = obs.get("latitude")
         lon = obs.get("longitude")
@@ -84,24 +124,24 @@ def build_butterfly_map_html(
 
         # Weather from pre-enriched observation
         w = obs.get("weather")
-        weather_html = _escape_js(_build_weather_html(w)) if w else ""
+        weather_html = _build_weather_html(w) if w else ""
 
-        marker = (
-            "{"
-            f"lat:{lat},lon:{lon},"
-            f'name:"{_escape_js(name)}",'
-            f'species:"{_escape_js(species)}",'
-            f'date:"{_escape_js(obs_date)}",'
-            f'url:"{_escape_js(url)}",'
-            f'photo:"{_escape_js(photo_url)}",'
-            f'color:"{color}",'
-            f'initials:"{_escape_js(initials)}",'
-            f'weather:"{weather_html}"'
-            "}"
+        markers.append(
+            _MarkerData(
+                lat=lat,
+                lon=lon,
+                name=name,
+                species=species,
+                date=obs_date,
+                url=url,
+                photo=photo_url,
+                color=color,
+                initials=initials,
+                weather=weather_html,
+            )
         )
-        markers_js_parts.append(marker)
 
-    markers_js = "[" + ",".join(markers_js_parts) + "]"
+    markers_json = _safe_json([m.model_dump() for m in markers])
     years = year_range(observations)
 
     map_div = render_template(
@@ -113,7 +153,7 @@ def build_butterfly_map_html(
 
     map_script = render_template(
         "sightings_map_script.html.j2",
-        markers_json=markers_js,
+        markers_json=markers_json,
     )
 
     return (map_div, map_script)
