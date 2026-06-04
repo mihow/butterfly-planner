@@ -3,10 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from butterfly_planner.datasources.inaturalist import client
+
+# ---------------------------------------------------------------------------
+# Recency window
+# ---------------------------------------------------------------------------
+# Number of years to look back when fetching sightings for the map.
+# The iNat paginator pages newest-first so that max_pages x per_page gives
+# the most recent observations, not the oldest.  10 years captures a
+# meaningful seasonal baseline while keeping queries recent.
+# Change RECENT_YEARS to adjust the floor (product decision: see PR notes).
+RECENT_YEARS: int = 10
 
 # =============================================================================
 # Data Model
@@ -87,7 +97,11 @@ def fetch_observations_for_month(
     max_pages: int = 3,
 ) -> list[ButterflyObservation]:
     """
-    Fetch individual butterfly observations for a given month across all years.
+    Fetch individual butterfly observations for a given month (recent years only).
+
+    Observations are bounded to the last ``RECENT_YEARS`` years and fetched
+    newest-first so that ``max_pages`` pages surface the most recent sightings,
+    not the oldest.
 
     Args:
         month: Month number (1-12) or list of months.
@@ -102,17 +116,24 @@ def fetch_observations_for_month(
 
     month_str = ",".join(str(m) for m in month) if isinstance(month, list) else str(month)
 
+    # Date floor: only include observations from roughly the last RECENT_YEARS
+    # years. This is an approximate floor (365-day years, ignores leap days),
+    # which is fine since it only gates a coarse recency window. Using a
+    # timedelta avoids the ValueError that date(year - N, 2, 29) raises when
+    # the target year is not a leap year.
+    today = date.today()
+    d1 = (today - timedelta(days=365 * RECENT_YEARS)).isoformat()
+
     params: dict[str, Any] = {
         "taxon_id": client.BUTTERFLIES,
         **bbox,
         "month": month_str,
         "quality_grade": quality_grade,
         "verifiable": "true",
-        "order": "desc",
-        "order_by": "observed_on",
+        "d1": d1,
     }
 
-    raw = client.get_observations_paginated(params, max_pages=max_pages)
+    raw = client.get_observations_paginated(params, max_pages=max_pages, newest_first=True)
     observations: list[ButterflyObservation] = []
     for obs in raw:
         parsed = _parse_observation(obs)
