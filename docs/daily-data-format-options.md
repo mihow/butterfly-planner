@@ -1,7 +1,10 @@
 # Structured Daily Data Format — Options
 
-**Date**: 2026-03-16
-**Status**: Option A implemented; others documented for future consideration
+**Date**: 2026-03-16 (updated 2026-05-17 for v0.2 release candidate)
+**Status**: Option A implemented (v0.2, release candidate). v0.2 is a
+structural refactor + hardening. Promotion to a stable 1.0 contract is
+**deferred** until a real consumer (widget / CLI / API) validates the
+contract end to end. The schema may still change before 1.0.
 
 ## Problem
 
@@ -14,19 +17,32 @@ is independent of both the upstream API shapes and the downstream HTML rendering
 
 ### Option A: Daily Data Snapshot in Build Flow (Implemented)
 
-**Where**: New module `src/butterfly_planner/renderers/daily_data.py`
+**Where**: `src/butterfly_planner/serialization/daily_data.py` (v0.2; moved from renderers/)
 **When**: Runs as a task in `flows/build.py`, alongside HTML generation
-**Output**: `data/derived/daily/<date>.json` + `data/derived/daily/today.json` (symlink/copy)
+**Output**: `data/derived/daily/<date>.json` + `data/derived/daily/today.json`
+plus `data/derived/daily/daily-data.schema.json` (the exported JSON Schema,
+written next to today.json so consumers can fetch the contract alongside
+the data)
 
 The build flow already loads and transforms all the data. This option adds a
 pure function that extracts a structured `DailyData` dict from the same inputs
 the HTML renderers use, then writes it to the derived/ tier.
 
-**Schema** (see `daily_data.py` for the canonical definition):
+**Schema v0.2** (canonical definition in `src/butterfly_planner/serialization/daily_data.py`;
+the JSON Schema is exported to `daily-data.schema.json` on every build):
+
+Changes from v0.1 (kept stable through 1.0 unless a consumer forces a change):
+- `conditions` field removed from `weather` and `forecast` entries.
+  Consumers should look up `weather_code` in `WMO_DESCRIPTIONS` (exported
+  from the module) for a plain-text label.
+- `sunshine.sunrise` / `sunshine.sunset` renamed to `sunshine.window_start` /
+  `sunshine.window_end`. These were always derived from the first/last
+  15-minute `is_day==1` slot, not civil sunrise/sunset. The rename makes the
+  semantics accurate.
 
 ```json
 {
-  "version": "0.1",
+  "version": "0.2",
   "date": "2026-03-16",
   "location": {"name": "Portland, OR", "lat": 45.5, "lon": -122.6},
   "generated_at": "2026-03-16T10:30:00-07:00",
@@ -35,16 +51,15 @@ the HTML renderers use, then writes it to the derived/ tier.
     "daylight_hours": 11.8,
     "sunshine_pct": 35.6,
     "is_good_day": true,
-    "sunrise": "07:15",
-    "sunset": "19:05",
+    "window_start": "07:15",
+    "window_end": "19:00",
     "hourly": [{"hour": 7, "sun_minutes": 8}, ...]
   },
   "weather": {
     "high_c": 14.2,
     "low_c": 6.1,
     "precip_mm": 0.0,
-    "weather_code": 1,
-    "conditions": "Mostly Clear"
+    "weather_code": 1
   },
   "gdd": {
     "accumulated": 142.5,
@@ -61,10 +76,16 @@ the HTML renderers use, then writes it to the derived/ tier.
     "recent_observations_count": 87
   },
   "forecast": [
-    {"date": "2026-03-17", "sunshine_hours": 5.1, "high_c": 15.0, "low_c": 7.2, ...},
+    {"date": "2026-03-17", "sunshine_hours": 5.1, "high_c": 15.0, "low_c": 7.2, "weather_code": 2, "daylight_hours": 12.0, "sunshine_pct": 42.5, "is_good_day": true},
     ...
   ]
 }
+```
+
+**WMO code → description** (plain text, no emoji):
+```python
+from butterfly_planner.serialization.daily_data import WMO_DESCRIPTIONS
+label = WMO_DESCRIPTIONS.get(weather_code, f"Unknown ({weather_code})")
 ```
 
 **Pros**:
@@ -176,4 +197,4 @@ reusable, so Options B and C can build on it later:
 3. **Later**: Option C — REST API when we need dynamic queries
 4. **Eventually**: Option D — Webhooks for real-time consumers
 
-The `build_daily_data()` function is the shared foundation for all options.
+The `build_daily_data()` function (in `serialization/daily_data.py`) is the shared foundation for all options.
