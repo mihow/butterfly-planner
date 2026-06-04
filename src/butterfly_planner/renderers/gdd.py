@@ -80,10 +80,12 @@ def build_gdd_today_html(gdd_data: dict[str, Any]) -> str:
         diff = current_total - previous_at_same_doy
         if ratio > 1.05:
             status_text = f"{diff:+.0f} GDD ahead of last year"
-            status_pct = min(85.0, 50 + (ratio - 1) * 200)
+            # Ahead = early = left side: subtract from 50 so pct decreases as ratio grows.
+            status_pct = max(15.0, 50 - (ratio - 1) * 200)
         elif ratio < 0.95:
             status_text = f"{diff:+.0f} GDD behind last year"
-            status_pct = max(15.0, 50 + (ratio - 1) * 200)
+            # Behind = late = right side: add to 50 so pct increases as ratio shrinks.
+            status_pct = min(85.0, 50 - (ratio - 1) * 200)
         else:
             status_text = "Tracking close to last year"
 
