@@ -57,7 +57,7 @@ def fetch_ensemble_sunshine(
     forecasts = []
     for i, time_str in enumerate(times):
         dt = datetime.fromisoformat(time_str)
-        member_values = [hourly[key][i] for key in member_keys]
+        member_values = [int(hourly[key][i]) for key in member_keys if hourly[key][i] is not None]
         forecasts.append(EnsembleSunshine(time=dt, member_values=member_values))
 
     return forecasts

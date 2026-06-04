@@ -44,7 +44,8 @@ class TestDataStoreWrite:
         assert data["meta"]["valid_until"] == valid.isoformat()
         assert data["data"] == {"temp": 20}
 
-    def test_write_extra_params(self, tmp_path: Path) -> None:
+    def test_write_extra_params_nested_under_params(self, tmp_path: Path) -> None:
+        """Extra **params must be nested under meta['params'], not merged into meta."""
         store = DataStore(tmp_path)
         store.write(
             Path("live/test.json"),
@@ -53,7 +54,31 @@ class TestDataStoreWrite:
             location={"lat": 45.5, "lon": -122.6},
         )
         data = json.loads((tmp_path / "live" / "test.json").read_text())
-        assert data["meta"]["location"] == {"lat": 45.5, "lon": -122.6}
+        # Params must live under meta["params"], not directly on meta
+        assert "params" in data["meta"]
+        assert data["meta"]["params"]["location"] == {"lat": 45.5, "lon": -122.6}
+        # Reserved keys must not be overwritten by caller params
+        assert data["meta"]["source"] == "test"
+        assert "fetched_at" in data["meta"]
+
+    def test_write_source_cannot_be_overwritten_by_params(self, tmp_path: Path) -> None:
+        """Caller passing source= in **params must not overwrite the reserved meta['source']."""
+        store = DataStore(tmp_path)
+        store.write(
+            Path("live/test.json"),
+            {},
+            source="real-source",
+            # Attempting to overwrite via params — should be nested, not overwrite
+        )
+        data = json.loads((tmp_path / "live" / "test.json").read_text())
+        assert data["meta"]["source"] == "real-source"
+
+    def test_write_no_extra_params_no_params_key(self, tmp_path: Path) -> None:
+        """When no extra params passed, meta['params'] key should not exist."""
+        store = DataStore(tmp_path)
+        store.write(Path("live/test.json"), {}, source="test")
+        data = json.loads((tmp_path / "live" / "test.json").read_text())
+        assert "params" not in data["meta"]
 
     def test_write_creates_parent_dirs(self, tmp_path: Path) -> None:
         store = DataStore(tmp_path)

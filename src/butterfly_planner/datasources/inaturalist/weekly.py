@@ -7,7 +7,7 @@ for a given ISO week, plus week-to-month conversion helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from butterfly_planner.datasources.inaturalist import client
@@ -41,7 +41,7 @@ class OccurrenceSummary:
     total_species: int
     total_observations: int
     weeks: list[int] = field(default_factory=list)
-    fetched_at: datetime = field(default_factory=datetime.now)
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def top_species(self) -> list[SpeciesRecord]:
@@ -130,7 +130,7 @@ def _week_range(center_week: int, *, radius: int = 1) -> list[int]:
     """
     Return a list of ISO week numbers centered on *center_week*.
 
-    Wraps around year boundaries (week 1 +/- 1 -> [52, 1, 2]).
+    Wraps around year boundaries (week 1 - 1 -> 52; week 53 + 1 -> 1).
 
     Args:
         center_week: The center ISO week number (1-53).
@@ -144,8 +144,8 @@ def _week_range(center_week: int, *, radius: int = 1) -> list[int]:
         w = center_week + offset
         if w < 1:
             w += 52
-        elif w > 52:
-            w -= 52
+        elif w > 53:
+            w -= 53
         weeks.append(w)
     return sorted(weeks)
 

@@ -70,7 +70,7 @@ def _parse_observation(obs: dict[str, Any]) -> ButterflyObservation | None:
         longitude=lon,
         quality_grade=obs.get("quality_grade", "casual"),
         url=f"https://www.inaturalist.org/observations/{obs['id']}",
-        photo_url=photos[0]["url"] if photos else None,
+        photo_url=photos[0].get("url") if photos else None,
     )
 
 
@@ -108,8 +108,6 @@ def fetch_observations_for_month(
         "month": month_str,
         "quality_grade": quality_grade,
         "verifiable": "true",
-        "order": "desc",
-        "order_by": "observed_on",
     }
 
     raw = client.get_observations_paginated(params, max_pages=max_pages)

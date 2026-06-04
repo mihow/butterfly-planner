@@ -10,7 +10,7 @@ Run locally:
 from __future__ import annotations
 
 import json as json_mod
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -125,7 +125,8 @@ def build_html(
     historical_weather: dict[str, dict[str, Any]] | None = None,
 ) -> str:
     """Build HTML page from weather, sunshine, iNaturalist, and GDD data."""
-    fetched_dt = datetime.fromisoformat(weather_data["fetched_at"])
+    _raw_fetched_at = weather_data.get("fetched_at") or ""
+    fetched_dt = datetime.fromisoformat(_raw_fetched_at) if _raw_fetched_at else datetime.now(UTC)
     pst = ZoneInfo("America/Los_Angeles")
     local_dt = fetched_dt.astimezone(pst)
     updated = local_dt.strftime("%Y-%m-%d %H:%M")

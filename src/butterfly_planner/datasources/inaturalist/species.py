@@ -149,7 +149,7 @@ def summarize_species(species: list[SpeciesRecord]) -> dict[str, Any]:
     """
     Create a summary of species data for reporting.
 
-    Returns dict with top_species, total count, and family breakdown.
+    Returns dict with top_species, total count, and rank breakdown.
     """
     if not species:
         return {"total_species": 0, "top_species": [], "by_rank": {}}

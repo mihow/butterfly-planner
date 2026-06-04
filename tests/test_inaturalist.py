@@ -508,9 +508,11 @@ class TestWeekRange:
         weeks = _week_range(1)
         assert weeks == [1, 2, 52]
 
-    def test_week_52_wraps_to_1(self) -> None:
+    def test_week_52_includes_53(self) -> None:
+        # Previously wrapped w=53 to w=1 (bug: skipped week 53 entirely).
+        # After fix: week 53 is a valid ISO week and should appear as-is.
         weeks = _week_range(52)
-        assert weeks == [1, 51, 52]
+        assert weeks == [51, 52, 53]
 
     def test_custom_radius(self) -> None:
         weeks = _week_range(10, radius=2)
@@ -644,6 +646,88 @@ class TestInatClient:
 # =============================================================================
 # Default Bounding Box Tests
 # =============================================================================
+
+
+# =============================================================================
+# Tests for #30 — observations.py: photos[0]["url"] → .get("url")
+# =============================================================================
+
+
+class TestParseObservationPhotoUrl:
+    """_parse_observation must not crash when photos entry has no 'url' key."""
+
+    def test_photo_with_no_url_key_returns_none(self) -> None:
+        """Photo dict missing 'url' key should yield photo_url=None."""
+        obs = {
+            "id": 200001,
+            "location": "45.5,-122.6",
+            "observed_on": "2025-06-15",
+            "quality_grade": "research",
+            "taxon": {"name": "Vanessa cardui"},
+            "photos": [{"thumbnail_url": "https://example.com/thumb.jpg"}],  # no "url" key
+        }
+        result = _parse_observation(obs)
+        assert result is not None
+        assert result.photo_url is None
+
+    def test_empty_photos_list_returns_none(self) -> None:
+        """Empty photos list should yield photo_url=None (no crash)."""
+        obs = {
+            "id": 200002,
+            "location": "45.5,-122.6",
+            "observed_on": "2025-06-15",
+            "quality_grade": "research",
+            "taxon": {"name": "Vanessa cardui"},
+            "photos": [],
+        }
+        result = _parse_observation(obs)
+        assert result is not None
+        assert result.photo_url is None
+
+    def test_photo_url_present_is_used(self) -> None:
+        """When url key exists, it should be used."""
+        obs = {
+            "id": 200003,
+            "location": "45.5,-122.6",
+            "observed_on": "2025-06-15",
+            "quality_grade": "research",
+            "taxon": {"name": "Vanessa cardui"},
+            "photos": [{"url": "https://example.com/photo.jpg"}],
+        }
+        result = _parse_observation(obs)
+        assert result is not None
+        assert result.photo_url == "https://example.com/photo.jpg"
+
+
+# =============================================================================
+# Tests for #32 — weekly.py: _week_range week-53 wrapping
+# =============================================================================
+
+
+class TestWeekRangeWeek53:
+    """_week_range must handle week-53 years correctly."""
+
+    def test_week_53_wraps_correctly(self) -> None:
+        """Week 53 center should wrap to week 1 and 2 (not 53+1=54)."""
+        weeks = _week_range(53)
+        # Expected: [1, 2, 53] — week 53 center with radius 1
+        assert 53 in weeks
+        assert 1 in weeks
+        assert 54 not in weeks
+        assert all(1 <= w <= 53 for w in weeks)
+
+    def test_week_52_with_radius_1_wraps_to_53(self) -> None:
+        """Week 52 center should include week 53 when applicable."""
+        weeks = _week_range(52)
+        # With old %52 logic: (53-1)%52+1 = 1, not 53 — that's the bug
+        # Current code: w=53 > 52 → w-=52 → w=1 (also skips 53!)
+        # Correct: 53 should be reachable
+        # After fix: weeks should contain 51, 52, 53
+        assert 52 in weeks
+        assert 51 in weeks
+        # Should not wrap 53 to 1 (that's the bug to fix)
+        # After fix: w=53 → w should be 53, not 1
+        assert 53 in weeks
 
 
 class TestDefaultBoundingBox:

@@ -33,7 +33,7 @@ def fetch_16day_sunshine(
         "forecast_days": 16,
     }
 
-    resp = session.get(FORECAST_API, params=params)
+    resp = session.get(FORECAST_API, params=params, timeout=60)
     resp.raise_for_status()
     data: dict[str, Any] = resp.json()
 
@@ -45,10 +45,16 @@ def fetch_16day_sunshine(
 
     forecasts = []
     for i, date_str in enumerate(dates):
+        raw_sun = sunshine_secs[i]
+        raw_day = daylight_secs[i]
+        if raw_sun is None or raw_day is None:
+            continue
         dt = date.fromisoformat(date_str)
         forecasts.append(
             DailySunshine(
-                date=dt, sunshine_seconds=sunshine_secs[i], daylight_seconds=daylight_secs[i]
+                date=dt,
+                sunshine_seconds=int(raw_sun),
+                daylight_seconds=int(raw_day),
             )
         )
 

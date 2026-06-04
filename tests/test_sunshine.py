@@ -10,6 +10,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from butterfly_planner.datasources import sunshine
+from butterfly_planner.datasources.sunshine.daily import fetch_16day_sunshine
+from butterfly_planner.datasources.sunshine.ensemble import fetch_ensemble_sunshine
+from butterfly_planner.renderers.sunshine import build_sunshine_16day_html
 
 
 class TestSunshineSlot:
@@ -384,3 +387,155 @@ class TestAnalysisFunctions:
         # Next week only has 3 days (indices 7-9)
         if summary["next_week"]:  # Only check if dict is not empty
             assert summary["next_week"]["total_days"] == 3
+
+
+# =============================================================================
+# Tests for #33 — sunshine renderer: low_c None guard
+# =============================================================================
+
+
+class TestBuildSunshine16DayHtmlNullTemps:
+    """16-day HTML renderer must not crash when low_c or high_c is None."""
+
+    def test_low_c_none_does_not_crash(self) -> None:
+        """high_c present but low_c=None must not raise TypeError in format()."""
+        sunshine_data = {
+            "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
+            "daily_16day": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "sunshine_duration": [14400],
+                    "daylight_duration": [36000],
+                }
+            },
+        }
+        weather_by_date = {
+            "2026-02-04": {
+                "high_c": 15.0,
+                "low_c": None,  # This triggers the bug
+                "precip_mm": 0.0,
+                "weather_code": 0,
+            }
+        }
+        # Should not raise TypeError from {w["low_c"]:.0f}
+        result = build_sunshine_16day_html(sunshine_data, weather_by_date)
+        assert "—" in result  # Falls back to em-dash when either temp is None
+
+    def test_high_c_none_does_not_crash(self) -> None:
+        """high_c=None must produce em-dash, not crash."""
+        sunshine_data = {
+            "today_15min": {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}},
+            "daily_16day": {
+                "daily": {
+                    "time": ["2026-02-04"],
+                    "sunshine_duration": [14400],
+                    "daylight_duration": [36000],
+                }
+            },
+        }
+        weather_by_date = {
+            "2026-02-04": {
+                "high_c": None,
+                "low_c": 5.0,
+                "precip_mm": 0.0,
+                "weather_code": 0,
+            }
+        }
+        result = build_sunshine_16day_html(sunshine_data, weather_by_date)
+        assert "—" in result
+
+
+# =============================================================================
+# Tests for #30 — daily.py: float/None coercion for DailySunshine fields
+# =============================================================================
+
+
+class TestFetch16DaySunshineFloatCoercion:
+    """fetch_16day_sunshine must coerce float/None values to int for DailySunshine."""
+
+    @patch("butterfly_planner.datasources.sunshine.daily.session.get")
+    def test_float_values_coerced_to_int(self, mock_get: Mock) -> None:
+        """API returning float seconds should be coerced to int."""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "daily": {
+                "time": ["2026-02-04"],
+                "sunshine_duration": [14400.7],  # float from API
+                "daylight_duration": [36000.2],  # float from API
+            }
+        }
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        forecasts = fetch_16day_sunshine(lat=45.5, lon=-122.6)
+        assert len(forecasts) == 1
+        assert isinstance(forecasts[0].sunshine_seconds, int)
+        assert isinstance(forecasts[0].daylight_seconds, int)
+        assert forecasts[0].sunshine_seconds == 14400
+
+    @patch("butterfly_planner.datasources.sunshine.daily.session.get")
+    def test_none_values_handled(self, mock_get: Mock) -> None:
+        """API returning None for sunshine/daylight should be handled gracefully."""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "daily": {
+                "time": ["2026-02-04"],
+                "sunshine_duration": [None],
+                "daylight_duration": [None],
+            }
+        }
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        # Should skip None entries rather than crashing
+        forecasts = fetch_16day_sunshine(lat=45.5, lon=-122.6)
+        assert len(forecasts) == 0  # None entry skipped
+
+
+# =============================================================================
+# Tests for #30 — ensemble.py: None filtering and int coercion
+# =============================================================================
+
+
+class TestFetchEnsembleSunshineNoneFiltering:
+    """fetch_ensemble_sunshine must filter None values and coerce floats."""
+
+    @patch("butterfly_planner.datasources.sunshine.ensemble.session.get")
+    def test_none_members_filtered(self, mock_get: Mock) -> None:
+        """None values in ensemble member lists should be filtered out."""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "hourly": {
+                "time": ["2026-02-04T12:00"],
+                "sunshine_duration_member00": [1800],
+                "sunshine_duration_member01": [None],  # missing member value
+                "sunshine_duration_member02": [2100],
+            }
+        }
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        forecasts = fetch_ensemble_sunshine(lat=45.5, lon=-122.6)
+        assert len(forecasts) == 1
+        # None filtered: 3 members → 2 valid
+        assert len(forecasts[0].member_values) == 2
+        assert None not in forecasts[0].member_values
+
+    @patch("butterfly_planner.datasources.sunshine.ensemble.session.get")
+    def test_float_members_coerced(self, mock_get: Mock) -> None:
+        """Float values in ensemble member lists should be coerced to int."""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "hourly": {
+                "time": ["2026-02-04T12:00"],
+                "sunshine_duration_member00": [1800.5],
+                "sunshine_duration_member01": [2100.9],
+            }
+        }
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        forecasts = fetch_ensemble_sunshine(lat=45.5, lon=-122.6)
+        assert len(forecasts) == 1
+        assert all(isinstance(v, int) for v in forecasts[0].member_values)
+        assert forecasts[0].member_values == [1800, 2100]
