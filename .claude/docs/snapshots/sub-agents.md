@@ -56,13 +56,6 @@ Create and use specialized AI subagents in Claude Code for task-specific workflo
 
 Copy page
 
-> Documentation Index
-> -------------------
->
-> Fetch the complete documentation index at: <https://code.claude.com/docs/llms.txt>
->
-> Use this file to discover all available pages before exploring further.
-
 Subagents are specialized AI assistants that handle specific types of tasks. Use one when a side task would flood your main conversation with search results, logs, or file contents you won’t reference again: the subagent does that work in its own context and returns only the summary. Define a custom subagent when you keep spawning the same kind of worker with the same instructions.
 Each subagent runs in its own context window with a custom system prompt, specific tool access, and independent permissions. When Claude encounters a task that matches a subagent’s description, it delegates to that subagent, which works independently and returns results. To see the context savings in practice, the [context window visualization](/docs/en/context-window) walks through a session where a subagent handles research in its own separate window.
 
@@ -456,7 +449,7 @@ The `permissionMode` field controls how the subagent handles permission prompts.
 | `bypassPermissions` | Skip permission prompts |
 | `plan` | Plan mode (read-only exploration) |
 
-Use `bypassPermissions` with caution. It skips all permission prompts, allowing the subagent to execute operations without approval, including writes to `.git`, `.claude`, `.vscode`, `.idea`, `.husky`, and `.cargo`. Root and home directory removals such as `rm -rf /` still prompt as a circuit breaker. See [permission modes](/docs/en/permission-modes#skip-all-checks-with-bypasspermissions-mode) for details.
+Use `bypassPermissions` with caution. It skips all permission prompts, allowing the subagent to execute operations without approval, including writes to `.git`, `.config/git`, `.claude`, `.vscode`, `.idea`, `.husky`, `.cargo`, `.devcontainer`, `.yarn`, and `.mvn`. Root and home directory removals such as `rm -rf /` still prompt as a circuit breaker. See [permission modes](/docs/en/permission-modes#skip-all-checks-with-bypasspermissions-mode) for details.
 
 If the parent uses `bypassPermissions` or `acceptEdits`, this takes precedence and cannot be overridden. If the parent uses [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), the subagent inherits auto mode and any `permissionMode` in its frontmatter is ignored: the classifier evaluates the subagent’s tool calls with the same block and allow rules as the parent session.
 
@@ -736,7 +729,7 @@ Claude decides whether to run subagents in the foreground or background based on
 * Press **Ctrl+B** to background a running task
 
 To disable all background task functionality, set the `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` environment variable to `1`. See [Environment variables](/docs/en/env-vars).
-When [fork mode](#fork-the-current-conversation) is enabled, every subagent spawn runs in the background regardless of the `background` field. Forks still surface permission prompts in your terminal as they occur; named subagents auto-deny anything that would prompt, as described above.
+When [`CLAUDE_CODE_FORK_SUBAGENT`](#fork-the-current-conversation) is set to `1`, every subagent spawn runs in the background regardless of the `background` field. Forks still surface permission prompts in your terminal as they occur; named subagents auto-deny anything that would prompt, as described above.
 
 ### [​](#common-patterns) Common patterns
 
@@ -850,16 +843,15 @@ The `preTokens` value shows how many tokens were used before compaction occurred
 [​](#fork-the-current-conversation) Fork the current conversation
 -----------------------------------------------------------------
 
-Forked subagents are experimental and require Claude Code v2.1.117 or later. Behavior and configuration may change in future releases. Enable them by setting the [`CLAUDE_CODE_FORK_SUBAGENT`](/docs/en/env-vars) environment variable to `1`. The variable is honored in interactive mode and via the SDK or `claude -p`.
+Forked subagents require Claude Code v2.1.117 or later. From v2.1.161 the `/fork` command is enabled by default; on earlier versions it requires setting the [`CLAUDE_CODE_FORK_SUBAGENT`](/docs/en/env-vars) environment variable to `1`. Making forks the model’s *default* spawn behavior is experimental and may change in future releases; it may also be enabled by default in interactive sessions as part of a staged rollout. Set the same variable to `1` to enable it explicitly, or to `0` to disable it, overriding the rollout. The variable is honored in interactive mode and via the SDK or `claude -p`.
 
 A fork is a subagent that inherits the entire conversation so far instead of starting fresh. This drops the input isolation that subagents otherwise provide: a fork sees the same system prompt, tools, model, and message history as the main session, so you can hand it a side task without re-explaining the situation. The fork’s own tool calls still stay out of your conversation and only its final result comes back, so your main context window stays clean. Use a fork when a named subagent would need too much background to be useful, or when you want to try several approaches in parallel from the same starting point.
-Enabling fork mode changes Claude Code in three ways:
+Enabling fork mode changes Claude Code in two ways:
 
 * Claude spawns a fork whenever it would otherwise use the [general-purpose](#built-in-subagents) subagent. Named subagents such as Explore still spawn as before.
 * Every subagent spawn runs in the [background](#run-subagents-in-foreground-or-background), whether it is a fork or a named subagent. Set `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` to `1` to keep spawns synchronous.
-* The `/fork` command spawns a fork instead of acting as an alias for [`/branch`](/docs/en/commands).
 
-You can start a fork yourself with `/fork` followed by a directive. Claude Code names the fork from the first words of the directive. The following example forks the conversation to draft test cases while you continue with the implementation in the main session:
+You can start a fork yourself with `/fork` followed by a directive, with or without the variable set. Claude Code names the fork from the first words of the directive. The following example forks the conversation to draft test cases while you continue with the implementation in the main session:
 
 ```
 /fork draft unit tests for the parser changes so far
@@ -895,7 +887,7 @@ When Claude spawns a fork through the Agent tool, it can pass `isolation: "workt
 
 ### [​](#limitations) Limitations
 
-Setting `CLAUDE_CODE_FORK_SUBAGENT=1` enables fork mode in interactive sessions, [non-interactive mode](/docs/en/headless), and the Agent SDK. A fork cannot spawn further forks.
+Setting `CLAUDE_CODE_FORK_SUBAGENT=1` enables fork mode in interactive sessions, [non-interactive mode](/docs/en/headless), and the Agent SDK; setting it to `0` disables fork mode everywhere, including any server-side rollout. A fork cannot spawn further forks.
 
 [​](#example-subagents) Example subagents
 -----------------------------------------

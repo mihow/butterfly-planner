@@ -43,13 +43,6 @@ Give Claude persistent instructions with CLAUDE.md files, and let Claude accumul
 
 Copy page
 
-> Documentation Index
-> -------------------
->
-> Fetch the complete documentation index at: <https://code.claude.com/docs/llms.txt>
->
-> Use this file to discover all available pages before exploring further.
-
 Each Claude Code session begins with a fresh context window. Two mechanisms carry knowledge across sessions:
 
 * **CLAUDE.md files**: instructions you write to give Claude persistent context
@@ -173,7 +166,7 @@ ln -s AGENTS.md CLAUDE.md
 ```
 
 On Windows, creating a symlink requires Administrator privileges or Developer Mode, so use the `@AGENTS.md` import instead.
-Running [`/init`](/docs/en/commands) in a repo that already has an `AGENTS.md` reads it and incorporates the relevant parts into the generated `CLAUDE.md`. It also reads other tool configs like `.cursorrules` and `.windsurfrules`.
+Running [`/init`](/docs/en/commands) in a repo that already has an `AGENTS.md` reads it and incorporates the relevant parts into the generated `CLAUDE.md`. It also reads other tool configs like `.cursorrules`, `.devin/rules/`, and `.windsurfrules`.
 
 ### [​](#how-claude-md-files-load) How CLAUDE.md files load
 

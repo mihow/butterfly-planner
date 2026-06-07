@@ -33,7 +33,7 @@ On this page
   + [Skill descriptions are cut short](#skill-descriptions-are-cut-short)
 * [Related resources](#related-resources)
 
-Tools and plugins
+Skills
 
 Extend Claude with skills
 =========================
@@ -43,13 +43,6 @@ Copy page
 Create, manage, and share skills to extend Claude’s capabilities in Claude Code. Includes custom commands and bundled skills.
 
 Copy page
-
-> Documentation Index
-> -------------------
->
-> Fetch the complete documentation index at: <https://code.claude.com/docs/llms.txt>
->
-> Use this file to discover all available pages before exploring further.
 
 Skills extend what Claude can do. Create a `SKILL.md` file with instructions, and Claude adds it to its toolkit. Claude uses skills when relevant, or you can invoke one directly with `/skill-name`.
 Create a skill when you keep pasting the same instructions, checklist, or multi-step procedure into chat, or when a section of CLAUDE.md has grown into a procedure rather than a fact. Unlike CLAUDE.md content, a skill’s body loads only when it’s used, so long reference material costs almost nothing until you need it.
@@ -288,6 +281,7 @@ Skills support string substitution for dynamic values in the skill content:
 | `${CLAUDE_SKILL_DIR}` | The directory containing the skill’s `SKILL.md` file. For plugin skills, this is the skill’s subdirectory within the plugin, not the plugin root. Use this in bash injection commands to reference scripts or files bundled with the skill, regardless of the current working directory. |
 
 Indexed arguments use shell-style quoting, so wrap multi-word values in quotes to pass them as a single argument. For example, `/my-skill "hello world" second` makes `$0` expand to `hello world` and `$1` to `second`. The `$ARGUMENTS` placeholder always expands to the full argument string as typed.
+To include a literal `$` before a digit, `ARGUMENTS`, or a declared argument name, such as `$1.00` in prose, escape it with a backslash: `\$1.00`. A backslash before any other `$` is left unchanged. Only a single backslash directly before the token escapes it; a doubled backslash such as `\\$1` keeps both backslashes and substitutes as before.
 **Example using substitutions:**
 
 ```
@@ -812,6 +806,6 @@ Was this page helpful?
 
 YesNo
 
-[Create plugins](/docs/en/plugins)[Automate with hooks](/docs/en/hooks-guide)
+[Reference](/docs/en/mcp)[Discover and install prebuilt plugins](/docs/en/discover-plugins)
 
 ⌘I
