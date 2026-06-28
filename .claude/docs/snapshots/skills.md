@@ -254,7 +254,7 @@ All fields are optional. Only `description` is recommended so Claude knows when 
 | `user-invocable` | No | Set to `false` to hide from the `/` menu. Use for background knowledge users shouldn’t invoke directly. Default: `true`. |
 | `allowed-tools` | No | Tools Claude can use without asking permission when this skill is active. Accepts a space- or comma-separated string, or a YAML list. |
 | `disallowed-tools` | No | Tools removed from Claude’s available pool while this skill is active. Use for autonomous skills that should never call certain tools, such as `AskUserQuestion` for a background loop. Accepts a space- or comma-separated string, or a YAML list. The restriction clears when you send your next message. |
-| `model` | No | Model to use when this skill is active. The override applies for the rest of the current turn and is not saved to settings; the session model resumes on your next prompt. Accepts the same values as [`/model`](/docs/en/model-config), or `inherit` to keep the active model. |
+| `model` | No | Model to use when this skill is active. The override applies for the rest of the current turn and is not saved to settings; the session model resumes on your next prompt. Accepts the same values as [`/model`](/docs/en/model-config), or `inherit` to keep the active model. A value excluded by your organization’s [`availableModels`](/docs/en/model-config#restrict-model-selection) allowlist is not used and the session keeps its current model. |
 | `effort` | No | [Effort level](/docs/en/model-config#adjust-effort-level) when this skill is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `xhigh`, `max`; available levels depend on the model. |
 | `context` | No | Set to `fork` to run in a forked subagent context. |
 | `agent` | No | Which subagent type to use when `context: fork` is set. |
@@ -817,6 +817,8 @@ If Claude doesn’t use your skill when expected:
 3. Try rephrasing your request to match the description more closely
 4. Invoke it directly with `/skill-name` if the skill is user-invocable
 
+If the frontmatter YAML is malformed, Claude Code loads the skill body with empty metadata, so `/skill-name` still works but Claude has no `description` to match against. Run with `--debug` to see the parse error.
+
 ### [​](#skill-triggers-too-often) Skill triggers too often
 
 If Claude uses your skill when you don’t want it:
@@ -841,6 +843,7 @@ To raise the budget, set the [`skillListingBudgetFraction`](/docs/en/settings#av
 * **[Memory](/docs/en/memory)**: manage CLAUDE.md files for persistent context
 * **[Commands](/docs/en/commands)**: reference for built-in commands and bundled skills
 * **[Permissions](/docs/en/permissions)**: control tool and skill access
+* **[Claude Tag skills](https://claude.com/docs/claude-tag/admins/skills-repo)**: project skills committed to a repo also load when that repo is used in a Claude Tag channel
 
 Was this page helpful?
 
