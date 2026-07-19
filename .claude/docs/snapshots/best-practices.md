@@ -38,11 +38,11 @@ Use Claude Code
 Best practices for Claude Code
 ==============================
 
-Copy page
+Copy pageCopy page
 
 Tips and patterns for getting the most out of Claude Code, from configuring your environment to scaling across parallel sessions.
 
-Copy page
+Copy pageCopy page
 
 Claude Code is an agentic coding environment. Unlike a chatbot that answers questions and waits, Claude Code can read your files, run commands, make changes, and autonomously work through problems while you watch, redirect, or step away entirely.
 This changes how you work. Instead of writing code yourself and asking Claude to review it, you describe what you want and Claude figures out how to build it. Claude explores, plans, and implements.
@@ -66,6 +66,7 @@ Give Claude a check it can run: tests, a build, a screenshot to compare. It’s 
 
 Claude stops when the work looks done. Without a check it can run, “looks done” is the only signal available, and you become the verification loop: every mistake waits for you to notice it. Give Claude something that produces a pass or fail, and the loop closes on its own. Claude does the work, runs the check, reads the result, and iterates until the check passes.
 The check is anything that returns a signal Claude can read in the conversation: a test suite, a build exit code, a linter, a script that diffs output against a fixture, or a [browser screenshot](/docs/en/chrome) compared against a design.
+
 
 | Strategy | Before | After |
 | --- | --- | --- |
@@ -158,6 +159,7 @@ The more precise your instructions, the fewer corrections you’ll need.
 
 Claude can infer intent, but it can’t read your mind. Reference specific files, mention constraints, and point to example patterns.
 
+
 | Strategy | Before | After |
 | --- | --- | --- |
 | **Scope the task.** Specify which file, what scenario, and testing preferences. | *”add tests for foo.py"* | *"write a test for foo.py covering the edge case where the user is logged out. avoid mocks.”* |
@@ -206,8 +208,9 @@ CLAUDE.md
 - Prefer running single tests, and not the whole test suite, for performance
 ```
 
-CLAUDE.md is loaded every session, so only include things that apply broadly. For domain knowledge or workflows that are only relevant sometimes, use [skills](/docs/en/skills) instead. Claude loads them on demand without bloating every conversation.
+Run `/context` to confirm Claude loaded the file. CLAUDE.md is loaded every session, so only include things that apply broadly. For domain knowledge or workflows that are only relevant sometimes, use [skills](/docs/en/skills) instead. Claude loads them on demand without bloating every conversation.
 Keep it concise. For each line, ask: *“Would removing this cause Claude to make mistakes?”* If not, cut it. Bloated CLAUDE.md files cause Claude to ignore your actual instructions!
+
 
 | ✅ Include | ❌ Exclude |
 | --- | --- |
@@ -377,7 +380,7 @@ Using Claude Code this way is an effective onboarding workflow, improving ramp-u
 
 For larger features, have Claude interview you first. Start with a minimal prompt and ask Claude to interview you using the `AskUserQuestion` tool.
 
-Claude asks about things you might not have considered yet, including technical implementation, UI/UX, edge cases, and tradeoffs.
+Claude asks about things you might not have considered yet, including technical implementation, UI/UX, edge cases, and tradeoffs. Replace `[brief description]` with your feature before sending the prompt.
 
 ```
 I want to build [brief description]. Interview me in detail using the AskUserQuestion tool.
@@ -448,9 +451,9 @@ use a subagent to review this code for edge cases
 Every prompt you send creates a checkpoint. You can restore conversation, code, or both to any previous checkpoint.
 
 Claude automatically snapshots files before each change so a checkpoint can restore them. Double-tap `Escape` or run `/rewind` to open the rewind menu. You can restore conversation only, restore code only, restore both, or summarize from a selected message. See [Checkpointing](/docs/en/checkpointing) for details.
-Instead of carefully planning every move, you can tell Claude to try something risky. If it doesn’t work, rewind and try a different approach. Checkpoints persist across sessions, so you can close your terminal and still rewind later.
+Instead of carefully planning every move, you can tell Claude to try something risky. If it doesn’t work, rewind and try a different approach. Checkpoints are saved with the conversation, so you can close your terminal, resume the session later, and still rewind.
 
-Checkpoints only track changes made *by Claude*, not external processes. This isn’t a replacement for git.
+Checkpoints only track changes made through Claude’s file editing tools. Changes made through Bash commands or external processes are not captured. This isn’t a replacement for git.
 
 ### [​](#resume-conversations) Resume conversations
 
@@ -471,7 +474,7 @@ Everything so far assumes one human, one Claude, and one conversation. But Claud
 
 Use `claude -p "prompt"` in CI, pre-commit hooks, or scripts. Add `--output-format stream-json --verbose` for streaming JSON output.
 
-With `claude -p "your prompt"`, you can run Claude non-interactively, without a session. [Non-interactive mode](/docs/en/headless) is how you integrate Claude into CI pipelines, pre-commit hooks, or any automated workflow. The output formats let you parse results programmatically: plain text, JSON, or streaming JSON.
+With `claude -p "your prompt"`, you can run Claude non-interactively, without an interactive prompt. The run still creates a resumable session unless you pass `--no-session-persistence`. [Non-interactive mode](/docs/en/headless) is how you integrate Claude into CI pipelines, pre-commit hooks, or any automated workflow. The output formats let you parse results programmatically: plain text, JSON, or streaming JSON.
 
 ```
 # One-off queries
@@ -483,6 +486,8 @@ claude -p "List all API endpoints" --output-format json
 # Streaming for real-time processing
 claude -p "Analyze this log file" --output-format stream-json --verbose
 ```
+
+The first command prints plain text. The `json` format returns a single JSON object with a `result` field. The `stream-json` format prints one JSON object per line, starting with an init event.
 
 ### [​](#run-multiple-claude-sessions) Run multiple Claude sessions
 
@@ -497,6 +502,7 @@ Pick the parallel approach that fits how much coordination you want to do yourse
 
 Beyond parallelizing work, multiple sessions enable quality-focused workflows. A fresh context improves code review since Claude won’t be biased toward code it just wrote.
 For example, use a Writer/Reviewer pattern:
+
 
 | Session A (Writer) | Session B (Reviewer) |
 | --- | --- |
