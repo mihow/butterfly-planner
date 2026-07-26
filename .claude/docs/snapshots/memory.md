@@ -105,7 +105,7 @@ For large projects, you can break instructions into topic-specific files using [
 
 ### [​](#set-up-a-project-claude-md) Set up a project CLAUDE.md
 
-A project CLAUDE.md can be stored in either `./CLAUDE.md` or `./.claude/CLAUDE.md`. Create this file and add instructions that apply to anyone working on the project: build and test commands, coding standards, architectural decisions, naming conventions, and common workflows. These instructions are shared with your team through version control, so focus on project-level standards rather than personal preferences.
+A project CLAUDE.md can be stored in either `./CLAUDE.md` or `./.claude/CLAUDE.md`. Create this file and add instructions that apply to anyone working on the project: build and test commands, coding standards, architectural decisions, naming conventions, and common workflows. These instructions are shared with your team through version control, so focus on project-level standards rather than personal preferences. To confirm the file loaded, run `/context` in a session and check the list under **Memory files**.
 
 Run `/init` to generate a starting CLAUDE.md automatically. Claude analyzes your codebase and creates a file with build commands, test instructions, and project conventions it discovers. If a CLAUDE.md already exists, `/init` suggests improvements rather than overwriting it. Refine from there with instructions Claude wouldn’t discover on its own.Set `CLAUDE_CODE_NEW_INIT=1` to enable an interactive multi-phase flow. `/init` asks which artifacts to set up: CLAUDE.md files, skills, and hooks. It then explores your codebase with a subagent, fills in gaps via follow-up questions, and presents a reviewable proposal before writing any files.
 
@@ -136,7 +136,7 @@ See @README for project overview and @package.json for available npm commands fo
 - git workflow @docs/git-instructions.md
 ```
 
-For private per-project preferences that shouldn’t be checked into version control, create a `CLAUDE.local.md` at the project root. It loads alongside `CLAUDE.md` and is treated the same way. Add `CLAUDE.local.md` to your `.gitignore` so it isn’t committed; running `/init` and choosing the personal option does this for you.
+For private per-project preferences that shouldn’t be checked into version control, create a `CLAUDE.local.md` at the project root. It loads alongside `CLAUDE.md` and is treated the same way. Add `CLAUDE.local.md` to your `.gitignore` so it isn’t committed. With `CLAUDE_CODE_NEW_INIT=1` set, running `/init` and choosing the personal option does this for you.
 If you work across multiple git worktrees of the same repository, a gitignored `CLAUDE.local.md` only exists in the worktree where you created it. To share personal instructions across worktrees, import a file from your home directory instead:
 
 ```
@@ -144,7 +144,7 @@ If you work across multiple git worktrees of the same repository, a gitignored `
 - @~/.claude/my-project-instructions.md
 ```
 
-The first time Claude Code encounters external imports in a project, it shows an approval dialog listing the files. If you decline, the imports stay disabled and the dialog does not appear again.
+An import in a project-level memory file is external when its path resolves outside your working directory, like the home directory import above. The first time Claude Code encounters external imports in a project, it shows an approval dialog listing the files. If you decline, the imports stay disabled and the dialog doesn’t appear again.The dialog protects you from files other people commit to a shared project. Imports in user-scope memory files, such as `~/.claude/CLAUDE.md` and `~/.claude/rules/`, are files you wrote yourself, so they load without the dialog and carry the same trust as the rest of your personal configuration.
 
 For a more structured approach to organizing instructions, see [`.claude/rules/`](#organize-rules-with-claude/rules/).
 
@@ -168,8 +168,9 @@ A symlink also works if you don’t need to add Claude-specific content:
 ln -s AGENTS.md CLAUDE.md
 ```
 
+The command prints no output on success. In your next session, run `/context` and confirm `CLAUDE.md` appears under **Memory files**.
 On Windows, creating a symlink requires Administrator privileges or Developer Mode, so use the `@AGENTS.md` import instead.
-Running [`/init`](/docs/en/commands) in a repo that already has an `AGENTS.md` reads it and incorporates the relevant parts into the generated `CLAUDE.md`. It also reads other tool configs like `.cursorrules`, `.devin/rules/`, and `.windsurfrules`.
+Running [`/init`](/docs/en/commands) reads Cursor rules, in `.cursor/rules/` or `.cursorrules`, and Copilot rules, in `.github/copilot-instructions.md`, and incorporates the relevant parts into the generated `CLAUDE.md`. With `CLAUDE_CODE_NEW_INIT=1` set, `/init` also reads `AGENTS.md`, `.devin/rules/`, `.windsurf/rules/` or `.windsurfrules`, and `.clinerules`.
 
 ### [​](#how-claude-md-files-load) How CLAUDE.md files load
 
@@ -252,6 +253,8 @@ paths:
 ---
 ```
 
+Each brace group multiplies the number of expanded patterns: `src/*.{ts,tsx}` expands to two patterns, and `{a,b}/{c,d}/*.{ts,tsx}` to eight. To keep expansion bounded, a rule’s whole `paths` list shares one budget of 1,000 expanded patterns and 4 MiB, and patterns without braces don’t count against it.
+Claude Code uses any pattern that would exceed the budget unexpanded, and its literal braces match no files. Before v2.1.217, a `paths` value with many brace groups stalled or crashed the CLI at startup.
 Glob syntax treats `[` as the start of a bracket expression such as `[abc]`. A pattern with a `[` that can’t be read as a bracket expression, such as `photos [2024/**`, is invalid: it matches nothing, and the rule’s other patterns keep working. To match a literal `[` in a file name, escape it as `photos \[2024/**`. Before v2.1.207, one invalid pattern made the Read tool fail for every file the rule was evaluated against, instead of matching nothing.
 
 #### [​](#share-rules-across-projects-with-symlinks) Share rules across projects with symlinks
@@ -349,7 +352,7 @@ Auto memory lets Claude accumulate knowledge across sessions without you writing
 
 ### [​](#enable-or-disable-auto-memory) Enable or disable auto memory
 
-Auto memory is on by default. To toggle it, open `/memory` in a session and use the auto memory toggle, or set `autoMemoryEnabled` in your project settings:
+Auto memory is on by default. To toggle it, open `/memory` in a session and use the auto memory toggle, which saves `autoMemoryEnabled` to your user settings at `~/.claude/settings.json`. To turn it off for a single project, set `autoMemoryEnabled` in that project’s settings:
 
 ```
 {
@@ -392,7 +395,8 @@ The check measures only the content that loads: YAML frontmatter and block-level
 This limit applies only to `MEMORY.md`. CLAUDE.md files are loaded in full regardless of length, though shorter files produce better adherence.
 Topic files like `debugging.md` or `patterns.md` are not loaded at startup. Claude reads them on demand using its standard file tools when it needs the information.
 The main conversation’s auto memory isn’t loaded into [subagents](/docs/en/sub-agents#what-loads-at-startup); the exception is a [fork](/docs/en/sub-agents#fork-the-current-conversation), which inherits the parent conversation and system prompt. A subagent’s own auto memory, enabled with the subagent `memory` field, is a separate directory.
-Claude reads and writes memory files during your session. When you see “Writing memory” or “Recalled memory” in the Claude Code interface, Claude is actively updating or reading from `~/.claude/projects/<project>/memory/`.
+Claude reads and writes memory files during your session. When you see messages like “Saved 2 memories” or “Recalled 2 memories” in the Claude Code interface, Claude is actively updating or reading from `~/.claude/projects/<project>/memory/`.
+When Claude writes a memory file that begins with YAML frontmatter, Claude Code records the write time in a `modified` frontmatter field as an ISO 8601 timestamp. The timestamp shows how current the fact is, both to you and to Claude when it reads the memory back. Any file that has frontmatter gets the field the next time Claude writes it, including files created on earlier versions; Claude Code never adds frontmatter to a file that has none. The `modified` field requires Claude Code v2.1.214 or later.
 
 ### [​](#audit-and-edit-your-memory) Audit and edit your memory
 
@@ -401,7 +405,8 @@ Auto memory files are plain markdown you can edit or delete at any time. Run [`/
 [​](#view-and-edit-with-/memory) View and edit with `/memory`
 -------------------------------------------------------------
 
-The `/memory` command lists your CLAUDE.md, CLAUDE.local.md, and other memory file locations across user and project scopes, lets you toggle auto memory on or off, and provides an option to open the auto memory folder. Select any file to open it in your editor. To check which files actually loaded into the current session, run `/context`.
+The `/memory` command lists your CLAUDE.md, CLAUDE.local.md, and other memory file locations across user and project scopes, including user and project CLAUDE.md entries for files that don’t exist yet. It also lets you toggle auto memory on or off and provides an option to open the auto memory folder. Select any file to open it in your editor; selecting one that doesn’t exist yet creates it first. To check which files actually loaded into the current session, run `/context`.
+GUI editors such as VS Code open the file in a separate window, and you can keep using the session while it’s open. Before v2.1.216, `/memory` waited for you to close the file before responding. Terminal editors such as Vim take over the terminal until you exit.
 When you ask Claude to remember something, like “always use pnpm, not npm” or “remember that the API tests require a local Redis instance,” Claude saves it to auto memory. To add instructions to CLAUDE.md instead, ask Claude directly, like “add this to CLAUDE.md,” or edit the file yourself via `/memory`.
 
 [​](#troubleshoot-memory-issues) Troubleshoot memory issues
@@ -414,7 +419,7 @@ These are the most common issues with CLAUDE.md and auto memory, along with step
 CLAUDE.md content is delivered as a user message after the system prompt, not as part of the system prompt itself. Claude reads it and tries to follow it, but there’s no guarantee of strict compliance, especially for vague or conflicting instructions.
 To debug:
 
-* Run `/context` to verify your CLAUDE.md and CLAUDE.local.md files loaded. If a file is missing from the breakdown, Claude can’t see it. Use `/memory` to open and edit the files.
+* Run `/context` and check the list under **Memory files** to verify your CLAUDE.md and CLAUDE.local.md files loaded. If a file is missing there, Claude can’t see it. Use `/memory` to open and edit the files.
 * Check that the relevant CLAUDE.md is in a location that gets loaded for your session (see [Choose where to put CLAUDE.md files](#choose-where-to-put-claude-md-files)).
 * Make instructions more specific. “Use 2-space indentation” works better than “format code nicely.”
 * Look for conflicting instructions across CLAUDE.md files. If two files give different guidance for the same behavior, Claude may pick one arbitrarily.
