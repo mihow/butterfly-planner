@@ -22,7 +22,7 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "pyyaml>=6.0",
     "requests>=2.31.0",
-    "prefect>=3.0.0",
+    "prefect>=3.6.28.dev2",
     "jinja2>=3.1.0",
 ]
 
