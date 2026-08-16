@@ -77,7 +77,7 @@ The check is anything that returns a signal Claude can read in the conversation:
 Once the check exists, decide how hard it gates the stop:
 
 * **In one prompt**: ask Claude to run the check and iterate in the same message, as in the table above.
-* **Across a session**: set the check as a [`/goal` condition](/docs/en/goal). A separate evaluator re-checks it after every turn and Claude keeps working until it holds.
+* **Across a session**: set the check as a [`/goal` condition](/docs/en/goal). A separate evaluator re-checks it after every turn and Claude keeps working until the goal resolves. If Claude stalls, Claude Code eventually stops the run with the goal still set — see [how /goal evaluation works](/docs/en/goal#how-evaluation-works).
 * **As a deterministic gate**: a [Stop hook](/docs/en/hooks#stop) runs your check as a script and blocks the turn from ending until it passes. Claude Code overrides the hook and ends the turn after 8 consecutive blocks.
 * **By a second opinion**: a [verification subagent](/docs/en/sub-agents) or a [dynamic workflow](/docs/en/workflows) that checks its own findings has a fresh model try to refute the result, so the agent doing the work isn’t the one grading it.
 
@@ -193,7 +193,6 @@ A few setup steps make Claude Code significantly more effective across all your 
 Run `/init` to generate a starter CLAUDE.md file based on your current project structure, then refine over time.
 
 CLAUDE.md is a special file that Claude reads at the start of every conversation. Include Bash commands, code style, and workflow rules. This gives Claude persistent context it can’t infer from code alone.
-The `/init` command analyzes your codebase to detect build systems, test frameworks, and code patterns, giving you a solid foundation to refine.
 There’s no required format for CLAUDE.md files, but keep it short and human-readable. For example:
 
 CLAUDE.md
@@ -224,25 +223,7 @@ Keep it concise. For each line, ask: *“Would removing this cause Claude to mak
 
 If Claude keeps doing something you don’t want despite having a rule against it, the file is probably too long and the rule is getting lost. If Claude asks you questions that are answered in CLAUDE.md, the phrasing might be ambiguous. Treat CLAUDE.md like code: review it when things go wrong, prune it regularly, and test changes by observing whether Claude’s behavior actually shifts.
 You can tune instructions by adding emphasis (e.g., “IMPORTANT” or “YOU MUST”) to improve adherence. Check CLAUDE.md into git so your team can contribute. The file compounds in value over time.
-CLAUDE.md files can import additional files using `@path/to/import` syntax:
-
-CLAUDE.md
-
-```
-See @README.md for project overview and @package.json for available npm commands.
-
-# Additional Instructions
-- Git workflow: @docs/git-instructions.md
-- Personal overrides: @~/.claude/my-project-instructions.md
-```
-
-You can place CLAUDE.md files in several locations:
-
-* **Home folder (`~/.claude/CLAUDE.md`)**: applies to all Claude sessions
-* **Project root (`./CLAUDE.md`)**: check into git to share with your team
-* **Project root (`./CLAUDE.local.md`)**: personal project-specific notes; add this file to your `.gitignore` so it isn’t shared with your team
-* **Parent directories**: useful for monorepos where both `root/CLAUDE.md` and `root/foo/CLAUDE.md` are pulled in automatically
-* **Child directories**: Claude pulls in child CLAUDE.md files on demand when it reads a file in those directories
+CLAUDE.md files can import additional files using `@path/to/import` syntax. For import rules and where CLAUDE.md files can live, see [CLAUDE.md files](/docs/en/memory#claude-md-files).
 
 ### [​](#configure-permissions) Configure permissions
 
@@ -360,7 +341,7 @@ For guidance on choosing between skills, subagents, hooks, and MCP, see [Extend 
 [​](#communicate-effectively) Communicate effectively
 -----------------------------------------------------
 
-The way you communicate with Claude Code significantly impacts the quality of results.
+Ask Claude the questions you’d ask another engineer, and for larger features have Claude interview you and write a spec before you start implementing.
 
 ### [​](#ask-codebase-questions) Ask codebase questions
 
@@ -426,7 +407,7 @@ During long sessions, Claude’s context window can fill with irrelevant convers
 * For more control, run `/compact <instructions>`, like `/compact Focus on the API changes`
 * To compact only part of the conversation, use `Esc + Esc` or `/rewind`, select a message checkpoint, and choose **Summarize from here** or **Summarize up to here**. The first condenses messages from that point forward while keeping earlier context intact; the second condenses earlier messages while keeping recent ones in full. See [the rewind menu’s summarize options](/docs/en/checkpointing#rewind-and-summarize).
 * Customize compaction behavior in CLAUDE.md with instructions like `"When compacting, always preserve the full list of modified files and any test commands"` to ensure critical context survives summarization
-* For quick questions that don’t need to stay in context, use [`/btw`](/docs/en/interactive-mode#side-questions-with-%2Fbtw). The answer appears in a dismissible overlay and never enters conversation history, so you can check a detail without growing context.
+* For questions that don’t need to stay in context, use [`/btw`](/docs/en/interactive-mode#side-questions-with-%2Fbtw). The answer never enters conversation history, so you can check a detail without growing context.
 
 ### [​](#use-subagents-for-investigation) Use subagents for investigation
 
@@ -439,12 +420,7 @@ Use subagents to investigate how our authentication system handles token
 refresh, and whether we have any existing OAuth utilities I should reuse.
 ```
 
-The subagent explores the codebase, reads relevant files, and reports back with findings, all without cluttering your main conversation.
-You can also use subagents for verification after Claude implements something:
-
-```
-use a subagent to review this code for edge cases
-```
+You can also use subagents for verification after Claude implements something. See [Add an adversarial review step](#add-an-adversarial-review-step).
 
 ### [​](#rewind-with-checkpoints) Rewind with checkpoints
 
@@ -468,7 +444,6 @@ Claude Code saves conversations locally, so when a task spans multiple sittings 
 -------------------------------------------
 
 Once you’re effective with one Claude, multiply your output with parallel sessions, non-interactive mode, and fan-out patterns.
-Everything so far assumes one human, one Claude, and one conversation. But Claude Code scales horizontally. The techniques in this section show how you can get more done.
 
 ### [​](#run-non-interactive-mode) Run non-interactive mode
 
@@ -557,7 +532,7 @@ For uninterrupted execution with background safety checks, use [auto mode](/docs
 claude --permission-mode auto -p "fix all lint errors"
 ```
 
-For non-interactive runs with the `-p` flag, auto mode aborts if the classifier repeatedly blocks actions, since there is no user to fall back to. See [when auto mode falls back](/docs/en/permission-modes#when-auto-mode-falls-back) for thresholds.
+When the classifier repeatedly blocks actions in a non-interactive run with the `-p` flag, Claude Code doesn’t stop the run. See [when auto mode falls back](/docs/en/permission-modes#when-auto-mode-falls-back) for what happens instead and for the thresholds.
 
 ### [​](#add-an-adversarial-review-step) Add an adversarial review step
 
