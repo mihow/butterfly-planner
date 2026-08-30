@@ -465,5 +465,3 @@ Was this page helpful?
 YesNo
 
 [Prompt caching](/docs/en/prompt-caching)[Manage sessions](/docs/en/sessions)
-
-⌘I
