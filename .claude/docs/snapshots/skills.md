@@ -32,6 +32,7 @@ On this page
   + [Inject dynamic context](#inject-dynamic-context)
   + [How injected commands run](#how-injected-commands-run)
   + [When an injected command fails](#when-an-injected-command-fails)
+  + [Permission checks on injected commands](#permission-checks-on-injected-commands)
   + [Run skills in a subagent](#run-skills-in-a-subagent)
   + [Example: Research skill using Explore agent](#example-research-skill-using-explore-agent)
   + [Restrict Claude’s skill access](#restrict-claude%E2%80%99s-skill-access)
@@ -164,7 +165,7 @@ Where you save a skill decides which sessions load it. Save it under your home d
 | Nested | `<subdir>/.claude/skills/<skill-name>/SKILL.md` | Sessions started in or below `<subdir>`. A session started above it loads the skill once Claude works on files there. See [monorepos and subdirectories](#discovery-from-parent-and-nested-directories) |
 | Additional directory | `.claude/skills/<skill-name>/SKILL.md` in a directory you pass with `--add-dir` | That session. See [directories outside the project](#skills-from-additional-directories) |
 | Plugin | `<plugin>/skills/<skill-name>/SKILL.md` | Wherever the [plugin](/docs/en/plugins) is enabled, as `/plugin-name:skill-name` |
-| claude.ai account | Skills you enable in your claude.ai settings | Cowork and cloud sessions. See [Skills synced from claude.ai](#how-synced-skills-behave) for local sessions |
+| claude.ai account | Skills enabled for your claude.ai account | Cowork sessions, cloud sessions, and terminal sessions where you sign in with that account. See [Skills synced from claude.ai](#how-synced-skills-behave) |
 
 Skill folders also follow these rules:
 
@@ -200,12 +201,12 @@ When two skills share a name, where each one came from decides which one `/name`
 | A skill and a file in `.claude/commands/` | The skill |
 | A project-root skill and a nested skill | Both load. See [monorepos and subdirectories](#discovery-from-parent-and-nested-directories) |
 | A plugin skill and a skill at any of the locations above | Both load, because plugin skills are namespaced as `/plugin-name:skill-name` |
-| Any of the above and a skill synced from claude.ai | The other skill or command. See [When a synced skill name matches another command](#when-a-synced-skill-name-matches-another-command) |
+| Any of the above and a skill [synced from your claude.ai account](#how-synced-skills-behave) | The other skill or command. The synced skill still runs as `/anthropic-skills:<name>`. See [When a synced skill name matches another command](#when-a-synced-skill-name-matches-another-command) |
 
 ### [​](#skills-in-cowork-and-cloud-sessions) Use skills in Cowork and cloud sessions
 
 [Cowork](https://claude.com/product/cowork) sessions and [cloud sessions](/docs/en/cloud-environments#what-carries-over-from-your-setup), including [routines](/docs/en/routines), don’t read `~/.claude/skills/` on your machine. Both interactive and scheduled Cowork sessions load the skills enabled for your claude.ai account, synced at session start; manage them from **Customize** in the Desktop app sidebar or from the skills settings on claude.ai. Cloud sessions additionally load project skills committed to the cloned repository’s `.claude/skills/`.
-If a skill exists only in `~/.claude/skills/` on your machine, Claude Code reports that the skill was not found when a [routine](/docs/en/routines) invokes it, because each routine run starts as a fresh remote session. To make a personal skill available in these sessions:
+If a skill exists only in `~/.claude/skills/` on your machine, Claude Code reports that the skill was not found when a [routine](/docs/en/routines) invokes it, because each routine run starts as a fresh cloud session. To make a personal skill available in these sessions:
 
 * For Cowork and cloud sessions, enable the skill for your claude.ai account.
 * For cloud sessions, you can instead commit the skill to the repository’s `.claude/skills/`, or ship it in a plugin declared in the repository’s `.claude/settings.json`. Repo-declared plugins [install at session start](/docs/en/cloud-environments#what-carries-over-from-your-setup); plugins enabled only in your user settings don’t transfer.
@@ -214,43 +215,41 @@ If a skill exists only in `~/.claude/skills/` on your machine, Claude Code repor
 
 ### [​](#how-synced-skills-behave) Skills synced from claude.ai
 
-This section applies to you if you enabled skills for your claude.ai account. In Cowork and cloud sessions, Claude Code loads those skills without any setup on your machine. In any other session on your machine, Claude Code loads them only after you turn syncing on with [`CLAUDE_CODE_SYNC_SKILLS`](/docs/en/env-vars#variables) in a non-interactive run, as [Where synced skills load](#where-synced-skills-load) describes.
+This section applies to you if you use Cowork or cloud sessions, or sign in to Claude Code in your terminal with a claude.ai account. In those sessions, Claude Code loads the skills enabled for your claude.ai account, with no setup on your part, as [Where synced skills load](#where-synced-skills-load) describes. Those skills include the ones you create or turn on in your claude.ai settings, skills your organization provides there, and Anthropic’s built-in skills such as `pdf` and `xlsx`.
 Claude Code downloads a synced skill from your account rather than reading a file you wrote on the machine where the session runs, so it applies rules to synced skills that don’t apply to the skills you store in the [skills locations](#where-skills-live).
 
 #### [​](#where-synced-skills-load) Where synced skills load
 
 In a Cowork or cloud session, Claude Code loads the skills enabled for your claude.ai account, and [Skills in Cowork and cloud sessions](#skills-in-cowork-and-cloud-sessions) says how to choose which skills those sessions get.
-In any other session on your machine, Claude Code loads them only after you download them once in a non-interactive run:
+In your terminal, Claude Code syncs those skills in sessions where you sign in with your claude.ai account. When the session starts, Claude Code downloads your account’s skills into `~/.claude/skills/synced/` in the background, then checks claude.ai for changes about every 10 minutes while the session runs. When a check finds that a skill was added, edited, or turned off on claude.ai, Claude Code adds, updates, or removes it in the running session without a restart. Syncing in terminal sessions requires Claude Code v2.1.273 or later.
+The sync never delays startup, because Claude waits for a skill’s download only when it invokes that skill. A short [non-interactive](/docs/en/headless) run can therefore finish before a newly added skill downloads, in which case a later session downloads it. To make a non-interactive run download your skills and wait for the list before it answers the prompt, set [`CLAUDE_CODE_SYNC_SKILLS`](/docs/en/env-vars#variables) to `1`.
+Claude Code syncs only in a session that signs in with your claude.ai account and [fetches feature flags from Anthropic](/docs/en/env-vars#features-that-need-feature-flag-fetching). It doesn’t sync in these sessions:
 
-1
+* A session that doesn’t use a sign-in stored by `/login`, such as one that authenticates with an API key, or one where `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, or an `apiKeyHelper` script supplies the credential
+* A session that doesn’t fetch feature flags, such as one on Amazon Bedrock or one where you set `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+* A session in [bare mode](/docs/en/headless#start-faster-with-bare-mode) or one you start with `--safe-mode`
+* A session where your organization’s managed settings [lock skills to plugin sources](/docs/en/settings-reference#strictpluginonlycustomization-skills), or one you start with a [`--setting-sources`](/docs/en/cli-reference#cli-flags) list that leaves out `user`
 
-Enable the skills for your claude.ai account
-
-Enable each skill you want for your claude.ai account, as [Skills in Cowork and cloud sessions](#skills-in-cowork-and-cloud-sessions) describes. Claude Code downloads only the skills you enabled, and it needs your claude.ai sign-in to download them.
-
-2
-
-Run Claude Code in non-interactive mode with syncing turned on
-
-Claude Code downloads synced skills only when you run it in [non-interactive mode](/docs/en/headless) with the `-p` flag and set [`CLAUDE_CODE_SYNC_SKILLS`](/docs/en/env-vars#variables) to `1`. The prompt you pass doesn’t affect the download.
-
-```
-CLAUDE_CODE_SYNC_SKILLS=1 claude -p "List the skills you have available"
-```
-
-Claude Code downloads the skills into `~/.claude/skills/synced/`, answers the prompt, and exits like any other non-interactive run. The downloaded skills stay on disk after it exits, so you don’t need to keep the run open. Claude Code downloads skills only during a run with `CLAUDE_CODE_SYNC_SKILLS` set, so after you enable or change a skill on claude.ai, run the command again. To change how long the run waits for the sync before it answers the prompt, set [`CLAUDE_CODE_SYNC_SKILLS_WAIT_TIMEOUT_MS`](/docs/en/env-vars#variables).
-
-3
-
-Confirm the skills load in a local session
-
-Start an interactive session, without `CLAUDE_CODE_SYNC_SKILLS` set, and run `/skills`. The menu lists the downloaded skills under `claude.ai sync`. Every local session you start afterwards with the same claude.ai sign-in loads them from `~/.claude/skills/synced/` too.
+If you sign in with `/login` during a session, restart Claude Code to start syncing.
+Skills that an earlier session synced stay on disk. Claude Code loads them in later sessions signed in to the same account, even when it can’t reach claude.ai.
+To see which skills synced, run `/skills`. The menu lists them under `claude.ai sync`.
+Some of Anthropic’s skills, such as `pdf` and `xlsx`, always sync. For the rest, turn a skill on or off in your skills settings on claude.ai to change whether it syncs.
+To stop syncing on a machine, set [`syncClaudeAiSkills`](/docs/en/settings-reference#syncclaudeaiskills) to `false` in your user settings. Claude Code stops downloading, and the next time it starts it moves the skills it already synced to `~/.claude/skills/.trash/` and no longer loads them. Your organization can turn syncing off for everyone by turning off Skills on claude.ai. To stop syncing while leaving Skills on, it can set the same key in [managed settings](/docs/en/managed-settings).
+If your organization turns Skills off on claude.ai, Claude Code removes the downloaded skills and they stop loading. The removed skills move to `~/.claude/skills/.trash/`, where you can recover the files until the [retention sweep](/docs/en/claude-directory#cleaned-up-automatically) deletes them. Once your organization turns Skills back on, Claude Code downloads the skills you enabled at the next sync.
 
 #### [​](#when-a-synced-skill-name-matches-another-command) When a synced skill name matches another command
 
-Claude Code skips a synced skill whose name matches any other command, and that other command runs. The other command can be a built-in command, a [bundled skill](#bundled-skills), a skill at any [local level](#where-skills-live), a plugin skill, a file in `.claude/commands/`, or an [MCP prompt](/docs/en/mcp#use-mcp-prompts-as-commands). Claude Code also reserves the names of its own built-in commands and bundled skills even when they’re unavailable in your session, for example after you turn bundled skills off, so it skips a synced skill with one of those names too.
+You can invoke a synced skill by its full name, `/anthropic-skills:<name>`, or by its short name, `/<name>`. When another command uses that short name, `/<name>` runs the other command, and the synced skill runs only as `/anthropic-skills:<name>`. With a local `deploy` skill and a synced `deploy`, `/deploy` runs the local skill and `/anthropic-skills:deploy` runs the synced one. Before v2.1.269, a synced skill had only its short name.
+The other command can be any of these:
+
+* A built-in command or a [bundled skill](#bundled-skills), including one that’s unavailable in your session, for example after you turn bundled skills off
+* A skill at any [local level](#where-skills-live) or a file in `.claude/commands/`
+* A plugin skill
+* An [MCP prompt](/docs/en/mcp#use-mcp-prompts-as-commands)
+
 Claude Code labels synced skills so you can tell where they came from. The `/skills` menu and `/context` group synced skills under `claude.ai sync`, and the `/` command menu marks them as coming from claude.ai.
-When it compares names, Claude Code ignores case, spacing, and invisible characters, and treats compatibility forms such as fullwidth letters and dash variants as their plain equivalents, so a synced `Commit` can’t load beside a local `commit`. A name that differs only by a look-alike letter from another alphabet counts as a different name, and the `claude.ai sync` label is how you tell the two apart. These checks and labels require Claude Code v2.1.228 or later.
+When it compares names, Claude Code ignores case, spacing, and invisible characters, and treats compatibility forms such as fullwidth letters and dash variants as their plain equivalents. For example, a synced skill named `Commit` and a local skill named `commit` count as the same name, so `/commit` keeps running your local skill.
+A name that differs only by a look-alike letter from another alphabet counts as a different name, and the `claude.ai sync` label is how you tell the two apart. These checks and labels require Claude Code v2.1.228 or later.
 
 #### [​](#how-claude-code-handles-the-frontmatter-of-a-synced-skill) How Claude Code handles the frontmatter of a synced skill
 
@@ -377,7 +376,7 @@ Claude Code accepts every field in the table above. Outside Claude Code, you can
 | Claude Code skills at [any level](#where-skills-live), including [plugin](/docs/en/plugins) skills | Every field in the table above |
 | claude.ai skill uploads, the Skills API, and packaging with `package_skill.py` from [anthropics/skills](https://github.com/anthropics/skills) | `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools` |
 
-When you enable a personal skill for [Cowork and cloud sessions](#skills-in-cowork-and-cloud-sessions), including routines, you upload it to claude.ai, so the same rules apply.
+When you enable a personal skill for your claude.ai account, for example to use it in [Cowork and cloud sessions](#skills-in-cowork-and-cloud-sessions) and routines, you upload it to claude.ai, so the same rules apply.
 If you include any field the spec doesn’t allow, packaging or upload fails with a hard error instead of ignoring the field:
 
 ```
@@ -400,9 +399,10 @@ The table below shows where the command name comes from for each layout:
 | File in a subdirectory of `.claude/commands/` | Subdirectory path relative to `commands/` with each `/` replaced by `:`, then the file name without extension | `.claude/commands/frontend/component.md` → `/frontend:component` |
 | Plugin `skills/` subdirectory | Frontmatter `name` or the directory name, namespaced by plugin | `my-plugin/skills/review/SKILL.md` → `/my-plugin:review`, or `/my-plugin:fancy` with `name: fancy` |
 | Plugin root `SKILL.md` | Frontmatter `name`, with the plugin directory name as a fallback | `my-plugin/SKILL.md` with `name: review` → `/my-plugin:review`. See [Path behavior rules](/docs/en/plugins-reference#path-behavior-rules) |
+| Skill [synced from claude.ai](#how-synced-skills-behave) | The skill’s name on your claude.ai account, prefixed with `anthropic-skills:` | Account skill `deploy` → `/anthropic-skills:deploy`, or `/deploy` while no other command uses that name |
 
 In a plugin skill, the frontmatter `name` replaces the directory name in the last segment of the command, so `my-plugin/skills/review/SKILL.md` with `name: fancy` becomes `/my-plugin:fancy`. The bare `/fancy` also invokes the skill unless another command already uses that name. If the `name` you write already starts with the plugin’s own prefix, Claude Code doesn’t add the prefix again on v2.1.246 or later. For example, `name: my-plugin:fancy` still becomes `/my-plugin:fancy`. From v2.1.216 through v2.1.245, Claude Code doubled the prefix when the `name` already carried it.
-In [non-interactive sessions](/docs/en/headless), the names `help` and `feedback` aren’t reserved for their terminal-only built-in commands, so a plugin skill with one of those names keeps its bare command there. Every other terminal-only built-in’s name, such as `/login`, stays reserved even though the command can’t run in those sessions. A synced skill named `help` or `feedback` is still skipped there, because Claude Code [skips a synced skill](#when-a-synced-skill-name-matches-another-command) whose name matches any built-in command whether or not that command can run.
+In [non-interactive sessions](/docs/en/headless), the names `help` and `feedback` aren’t reserved for their terminal-only built-in commands, so a plugin skill with one of those names keeps its bare command there. Every other terminal-only built-in’s name, such as `/login`, stays reserved even though the command can’t run in those sessions.
 For a plugin-root `SKILL.md`, there is no skill directory to take the name from, so `name` supplies the whole final segment. Without a `name` field, Claude Code falls back to the plugin’s directory name.
 
 #### [​](#available-string-substitutions) Available string substitutions
@@ -657,8 +657,12 @@ Which commands get the carveout depends on the shell:
 * `shell: powershell`, when the PowerShell tool is enabled: a [different set](/docs/en/tools-reference#shell-selection-in-settings-hooks-and-skills) that includes `grep` and `git diff` but not `find` or `diff`
 
 With the default `bash` shell, append `|| true` to any other command you expect to exit non-zero. A check script that exits 1 when it finds problems is one example.
-Injected commands never prompt for permission. When a command’s permission check returns anything other than allow, Claude Code aborts the invocation. This includes a rule that would normally ask you. The abort shows `Shell command permission check failed for pattern "..."`.
-To keep an unmatched command from aborting here, pre-approve it with [`allowed-tools`](#pre-approve-tools-for-a-skill). A matching ask or deny rule still aborts the invocation regardless of `allowed-tools`. See [Manage permissions](/docs/en/permissions#manage-permissions).
+
+#### [​](#permission-checks-on-injected-commands) Permission checks on injected commands
+
+Injected commands never prompt for permission while the skill renders. Claude Code checks each one against your [permission rules](/docs/en/permissions) first. A command a deny rule matches aborts the invocation with `Shell command permission check failed for pattern "..."`.
+Outside [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), when a command’s permission check returns anything other than allow, Claude Code aborts the invocation with the same error. This includes a rule that would normally ask you. To keep an unmatched command from aborting here, pre-approve it with [`allowed-tools`](#pre-approve-tools-for-a-skill). Deny and ask rules still override `allowed-tools`. See [Manage permissions](/docs/en/permissions#manage-permissions).
+In auto mode, a command that would otherwise need your approval doesn’t abort the invocation. The skill loads with an instruction telling Claude to run the command first, and Claude’s own call then goes through [auto mode’s usual checks](/docs/en/permission-modes#how-the-classifier-evaluates-actions). The invocation still aborts in a [forked skill](#run-skills-in-a-subagent) that sets `agent`, and in a session where Claude doesn’t have the [shell tool that runs injected commands](#how-injected-commands-run).
 
 ### [​](#run-skills-in-a-subagent) Run skills in a subagent
 
@@ -684,8 +688,8 @@ Skills and [subagents](/docs/en/sub-agents) work together in two directions:
 
 | Approach | System prompt | Task | Also loads |
 | --- | --- | --- | --- |
-| Skill with `context: fork` | From agent type | SKILL.md content | CLAUDE.md, except when the agent is Explore or Plan |
-| Subagent with `skills` field | Subagent’s markdown body | Claude’s delegation message | Preloaded skills + CLAUDE.md |
+| Skill with `context: fork` | From agent type | SKILL.md content | CLAUDE.md, per the agent’s [startup context](/docs/en/sub-agents#what-loads-at-startup) |
+| Subagent with `skills` field | Subagent’s markdown body | Claude’s delegation message | Preloaded skills + CLAUDE.md, per the subagent’s [startup context](/docs/en/sub-agents#what-loads-at-startup) |
 
 With `context: fork`, you write the task in your skill and pick an agent type to execute it. The built-in Explore and Plan agents [skip CLAUDE.md and git status](/docs/en/sub-agents#what-loads-at-startup) to keep their context small, so a forked skill using `agent: Explore` sees only the SKILL.md content and the agent’s own system prompt. For the inverse, where you define a custom subagent that uses skills as reference material, see [Subagents](/docs/en/sub-agents#preload-skills-into-subagents).
 
@@ -785,7 +789,7 @@ The report covers the skills in your session other than bundled skills and enter
 [​](#evaluate-and-iterate-on-a-skill) Evaluate and iterate on a skill
 ---------------------------------------------------------------------
 
-Seeing a skill trigger tells you Claude found it, not that it did what you intended. To know a skill is working, measure two things separately: whether Claude invokes it on the prompts it should, and whether the output matches what you expect when it does.
+Seeing a skill trigger tells you Claude found it, not that it did what you intended. To know a skill is working, measure separately whether Claude invokes it on the prompts it should, and whether the output matches what you expect when it does.
 The check for both is a baseline comparison. Collect a few realistic prompts, run each one in a fresh session with the skill available and again with it [disabled](#override-skill-visibility-from-settings), and compare the results. A fresh session matters because leftover context from authoring the skill will mask gaps in the written instructions.
 Two tools automate that comparison. For a skill that ships in a [plugin](/docs/en/plugins), [`claude plugin eval`](/docs/en/plugin-evals) runs each prompt in an isolated session with and without the plugin, scores it with graders you define or that it writes for you, and exits non-zero below a threshold so you can gate CI on it. For iterating on a single skill inside a Claude Code conversation, the skill-creator plugin below runs a similar loop with its own `evals/evals.json` format. The two formats aren’t interchangeable.
 
