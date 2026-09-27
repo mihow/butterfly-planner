@@ -13,6 +13,7 @@ On this page
   + [Organize rules with .claude/rules/](#organize-rules-with-claude%2Frules%2F)
   + [Set up rules](#set-up-rules)
   + [Path-specific rules](#path-specific-rules)
+  + [Rule frontmatter reference](#rules-frontmatter-reference)
   + [Share rules across projects with symlinks](#share-rules-across-projects-with-symlinks)
   + [User-level rules](#user-level-rules)
   + [Manage CLAUDE.md for large teams](#manage-claude-md-for-large-teams)
@@ -116,7 +117,7 @@ For large projects, you can break instructions into topic-specific files using [
 
 A project CLAUDE.md can be stored in either `./CLAUDE.md` or `./.claude/CLAUDE.md`. Create this file and add instructions that apply to anyone working on the project: build and test commands, coding standards, architectural decisions, naming conventions, and common workflows. These instructions are shared with your team through version control, so focus on project-level standards rather than personal preferences. To confirm the file loaded, run `/context` in a session and check the list under **Memory files**.
 
-Run `/init` to generate a starting CLAUDE.md automatically. Claude analyzes your codebase and creates a file with build commands, test instructions, and project conventions it discovers. If a CLAUDE.md already exists, `/init` suggests improvements rather than overwriting it. Refine from there with instructions Claude wouldn’t discover on its own.Set `CLAUDE_CODE_NEW_INIT=1` to enable an interactive multi-phase flow. `/init` asks which artifacts to set up: CLAUDE.md files, skills, and hooks. It then explores your codebase with a subagent, fills in gaps via follow-up questions, and presents a reviewable proposal before writing any files.
+Run `/init` to generate a starting CLAUDE.md automatically. Claude analyzes your codebase and creates a file with build commands, test instructions, and project conventions it discovers. If a CLAUDE.md already exists, `/init` suggests improvements rather than overwriting it. Refine from there with instructions Claude wouldn’t discover on its own.For an interactive multi-phase flow instead, set the `CLAUDE_CODE_NEW_INIT` environment variable to `1` before you run `/init`. Set it in your shell or in the `env` block of a settings file, as shown in [Set environment variables](/docs/en/env-vars#set-environment-variables). With it set, `/init` asks which artifacts to set up: CLAUDE.md files, skills, and hooks. It then explores your codebase with a subagent, fills in gaps via follow-up questions, and presents a reviewable proposal before writing any files. The variable only changes how `/init` runs, so you can leave it set.
 
 ### [​](#write-effective-instructions) Write effective instructions
 
@@ -172,6 +173,7 @@ To also load memory files from additional directories, set the `CLAUDE_CODE_ADDI
 CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 claude --add-dir ../shared-config
 ```
 
+The inline form sets the variable for that one launch in Bash or Zsh. To keep it on for every session, add it to the `env` block in `~/.claude/settings.json` as shown in [Set environment variables](/docs/en/env-vars#set-environment-variables).
 This loads `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`, and `CLAUDE.local.md` from the additional directory. `CLAUDE.local.md` is skipped if you exclude `local` from [`--setting-sources`](/docs/en/cli-reference).
 
 ### [​](#organize-rules-with-claude/rules/) Organize rules with `.claude/rules/`
@@ -240,6 +242,17 @@ Each brace group multiplies the number of expanded patterns: `src/*.{ts,tsx}` ex
 Claude Code uses any pattern that would exceed the budget unexpanded, and its literal braces match no files. Before v2.1.217, a `paths` value with many brace groups stalled or crashed the CLI at startup.
 Glob syntax treats `[` as the start of a bracket expression such as `[abc]`. A pattern with a `[` that can’t be read as a bracket expression, such as `photos [2024/**`, is invalid: it matches nothing, and the rule’s other patterns keep working. To match a literal `[` in a file name, escape it as `photos \[2024/**`. Before v2.1.207, one invalid pattern made the Read tool fail for every file the rule was evaluated against, instead of matching nothing.
 
+#### [​](#rules-frontmatter-reference) Rule frontmatter reference
+
+Configure a rule with YAML [frontmatter](/docs/en/glossary#frontmatter) between `---` markers at the top of the file. `paths` is the only field Claude Code reads from a rule; any other field is ignored without an error. Claude Code removes the frontmatter before loading the rule into context.
+
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `paths` | No | Glob patterns that [scope the rule to matching files](#path-specific-rules). Accepts a YAML list or a comma-separated string |
+
+If the YAML between the markers doesn’t parse, Claude Code ignores the frontmatter and loads the rule as if it had no `paths`. Run `claude --debug` to see the parse error.
+
 #### [​](#share-rules-across-projects-with-symlinks) Share rules across projects with symlinks
 
 The `.claude/rules/` directory supports symlinks, so you can maintain a shared set of rules and link them into multiple projects. Circular symlinks are detected and handled gracefully.
@@ -251,6 +264,8 @@ ln -s ~/shared-claude-rules .claude/rules/shared
 ln -s ~/company-standards/security.md .claude/rules/security.md
 ```
 
+If you point a `.claude/rules/` or `CLAUDE.md` symlink at a network path such as the UNC share `\\server\share` or a path under `/net` or `/Network`, the linked instructions don’t load. Claude Code doesn’t follow the link, because looking up such a path can contact the host it names. `\\wsl$` paths don’t count as network paths.
+
 #### [​](#user-level-rules) User-level rules
 
 Personal rules in `~/.claude/rules/` apply to every project on your machine. Use them for preferences that aren’t project-specific:
@@ -261,7 +276,7 @@ Personal rules in `~/.claude/rules/` apply to every project on your machine. Use
 └── workflows.md      # Your preferred workflows
 ```
 
-User-level rules are loaded before project rules, giving project rules higher priority.
+Claude Code loads user-level rules before project rules, so a project rule appears later in Claude’s context than a user rule. Neither set overrides the other: if a user rule and a project rule conflict, Claude may follow either one, so keep the two consistent.
 
 ### [​](#manage-claude-md-for-large-teams) Manage CLAUDE.md for large teams
 
@@ -344,7 +359,7 @@ Claude Code can read [`AGENTS.md`](/docs/en/glossary#agents-md) as your project 
 
 To change the default, for example to have Claude always read both files, read only `CLAUDE.md`, or read only your organization’s managed instructions, [change the **Project instructions** setting](#choose-which-instruction-files-load).
 
-Reading `AGENTS.md` directly requires Claude Code v2.1.277 or later. In some sessions, such as those on Amazon Bedrock or with telemetry disabled, Claude [can’t read `AGENTS.md`](#when-agents-md-support-is-unavailable), so [import it from a `CLAUDE.md`](#share-one-file-with-other-coding-tools) there instead.
+Reading `AGENTS.md` directly requires Claude Code v2.1.277 or later. In some sessions Claude [can’t read `AGENTS.md`](#when-agents-md-support-is-unavailable), so [import it from a `CLAUDE.md`](#share-one-file-with-other-coding-tools) there instead.
 
 ### [​](#when-claude-code-reads-agents-md) When Claude Code reads AGENTS.md
 
@@ -395,11 +410,10 @@ Your change applies from the next message you send and in every new session.
 In these sessions Claude reads `CLAUDE.md` files only, and **Project instructions** doesn’t appear in the `/config` settings panel:
 
 * You’re on a Claude Code version before v2.1.277
-* Your session doesn’t [fetch feature flags from Anthropic](/docs/en/env-vars#features-that-need-feature-flag-fetching), for example because you use Amazon Bedrock or another third-party provider, or you disabled telemetry. The linked section has the full list
-* It’s your [first session after you install or upgrade](/docs/en/env-vars#first-session-after-an-install-or-upgrade) to a version with `AGENTS.md` support. Claude reads `AGENTS.md` from your next session on
-* You or your organization set [`disableAllHooks`](/docs/en/settings-reference#disableallhooks) or [`allowManagedHooksOnly`](/docs/en/settings-reference#allowmanagedhooksonly), or you disabled the built-in `agents-md` plugin in `/plugin`
+* You disabled the built-in `agents-md` plugin in `/plugin`
+* In some cases, it’s your [first session after you upgrade](/docs/en/env-vars#first-session-after-an-install-or-upgrade) from v2.1.276 or earlier. Claude reads `AGENTS.md` from your next session on
 
-To give Claude your `AGENTS.md` in these sessions, [import it from a `CLAUDE.md`](#share-one-file-with-other-coding-tools).
+Before v2.1.281, some sessions, such as those on Amazon Bedrock or with telemetry disabled, read `CLAUDE.md` files only. On those versions, update Claude Code. To give Claude your `AGENTS.md` in any of these sessions, [import it from a `CLAUDE.md`](#share-one-file-with-other-coding-tools).
 
 ### [​](#where-agents-md-differs-from-claude-md) Where AGENTS.md differs from CLAUDE.md
 
@@ -408,7 +422,6 @@ An `AGENTS.md` that Claude reads through the **Project instructions** setting di
 
 |  | `CLAUDE.md` | `AGENTS.md` read through the setting |
 | --- | --- | --- |
-| `/memory` and the **Memory files** list in `/context` | Listed | Not listed. To confirm Claude read it, look for the [`AGENTS.md loaded` line](#when-claude-code-reads-agents-md) under the default value, or ask Claude what its project instructions say |
 | [`InstructionsLoaded` hooks](/docs/en/hooks#instructionsloaded) | Fire | Don’t fire. They fire as usual for an `AGENTS.md` that a `CLAUDE.md` imports or symlinks to |
 | Directories you add with `--add-dir` while [`CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD`](#load-from-additional-directories) is set | Their `CLAUDE.md` loads | Their `AGENTS.md` doesn’t load |
 | An `@path` import of a file outside your working directory | Claude Code asks you to approve [external imports](#import-additional-files) | Loads only if you already approved external imports for this project, with no prompt |
@@ -543,7 +556,7 @@ These are the most common issues with CLAUDE.md and auto memory, along with step
 CLAUDE.md content is delivered as a user message after the system prompt, not as part of the system prompt itself. Claude reads it and tries to follow it, but there’s no guarantee of strict compliance, especially for vague or conflicting instructions.
 To debug:
 
-* Run `/context` and check the list under **Memory files** to verify your CLAUDE.md and CLAUDE.local.md files loaded. If a `CLAUDE.md` file is missing there, Claude can’t see it. An `AGENTS.md` appears there only when a `CLAUDE.md` imports it, not when Claude [reads it directly](#where-agents-md-differs-from-claude-md). Use `/memory` to open and edit the files.
+* Run `/context` and check the list under **Memory files** to verify your CLAUDE.md and CLAUDE.local.md files loaded. If a `CLAUDE.md` file is missing there, Claude can’t see it. Use `/memory` to open and edit the files.
 * Check that the relevant CLAUDE.md is in a location that gets loaded for your session (see [Choose where to put CLAUDE.md files](#choose-where-to-put-claude-md-files)).
 * Make instructions more specific. “Use 2-space indentation” works better than “format code nicely.”
 * Look for conflicting instructions across CLAUDE.md files. If two files give different guidance for the same behavior, Claude may pick one arbitrarily.
@@ -558,11 +571,11 @@ Use the [`InstructionsLoaded` hook](/docs/en/hooks#instructionsloaded) to log wh
 If your repository has an `AGENTS.md` and Claude doesn’t seem to know what it says, the usual cause is a `CLAUDE.md` somewhere on the project path. By default Claude reads `AGENTS.md` only when you have no `CLAUDE.md` or `CLAUDE.local.md` in your working directory or above it. Check these in order:
 
 1. Look for a `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` in your working directory or any directory above it, other than your `~/.claude/CLAUDE.md`. If you find one, Claude reads it instead of `AGENTS.md` unless you set **Project instructions** to `claude-md-and-agents-md`.
-2. Run `claude --version` and confirm v2.1.277 or later.
-3. Check whether your session is one that [can’t load `AGENTS.md`](#when-agents-md-support-is-unavailable), such as a session on a third-party provider or with telemetry disabled.
-4. Type `/config` in your session to open the settings panel and confirm **Project instructions** isn’t set to `claude-md` or `managed-only`. If you don’t see the setting there at all, your session is one that [can’t load `AGENTS.md`](#when-agents-md-support-is-unavailable).
+2. Run `claude --version` and confirm v2.1.277 or later. Before v2.1.281, some sessions, such as those on Amazon Bedrock or with telemetry disabled, [couldn’t load `AGENTS.md`](#when-agents-md-support-is-unavailable) either, so on those versions update to v2.1.281 or later.
+3. Type `/config` in your session to open the settings panel and confirm **Project instructions** isn’t set to `claude-md` or `managed-only`. If you don’t see the setting there at all, your session is one that [can’t load `AGENTS.md`](#when-agents-md-support-is-unavailable).
 
-`AGENTS.md` doesn’t appear in `/memory` or `/context` when Claude reads it directly, so check for the `AGENTS.md loaded` line or ask Claude what its project instructions say instead.
+To check whether Claude read your `AGENTS.md`, run `/memory` and look for its path in the list.
+Before v2.1.280, `/memory` and `/context` didn’t list an `AGENTS.md` that Claude read directly. On those versions, ask Claude what its project instructions say instead.
 If you want to keep the `CLAUDE.md` you found, or your session can’t load `AGENTS.md`, [add a `CLAUDE.md` next to your `AGENTS.md` that imports it](#share-one-file-with-other-coding-tools).
 
 ### [​](#i-don’t-know-what-auto-memory-saved) I don’t know what auto memory saved
@@ -572,6 +585,7 @@ Run `/memory` and select the auto memory folder to browse what Claude has saved.
 ### [​](#my-claude-md-is-too-large) My CLAUDE.md is too large
 
 Files over 200 lines consume more context and may reduce adherence. Claude Code skips a file over 4 MiB. Use [path-scoped rules](#path-specific-rules) to load instructions only when Claude works with matching files, or trim content that isn’t needed in every session. Splitting into [`@path` imports](#import-additional-files) helps organization but doesn’t reduce context, since imported files load at launch.
+If one of your instruction files is over the recommended length, you see a warning at startup and when you run `/status`. You also see a warning when files that are each within that length add up past a combined limit at session start. Each CLAUDE.md, rules file, and `@path` import counts as a separate file.
 The [`/doctor`](/docs/en/commands#all-commands) checkup proposes trims for a checked-in CLAUDE.md: it cuts content Claude can derive from the codebase, such as directory layouts, dependency lists, and architecture overviews, and keeps pitfalls, rationale, and conventions that differ from tool defaults. The trim check requires Claude Code v2.1.206 or later.
 
 ### [​](#instructions-seem-lost-after-/compact) Instructions seem lost after `/compact`
