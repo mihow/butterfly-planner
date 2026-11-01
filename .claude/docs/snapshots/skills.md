@@ -1,6 +1,8 @@
 On this page
 ------------
 
+Back to top
+
 * [Bundled skills](#bundled-skills)
   + [Check your setup with /doctor](#check-your-setup-with-%2Fdoctor)
   + [Run and verify your app](#run-and-verify-your-app)
@@ -42,7 +44,7 @@ On this page
   + [Inject dynamic context](#inject-dynamic-context)
   + [How injected commands run](#how-injected-commands-run)
   + [When an injected command fails](#when-an-injected-command-fails)
-  + [Control characters in injected commands](#control-characters-in-injected-commands)
+  + [When no shell command was run](#control-characters-in-injected-commands)
   + [Permission checks on injected commands](#permission-checks-on-injected-commands)
   + [Run skills in a subagent](#run-skills-in-a-subagent)
   + [Example: Research skill using Explore agent](#example-research-skill-using-explore-agent)
@@ -58,6 +60,7 @@ On this page
   + [Skill triggers too often](#skill-triggers-too-often)
   + [Claude stops following a skill](#claude-stops-following-a-skill)
   + [Skill descriptions are cut short](#skill-descriptions-are-cut-short)
+  + [Angle brackets in a skill description show as &lt; and &gt;](#angle-brackets-in-a-skill-description)
   + [Personal skills disappeared](#personal-skills-disappeared)
 * [Related resources](#related-resources)
 
@@ -99,7 +102,7 @@ Run `/doctor` at the Claude Code prompt for a setup checkup that diagnoses issue
 * **Extensions**: unused skills, MCP servers, and plugins compared with their context cost, and slow [hooks](/docs/en/hooks)
 * **`CLAUDE.md` files**: local `CLAUDE.md` files that duplicate checked-in ones, checked-in [`CLAUDE.md` content Claude could derive from the codebase](/docs/en/memory#my-claude-md-is-too-large), and the always-loaded guidance that remains, which Claude offers to migrate into skills and nested `CLAUDE.md` files that load on demand
 * **Permissions**: an offer to make [auto mode](/docs/en/permissions#permission-modes) your default permission mode and to [pre-approve](/docs/en/permissions) read-only commands that you frequently deny
-* **Usage**: on a Pro, Max, Team, or Enterprise plan, the [changes `/usage` recommends](/docs/en/costs#plan-usage-breakdown) to lower your plan usage, measured over the last 7 days. Claude proposes the changes it can make itself and reports the rest as advice, such as a command for you to run. The usage check requires Claude Code v2.1.305 or later, and `/doctor` leaves it out while [Remote Control](/docs/en/remote-control) is connected.
+* **Usage**: on a Pro, Max, Ultra, Team, or Enterprise plan, the [changes `/usage` recommends](/docs/en/costs#plan-usage-breakdown) to lower your plan usage, measured over the last 7 days. Claude proposes the changes it can make itself and reports the rest as advice, such as a command for you to run. The usage check requires Claude Code v2.1.305 or later, and `/doctor` leaves it out while [Remote Control](/docs/en/remote-control) is connected.
 
 For read-only installation diagnostics without starting a session, run `claude doctor` in your terminal instead.
 To audit your instructions rather than your setup, run `/doctor prompt-audit` at the Claude Code prompt. Claude [checks your `CLAUDE.md` files, skills, and other configuration](/docs/en/memory#audit-your-instruction-files) for outdated or conflicting instructions instead of running the checkup. The `prompt-audit` subcommand requires Claude Code v2.1.283 or later.
@@ -137,7 +140,7 @@ To start one of the skill’s workflows, type a subcommand after the skill name 
 | Subcommand | What it does | Minimum version |
 | --- | --- | --- |
 | `migrate` | Update your existing Claude API code to a newer model | Earlier than v2.1.221 |
-| `upgrade` | Move your project’s Anthropic SDK dependency across a major version, currently the Python `anthropic` package from 0.x to 1.x | v2.1.236 or later |
+| `upgrade` | Upgrade your project’s Anthropic SDK to a new major version and update your code for its breaking changes | v2.1.236 or later |
 | `api-version` | Update your Claude API code for a newer [API version](https://platform.claude.com/docs/en/api/versioning), then switch your requests to that version | v2.1.307 or later |
 | `managed-agents-onboard` | Walk through creating a new Managed Agent | Earlier than v2.1.221 |
 | `managed-agents-onboard <url>` | Build the Managed Agent that the page at the URL describes, such as a page in the [Managed Agents docs](https://platform.claude.com/docs/en/managed-agents/overview) | v2.1.290 or later |
@@ -407,7 +410,7 @@ Deploy the application:
 3. Push to the deployment target
 ```
 
-Keep the body itself concise. Once a skill loads, its content [stays in context across turns](#skill-content-lifecycle), so every line is a recurring token cost. State what to do rather than narrating how or why, and apply the same conciseness test you would for [CLAUDE.md content](/docs/en/best-practices#write-an-effective-claude-md).
+Keep the body itself concise. Once a skill loads, its content [stays in context across turns](#skill-content-lifecycle), so every line is a recurring token cost. State what to do rather than narrating how or why, and apply the same conciseness test you would for [CLAUDE.md content](/docs/en/best-practices#keep-claude-md-short).
 
 ### [​](#frontmatter-reference) Frontmatter reference
 
@@ -424,15 +427,14 @@ allowed-tools: Read Grep
 Your skill instructions here...
 ```
 
-All fields are optional. Only `description` is recommended so Claude knows when to use the skill. A field name must match the table exactly, hyphens included: Claude Code ignores a field it doesn’t recognize without reporting an error.
+All fields are optional. Only `description` is recommended so Claude knows when to use the skill. A field name must match the table exactly, hyphens included: Claude Code ignores a field it doesn’t recognize without reporting an error. Boolean fields accept `yes`, `no`, `on`, `off`, `1`, and `0` in any letter case, in addition to `true` and `false`.
 Claude Code reads the frontmatter only when the opening `---` is the file’s first line. Otherwise it treats the whole file, `---` markers included, as skill content. If the YAML between the markers doesn’t parse, the skill still loads with no fields set; see [Skill not triggering](#skill-not-triggering) to find and fix the error.
-Boolean fields accept `yes`, `no`, `on`, `off`, `1`, and `0` in any letter case, in addition to `true` and `false`. Before v2.1.218, Claude Code recognized only `true` and `false`.
 
 
 | Field | Required | Description |
 | --- | --- | --- |
 | `name` | No | Command name shown in the `/` menu. Defaults to the directory name. See [How a skill gets its command name](#how-a-skill-gets-its-command-name) for how the field interacts with the name you type to invoke the skill. |
-| `description` | Recommended | What the skill does and when to use it. Claude uses this to decide when to apply the skill. If omitted, uses the first non-empty line of the markdown content. Put the key use case first: the combined `description` and `when_to_use` text is truncated at 1,536 characters in the skill listing to reduce context usage. |
+| `description` | Recommended | What the skill does and when to use it. Claude uses this to decide when to apply the skill. If omitted, uses the first non-empty line of the markdown content. Put the key use case first: the combined `description` and `when_to_use` text is truncated at 1,536 characters in the skill listing to reduce context usage. Angle brackets in the text [show as `&lt;` and `&gt;`](#angle-brackets-in-a-skill-description). |
 | `when_to_use` | No | Additional context for when Claude should invoke the skill, such as trigger phrases or example requests. Appended to `description` in the skill listing and counts toward the 1,536-character cap. |
 | `argument-hint` | No | Hint shown during autocomplete to indicate expected arguments. Example: `[issue-number]` or `[filename] [format]`. |
 | `arguments` | No | Named positional arguments for [`$name` substitution](#available-string-substitutions) in the skill content. Accepts a space-separated string or a YAML list. Names map to argument positions in order. |
@@ -441,10 +443,10 @@ Boolean fields accept `yes`, `no`, `on`, `off`, `1`, and `0` in any letter case,
 | `allowed-tools` | No | Tools Claude can use without asking permission during the turn that invokes this skill. The grant clears when you send your next message. Accepts a space- or comma-separated string, or a YAML list. See [Pre-approve tools for a skill](#pre-approve-tools-for-a-skill). |
 | `disallowed-tools` | No | Tools removed from Claude’s available pool while this skill is active. Use for autonomous skills that should never call certain tools, such as `AskUserQuestion` for a background loop. Accepts a space- or comma-separated string, or a YAML list. The restriction clears when you send your next message. Like deny rules, the field can’t remove [`EndConversation`](/docs/en/tools-reference#endconversation-tool-behavior) while any other tool remains. |
 | `model` | No | Model to use when this skill is active. The override applies for the rest of the current turn and isn’t saved to settings. The session model resumes when you send your next prompt. Accepts the same values as [`/model`](/docs/en/model-config), or `inherit` to keep the active model. A value excluded by your organization’s [`availableModels`](/docs/en/model-config#restrict-model-selection) allowlist isn’t used, and the session keeps its current model. In [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), and in [plan mode while the classifier reviews commands](/docs/en/permission-modes#analyze-before-you-edit-with-plan-mode), a model that auto mode doesn’t support also isn’t used, and the session keeps its current model. With `context: fork`, the value sets the [forked subagent’s model](#run-skills-in-a-subagent) instead, and an excluded value follows the [same rules as a subagent model override](/docs/en/model-config#restrict-model-selection). |
-| `effort` | No | [Effort level](/docs/en/model-config#adjust-effort-level) when this skill is active. Overrides the session effort level. When you omit it, the level comes from the [effort resolution order](/docs/en/model-config#adjust-effort-level). Options: `low`, `medium`, `high`, `xhigh`, `max`; available levels depend on the model. |
+| `effort` | No | [Effort level](/docs/en/model-config#adjust-effort-level) for the rest of the current turn. Overrides the session effort level, but not the [`CLAUDE_CODE_EFFORT_LEVEL`](/docs/en/env-vars#variables) environment variable. With `context: fork`, the value sets the forked subagent’s effort level instead. When you omit it, the level comes from the [effort resolution order](/docs/en/model-config#adjust-effort-level). Options: `low`, `medium`, `high`, `xhigh`, `max`; available levels depend on the model. |
 | `context` | No | Set to `fork` to run in a forked subagent context. See [Run skills in a subagent](#run-skills-in-a-subagent). |
 | `agent` | No | Which subagent type to use when `context: fork` is set. |
-| `background` | No | Only applies with `context: fork`. Set to `false` to wait for the forked subagent’s result in the turn that invoked the skill, instead of [running it in the background](#run-skills-in-a-subagent). Default: `true`. Requires Claude Code v2.1.218 or later. |
+| `background` | No | Only applies with `context: fork`. Set to `false` to wait for the forked subagent’s result in the turn that invoked the skill, instead of [running it in the background](#run-skills-in-a-subagent). Default: `true`. |
 | `hooks` | No | Hooks that Claude Code registers when the skill is invoked and keeps running for the rest of the session. See [Hooks in skills and agents](/docs/en/hooks#hooks-in-skills-and-agents) for the configuration format, the `once` option, and the [limits on skill hooks](/docs/en/hooks#limits-on-skill-hooks). |
 | `paths` | No | Glob patterns that limit when this skill is activated. Accepts a comma-separated string or a YAML list. When set, Claude loads the skill automatically only when working with files matching the patterns. Patterns are relative to Claude’s current working directory, and files outside that directory don’t match. Uses the same glob format as [path-specific rules](/docs/en/memory#path-specific-rules). |
 | `shell` | No | Shell to use for `` !`command` `` and ```` ```! ```` blocks in this skill. Accepts `bash` (default) or `powershell`. Setting `powershell` runs inline shell commands via PowerShell when the [PowerShell tool](/docs/en/tools-reference#powershell-tool) is enabled: it’s on by default on Windows without Git Bash, on by default with Git Bash for claude.ai and Console accounts, and needs `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` in Amazon Bedrock, Google Cloud’s Agent Platform, and Microsoft Foundry sessions and on macOS, Linux, and WSL. Set it to `0` to turn the tool off. |
@@ -788,9 +790,9 @@ Which commands get the carveout depends on the shell:
 
 With the default `bash` shell, append `|| true` to any other command you expect to exit non-zero. A check script that exits 1 when it finds problems is one example.
 
-#### [​](#control-characters-in-injected-commands) Control characters in injected commands
+#### [​](#control-characters-in-injected-commands) When no shell command was run
 
-`No shell command in <name> was run` means one of the file’s `!` commands contains a raw control character other than tab or newline, so none of them runs. See [how to find and remove the character](/docs/en/errors#no-shell-command-was-run).
+`No shell command in <name> was run` means one of its shell commands contains a character the tool doesn’t accept. To find and remove the character, see the [error reference](/docs/en/errors#no-shell-command-was-run).
 
 #### [​](#permission-checks-on-injected-commands) Permission checks on injected commands
 
@@ -804,7 +806,7 @@ Add `context: fork` to your frontmatter when you want a skill to run in isolatio
 
 Despite the name, a skill with `context: fork` doesn’t run in a [fork of the current conversation](/docs/en/sub-agents#fork-the-current-conversation), which would hand the subagent everything you’ve discussed so far. When the task depends on that history, fork the conversation instead of using `context: fork`.
 
-The forked subagent runs in the [background](/docs/en/sub-agents#run-subagents-in-foreground-or-background): you keep working while it runs, and its result arrives in your conversation when it completes. Set `background: false` in the frontmatter to instead wait for the result in the turn that invoked the skill. Before v2.1.218, forked skills always blocked the turn until they finished.
+The forked subagent runs in the [background](/docs/en/sub-agents#run-subagents-in-foreground-or-background): you keep working while it runs, and its result arrives in your conversation when it completes. Set `background: false` in the frontmatter to instead wait for the result in the turn that invoked the skill.
 Claude Code also waits for the result, even when the skill doesn’t set `background: false`, in cases like these:
 
 * In non-interactive mode, with the `-p` flag or the Agent SDK
@@ -1213,6 +1215,13 @@ Claude Code loads a listing of skill names and descriptions into context so Clau
 Run `/doctor` for an estimate of the listing’s context cost and its biggest contributors. To find skills worth turning off, run [`/skill-doctor`](#find-unused-skills). When the listing exceeds its budget, Claude Code also writes a warning to the debug log, visible with [`--debug`](/docs/en/cli-reference#cli-flags).
 The Skills row in `/context` reports the size of the listing after the budget is applied, so it matches what the model receives. Before v2.1.196, the row counted the full text of every description and could show a value several times larger than the configured budget.
 To raise the budget, set the [`skillListingBudgetFraction`](/docs/en/settings-reference#skilllistingbudgetfraction) setting (for example, `0.02` = 2%) or the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable to a fixed character count. To free budget for other skills, set low-priority entries to `"name-only"` in [`skillOverrides`](#override-skill-visibility-from-settings) so they list without a description. You can also trim the `description` and `when_to_use` text at the source: put the key use case first, since each entry’s combined text is capped at 1,536 characters regardless of budget. The cap is configurable with [`skillListingMaxDescChars`](/docs/en/settings-reference#skilllistingmaxdescchars).
+
+### [​](#angle-brackets-in-a-skill-description) Angle brackets in a skill description show as `&lt;` and `&gt;`
+
+Claude Code displays `<` and `>` in the `description` and `when_to_use` fields as `&lt;` and `&gt;`. To show a placeholder such as `<branch>`, use square brackets or [`argument-hint`](#frontmatter-reference):
+
+* **Square brackets**: replace `<branch>` with `[branch]`, which displays as typed
+* **`argument-hint`**: move the placeholder to a new `argument-hint: <branch>` line. It shows after the command name. If you also upload the skill to claude.ai or the Skills API, [check whether `argument-hint` is accepted there](#using-skill-frontmatter-outside-claude-code) first.
 
 ### [​](#personal-skills-disappeared) Personal skills disappeared
 
