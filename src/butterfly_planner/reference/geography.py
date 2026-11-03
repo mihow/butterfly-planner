@@ -104,8 +104,3 @@ def get_location(slug: str) -> Location:
     except KeyError:
         valid = ", ".join(sorted(LOCATIONS))
         raise KeyError(f"Unknown location {slug!r}; valid locations: {valid}") from None
-
-
-# Single-region aliases kept for existing callers until they take a Location.
-TARGET_REGION_BBOX = PORTLAND.bbox
-TARGET_REGION_PARAMS = TARGET_REGION_BBOX.as_query_params()

@@ -11,7 +11,6 @@ from butterfly_planner.reference.geography import (
     DEFAULT_LOCATION,
     LOCATIONS,
     PORTLAND,
-    TARGET_REGION_BBOX,
     BoundingBox,
     get_location,
 )
@@ -83,9 +82,6 @@ class TestPortland:
         assert PORTLAND.timezone == "America/Los_Angeles"
         assert PORTLAND.map_center == (45.5, -122.8)
         assert PORTLAND.map_zoom == 8
-
-    def test_target_region_alias_is_portland_bbox(self) -> None:
-        assert TARGET_REGION_BBOX is PORTLAND.bbox
 
     def test_inat_default_area_matches_portland_bbox(self) -> None:
         assert PORTLAND.bbox.as_dict() == NW_OREGON_SW_WASHINGTON

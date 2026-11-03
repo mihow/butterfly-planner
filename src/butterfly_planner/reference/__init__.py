@@ -11,8 +11,6 @@ Adding a new module:
 from butterfly_planner.reference.geography import DEFAULT_LOCATION as DEFAULT_LOCATION
 from butterfly_planner.reference.geography import LOCATIONS as LOCATIONS
 from butterfly_planner.reference.geography import PORTLAND as PORTLAND
-from butterfly_planner.reference.geography import TARGET_REGION_BBOX as TARGET_REGION_BBOX
-from butterfly_planner.reference.geography import TARGET_REGION_PARAMS as TARGET_REGION_PARAMS
 from butterfly_planner.reference.geography import BoundingBox as BoundingBox
 from butterfly_planner.reference.geography import Location as Location
 from butterfly_planner.reference.geography import PointOfInterest as PointOfInterest

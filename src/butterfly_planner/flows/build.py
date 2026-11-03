@@ -20,7 +20,7 @@ from prefect import flow, task
 from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
 from butterfly_planner.flows.paths import LocationPaths, location_paths
-from butterfly_planner.reference.geography import PORTLAND
+from butterfly_planner.reference.geography import PORTLAND, Location
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.gdd import build_gdd_timeline_html, build_gdd_today_html
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
@@ -117,8 +117,12 @@ def build_html(
     inat_data: dict[str, Any] | None = None,
     gdd_data: dict[str, Any] | None = None,
     historical_weather: dict[str, dict[str, Any]] | None = None,
+    loc: Location = PORTLAND,
 ) -> str:
-    """Build HTML page from weather, sunshine, iNaturalist, and GDD data."""
+    """Build HTML page from weather, sunshine, iNaturalist, and GDD data.
+
+    ``loc`` decides the area the sightings table and map describe.
+    """
     _raw_fetched_at = weather_data.get("fetched_at") or ""
     fetched_dt = datetime.fromisoformat(_raw_fetched_at) if _raw_fetched_at else datetime.now(UTC)
     pst = ZoneInfo("America/Los_Angeles")
@@ -138,7 +142,7 @@ def build_html(
     if inat_data:
         species_list = inat_data.get("data", {}).get("species", [])
         palette = build_species_palette(species_list)
-        butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette)
+        butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette, location=loc)
 
         # Enrich observations with historical weather before rendering map
         observations = inat_data.get("data", {}).get("observations", [])
@@ -149,7 +153,9 @@ def build_html(
                 "data": {**inat_data.get("data", {}), "observations": enriched},
             }
 
-        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data, palette)
+        butterfly_map_html, map_script_html = build_butterfly_map_html(
+            inat_data, palette, location=loc
+        )
 
     gdd_today_html = ""
     gdd_timeline_html = ""
@@ -282,7 +288,7 @@ def build_all() -> dict[str, Any]:
     hist_weather = load_historical_weather(paths)
 
     print("Building HTML...")
-    html = build_html(weather_envelope, sunshine, inat, gdd_data, hist_weather)
+    html = build_html(weather_envelope, sunshine, inat, gdd_data, hist_weather, loc=PORTLAND)
 
     print("Writing site...")
     output_path = write_site(html)

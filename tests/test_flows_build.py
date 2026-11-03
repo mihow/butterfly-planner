@@ -655,7 +655,7 @@ class TestBuildButterflyMapHtml:
                 ],
             },
         }
-        map_div, map_script = build_butterfly_map_html(enriched_inat)
+        map_div, map_script = build_butterfly_map_html(enriched_inat, location=PORTLAND)
 
         assert "Butterfly Sightings Map" in map_div
         # Photo URL should be in marker data
@@ -670,7 +670,7 @@ class TestBuildButterflyMapHtml:
 
     def test_map_without_historical_weather(self) -> None:
         """Test map works without historical weather data."""
-        map_div, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        map_div, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "Butterfly Sightings Map" in map_div
         assert "Painted Lady" in map_script
@@ -681,14 +681,14 @@ class TestBuildButterflyMapHtml:
         no_obs: dict = {
             "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
         }
-        map_div, map_script = build_butterfly_map_html(no_obs)
+        map_div, map_script = build_butterfly_map_html(no_obs, location=PORTLAND)
 
         assert "No observation data" in map_div
         assert map_script == ""
 
     def test_map_popup_structure(self) -> None:
         """Test that the JS template builds popups with obs-popup class."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "obs-popup" in map_script
         assert "obs-popup-img" in map_script
@@ -701,14 +701,14 @@ class TestBuildButterflyMapHeatLayer:
 
     def test_heat_layer_present(self) -> None:
         """Test that the map script includes heat layer setup."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "L.heatLayer" in map_script
         assert "heatPoints" in map_script
 
     def test_layer_control_present(self) -> None:
         """Test that the map script includes layer controls."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "L.control.layers" in map_script
         assert '"Sightings"' in map_script
@@ -719,13 +719,13 @@ class TestBuildButterflyMapHeatLayer:
         no_obs: dict = {
             "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
         }
-        _, map_script = build_butterfly_map_html(no_obs)
+        _, map_script = build_butterfly_map_html(no_obs, location=PORTLAND)
 
         assert map_script == ""
 
     def test_map_description_mentions_density(self) -> None:
         """Test that the map description mentions the heat map layer."""
-        map_div, _ = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        map_div, _ = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "density" in map_div.lower()
 
@@ -735,14 +735,14 @@ class TestHeatMapIntensitySlider:
 
     def test_intensity_slider_control_present(self) -> None:
         """Test that the map script includes the intensity slider control."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "IntensityControl" in map_script
         assert 'type="range"' in map_script
 
     def test_auto_scaled_default_max(self) -> None:
         """Test that the default max is auto-scaled based on observation count."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         # With 2 observations: max = max(0.08, min(1.0, 0.05 + 2*0.02)) = 0.09
         assert "defaultMax" in map_script
@@ -751,7 +751,7 @@ class TestHeatMapIntensitySlider:
 
     def test_slider_updates_heat_layer(self) -> None:
         """Test that the slider wires up to heat.setOptions."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "heat.setOptions" in map_script
 
@@ -763,7 +763,7 @@ class TestHeatMapIntensitySlider:
         must read 100% at the left end (slider=1) and up to 2000% at the right
         (slider=20).
         """
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         # Slider input range must be inverted scale (1 to 20), not raw heat max
         assert 'min="1"' in map_script
@@ -779,7 +779,7 @@ class TestBuildButterflySightingsHtml:
 
     def test_with_species_data(self) -> None:
         """Test building HTML with species data."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         assert "Butterfly Sightings" in result
         assert "June" in result
@@ -793,20 +793,20 @@ class TestBuildButterflySightingsHtml:
 
     def test_with_photo(self) -> None:
         """Test that photo URL renders as img tag."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         assert 'class="species-photo"' in result
         assert "photos/123/medium.jpg" in result
 
     def test_without_photo(self) -> None:
         """Test placeholder when no photo URL."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         assert "species-photo-placeholder" in result
 
     def test_deep_links(self) -> None:
         """Test that observation counts link to iNaturalist search."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         # Observation count should link to filtered search
         assert "taxon_id=48662&month=6" in result
@@ -820,13 +820,13 @@ class TestBuildButterflySightingsHtml:
     def test_empty_species(self) -> None:
         """Test with no species data."""
         empty_data: dict = {"data": {"month": 1, "species": []}}
-        result = build_butterfly_sightings_html(empty_data)
+        result = build_butterfly_sightings_html(empty_data, location=PORTLAND)
 
         assert "No butterfly sightings data available" in result
 
     def test_observation_bar_scaling(self) -> None:
         """Test that observation bars scale relative to max count."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         # First species (542) should have full-width bar (200px)
         assert "width: 200px;" in result
