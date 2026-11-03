@@ -109,7 +109,7 @@ class TestMapUsesLocation:
 
         assert "var pois" not in map_script
 
-    def test_portland_output_is_unchanged(self) -> None:
+    def test_portland_keeps_its_map_view_and_bbox(self) -> None:
         map_div, map_script = build_butterfly_map_html(INAT_DATA, location=PORTLAND)
 
         assert "setView([45.5, -122.8], 8)" in map_script
@@ -127,7 +127,7 @@ class TestTableUsesLocation:
         assert "swlat=44.5" not in html
         assert "Oregon" not in html
 
-    def test_portland_output_is_unchanged(self) -> None:
+    def test_portland_links_keep_oregon_bbox(self) -> None:
         html = build_butterfly_sightings_html(INAT_DATA, location=PORTLAND)
 
         assert "swlat=44.5" in html
