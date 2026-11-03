@@ -378,7 +378,7 @@ class TestBuildHtml:
             },
         }
 
-        result = build.build_html(weather_data, sunshine_data)
+        result = build.build_html(weather_data, sunshine_data, loc=PORTLAND)
 
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Planner" in result
@@ -402,7 +402,7 @@ class TestBuildHtml:
                 }
             },
         }
-        result = build.build_html(weather_data, None)
+        result = build.build_html(weather_data, None, loc=PORTLAND)
 
         # build_version is the rebuild time (YYYYMMDDHHMM), not the weather
         # fetch time, so assert the format rather than a fixed value.
@@ -424,7 +424,7 @@ class TestBuildHtml:
             },
         }
 
-        result = build.build_html(weather_data, None)
+        result = build.build_html(weather_data, None, loc=PORTLAND)
 
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Planner" in result
@@ -851,7 +851,9 @@ class TestBuildHtmlWithInaturalist:
             },
         }
 
-        result = build.build_html(weather_data, None, SAMPLE_INAT_DATA, historical_weather=None)
+        result = build.build_html(
+            weather_data, None, SAMPLE_INAT_DATA, historical_weather=None, loc=PORTLAND
+        )
 
         assert "Butterfly Sightings" in result
         assert "June" in result
@@ -872,7 +874,7 @@ class TestBuildHtmlWithInaturalist:
             },
         }
 
-        result = build.build_html(weather_data, None, None)
+        result = build.build_html(weather_data, None, None, loc=PORTLAND)
 
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Sightings" not in result
@@ -887,7 +889,7 @@ class TestWriteSite:
         monkeypatch.setattr(build, "SITE_DIR", site_dir)
 
         html_content = "<html><body>Test</body></html>"
-        result = build.write_site(html_content)
+        result = build.write_site(html_content, PORTLAND_PATHS)
 
         assert result == site_dir / "index.html"
         assert result.exists()
@@ -932,6 +934,8 @@ class TestBuildAllFlow:
         assert result["pages"] == 1
         assert "output" in result
         assert (site_dir / "index.html").exists()
+        # Portland's daily JSON lives in its own folder, like every location's.
+        assert (ds.derived / "daily" / "portland" / "today.json").exists()
 
     def test_build_all_with_all_data(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test flow with weather, sunshine, and iNaturalist data."""
@@ -1025,7 +1029,7 @@ class TestBuildHtmlFetchedAtFallback:
             },
         }
         # Call .fn() to bypass the Prefect task runner (no server needed)
-        result = build.build_html.fn(weather_data, None)
+        result = build.build_html.fn(weather_data, None, loc=PORTLAND)
         assert "<!DOCTYPE html>" in result
 
     def test_build_html_missing_fetched_at_does_not_raise(self) -> None:
@@ -1041,5 +1045,5 @@ class TestBuildHtmlFetchedAtFallback:
                 }
             }
         }
-        result = build.build_html.fn(weather_data, None)
+        result = build.build_html.fn(weather_data, None, loc=PORTLAND)
         assert "<!DOCTYPE html>" in result
