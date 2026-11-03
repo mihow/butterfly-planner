@@ -36,6 +36,10 @@ from butterfly_planner.renderers.gdd import (
     build_gdd_today_html,
 )
 
+# The slider tests compare against last year's entry on the same day of year,
+# so they pin "today" to the date their fixtures use.
+SLIDER_TODAY = date(2026, 5, 17)
+
 # =============================================================================
 # compute_daily_gdd
 # =============================================================================
@@ -523,10 +527,10 @@ class TestRendering:
     ) -> dict:
         """Build minimal GDD data structure for slider direction tests.
 
-        Uses May 17 as the reference date (DOY 137) so that the previous year's
-        same-DOY entry is found correctly by build_gdd_today_html's lookup loop.
+        The entries fall on May 17. Pass ``today=SLIDER_TODAY`` to
+        build_gdd_today_html so its same-day-of-year lookup finds the May 17
+        entry whatever the real date is.
         """
-        # Use May 17 as a stable reference date that matches today's DOY (137)
         curr_date = f"{current_year}-05-17"
         prev_date = f"{previous_year}-05-17"
         return {
@@ -578,7 +582,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=62.0, previous_accumulated=40.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert "ahead" in kwargs["status_text"].lower(), (
@@ -594,7 +598,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=30.0, previous_accumulated=60.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert "behind" in kwargs["status_text"].lower(), (
@@ -610,7 +614,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=50.0, previous_accumulated=50.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert "tracking" in kwargs["status_text"].lower(), (
@@ -624,7 +628,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=200.0, previous_accumulated=10.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert status_pct >= 15, f"Ahead pct should clamp to at least 15, got {status_pct}"
@@ -636,7 +640,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=5.0, previous_accumulated=200.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert status_pct <= 85, f"Behind pct should clamp to at most 85, got {status_pct}"

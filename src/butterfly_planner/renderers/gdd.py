@@ -37,11 +37,13 @@ _MONTH_ABBREVS = [
 ]
 
 
-def build_gdd_today_html(gdd_data: dict[str, Any]) -> str:
+def build_gdd_today_html(gdd_data: dict[str, Any], today: date | None = None) -> str:
     """Build the "Today's GDD" card HTML.
 
     Args:
         gdd_data: Raw GDD data dict (as saved to gdd.json) with 'data' key.
+        today: The date to compare against last year's same day of year.
+            Defaults to the current date.
 
     Returns:
         Rendered HTML string for the GDD today card.
@@ -54,7 +56,8 @@ def build_gdd_today_html(gdd_data: dict[str, Any]) -> str:
     current_total = current.get("total_gdd", 0)
 
     # Find the previous year's accumulated GDD through the same day-of-year
-    today = date.today()
+    if today is None:
+        today = date.today()
     today_doy = today.timetuple().tm_yday
     previous_at_same_doy: float | None = None
     for entry in previous.get("daily", []):
