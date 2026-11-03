@@ -8,6 +8,7 @@ Adding a new module:
 2. Re-export from this ``__init__.py``
 """
 
+from butterfly_planner.reference.geography import BISBEE as BISBEE
 from butterfly_planner.reference.geography import DEFAULT_LOCATION as DEFAULT_LOCATION
 from butterfly_planner.reference.geography import LOCATIONS as LOCATIONS
 from butterfly_planner.reference.geography import PORTLAND as PORTLAND

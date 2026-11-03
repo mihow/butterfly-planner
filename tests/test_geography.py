@@ -8,6 +8,7 @@ import pytest
 
 from butterfly_planner.datasources.inaturalist.client import NW_OREGON_SW_WASHINGTON
 from butterfly_planner.reference.geography import (
+    BISBEE,
     DEFAULT_LOCATION,
     LOCATIONS,
     PORTLAND,
@@ -85,6 +86,49 @@ class TestPortland:
 
     def test_inat_default_area_matches_portland_bbox(self) -> None:
         assert PORTLAND.bbox.as_dict() == NW_OREGON_SW_WASHINGTON
+
+
+class TestBisbee:
+    """Bisbee covers the town, Leslie Canyon and the SE Arizona sky islands."""
+
+    # Leslie Canyon NWR polygon bounds, from iNaturalist place 119427.
+    LESLIE_CANYON_CORNERS = (
+        (31.5532, -109.5334),
+        (31.5532, -109.4297),
+        (31.7025, -109.5334),
+        (31.7025, -109.4297),
+    )
+
+    def test_registered_under_its_slug_and_subdir(self) -> None:
+        assert get_location("bisbee") is BISBEE
+        assert BISBEE.site_subdir == "bisbee"
+        assert BISBEE.name == "Bisbee, AZ"
+
+    def test_timezone_is_arizona_without_dst(self) -> None:
+        assert BISBEE.timezone == "America/Phoenix"
+
+    @pytest.mark.parametrize(
+        ("place", "lat", "lon"),
+        [
+            ("Bisbee", 31.4482, -109.9284),
+            ("Ramsey Canyon", 31.432, -110.322),
+            ("Portal", 31.91, -109.16),
+            ("Chiricahua National Monument", 32.012, -109.342),
+        ],
+    )
+    def test_bbox_contains_nearby_places(self, place: str, lat: float, lon: float) -> None:
+        assert BISBEE.bbox.contains(lat, lon), place
+
+    def test_bbox_contains_all_of_leslie_canyon(self) -> None:
+        for lat, lon in self.LESLIE_CANYON_CORNERS:
+            assert BISBEE.bbox.contains(lat, lon)
+
+    def test_leslie_canyon_is_a_point_of_interest(self) -> None:
+        names = [poi.name for poi in BISBEE.points_of_interest]
+        assert any("Leslie Canyon" in name for name in names)
+        poi = BISBEE.points_of_interest[0]
+        assert (poi.lat, poi.lon) == (31.6370, -109.4816)
+        assert poi.url == "https://www.fws.gov/refuge/leslie-canyon"
 
 
 class TestGetLocation:

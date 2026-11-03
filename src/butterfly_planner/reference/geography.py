@@ -88,7 +88,33 @@ PORTLAND = Location(
     site_subdir="",
 )
 
-LOCATIONS: dict[str, Location] = {loc.slug: loc for loc in (PORTLAND,)}
+# The box runs from the Mexico border to the Arizona/New Mexico line, so it
+# takes in the Huachuca and Chiricahua Mountains as well as Bisbee and Leslie
+# Canyon. A box this wide gives the "this week" window enough observations.
+# Weather comes from the single point at Bisbee, so it is only a rough guide
+# across the area's range of elevations. Arizona keeps MST all year.
+BISBEE = Location(
+    slug="bisbee",
+    name="Bisbee, AZ",
+    region_label="Bisbee, Leslie Canyon & SE Arizona",
+    lat=31.4482,
+    lon=-109.9284,
+    bbox=BoundingBox(swlat=31.33, swlng=-110.45, nelat=32.05, nelng=-109.05),
+    timezone="America/Phoenix",
+    map_center=(31.69, -109.75),
+    map_zoom=9,
+    site_subdir="bisbee",
+    points_of_interest=(
+        PointOfInterest(
+            name="Leslie Canyon National Wildlife Refuge",
+            lat=31.6370,
+            lon=-109.4816,
+            url="https://www.fws.gov/refuge/leslie-canyon",
+        ),
+    ),
+)
+
+LOCATIONS: dict[str, Location] = {loc.slug: loc for loc in (PORTLAND, BISBEE)}
 
 DEFAULT_LOCATION = PORTLAND
 

@@ -645,6 +645,14 @@ def _write_fresh_cache(store: DataStore, loc: Location) -> None:
         store.write(path, {"cached_for": loc.slug}, source="test", valid_until=valid)
 
 
+def _register_only_portland_and_other(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the registry hold exactly Portland and ``OTHER`` for this test."""
+    for slug in list(geography.LOCATIONS):
+        if slug != PORTLAND.slug:
+            monkeypatch.delitem(geography.LOCATIONS, slug)
+    monkeypatch.setitem(geography.LOCATIONS, OTHER.slug, OTHER)
+
+
 class TestFetchAllLocations:
     """Fetching several locations keeps their data and failures apart."""
 
@@ -653,7 +661,7 @@ class TestFetchAllLocations:
     ) -> None:
         store = DataStore(tmp_path)
         monkeypatch.setattr(fetch, "store", store)
-        monkeypatch.setitem(geography.LOCATIONS, OTHER.slug, OTHER)
+        _register_only_portland_and_other(monkeypatch)
         _write_fresh_cache(store, PORTLAND)
         portland_files = {p: p.read_bytes() for p in (tmp_path / "live" / "portland").iterdir()}
         portland_files |= {
@@ -681,7 +689,7 @@ class TestFetchAllLocations:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
         monkeypatch.setattr(fetch, "store", DataStore(tmp_path))
-        monkeypatch.setitem(geography.LOCATIONS, OTHER.slug, OTHER)
+        _register_only_portland_and_other(monkeypatch)
         _mock_datasources(monkeypatch)
         real_fetch_weather = fetch.fetch_weather
 

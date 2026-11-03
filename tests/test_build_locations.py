@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from butterfly_planner.flows import build
-from butterfly_planner.reference.geography import PORTLAND, BoundingBox
+from butterfly_planner.reference.geography import BISBEE, PORTLAND, BoundingBox
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -184,3 +184,69 @@ class TestBuildAllLocations:
         assert not (site / "testarea").exists()
         assert "testarea/" not in root_html
         assert 'class="locations"' not in root_html
+
+
+BISBEE_INAT = {
+    "month": 8,
+    "weeks": [31, 32, 33],
+    "date_start": "2026-08-01",
+    "date_end": "2026-08-15",
+    "species": [
+        {
+            "taxon_id": 48662,
+            "scientific_name": "Vanessa cardui",
+            "common_name": "Painted Lady",
+            "rank": "species",
+            "observation_count": 12,
+            "photo_url": None,
+            "taxon_url": "https://www.inaturalist.org/taxa/48662",
+        },
+    ],
+    "observations": [
+        {
+            "id": 1,
+            "species": "Vanessa cardui",
+            "common_name": "Painted Lady",
+            "observed_on": "2025-08-10",
+            "latitude": 31.64,
+            "longitude": -109.48,
+            "quality_grade": "research",
+            "url": "https://www.inaturalist.org/observations/1",
+            "photo_url": None,
+        },
+    ],
+}
+
+
+class TestBisbeePage:
+    """The registered Bisbee location builds a page about Bisbee only."""
+
+    @pytest.fixture
+    def store(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> build.DataStore:
+        ds = build.DataStore(tmp_path)
+        monkeypatch.setattr(build, "store", ds)
+        monkeypatch.setattr(build, "SITE_DIR", ds.derived / "site")
+        return ds
+
+    def test_bisbee_page_and_daily_data(self, store: build.DataStore) -> None:
+        _seed_weather(store.base, "portland")
+        _seed_weather(store.base, "bisbee")
+        inat_path = store.base / "live" / "bisbee" / "inaturalist.json"
+        inat_path.write_text(
+            json.dumps({"meta": {"source": "inaturalist.org"}, "data": BISBEE_INAT})
+        )
+
+        result = build.build_all_locations()
+
+        assert result["pages"] == 2
+        html = (store.derived / "site" / "bisbee" / "index.html").read_text()
+        assert "Bisbee, AZ" in html
+        assert "MST" in html
+        assert "31.33" in html
+        assert "Leslie Canyon" in html
+        assert "Portland" not in html.replace('<a href="../">Portland, OR</a>', "")
+        assert "NW Oregon" not in html
+
+        today = json.loads((store.derived / "daily" / "bisbee" / "today.json").read_text())
+        assert today["location"]["name"] == "Bisbee, AZ"
+        assert BISBEE.slug in result["locations"]
