@@ -13,12 +13,16 @@ from butterfly_planner.datasources.inaturalist import SpeciesRecord
 from butterfly_planner.datasources.inaturalist.observations import ButterflyObservation
 from butterfly_planner.datasources.sunshine import DailySunshine, SunshineSlot
 from butterfly_planner.flows import fetch
+from butterfly_planner.flows.paths import location_paths
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.store import DataStore
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import pytest
+
+PORTLAND_PATHS = location_paths(PORTLAND)
 
 
 class TestFetchWeather:
@@ -107,9 +111,9 @@ class TestSaveWeather:
             }
         }
 
-        result = fetch.save_weather(weather_data)
+        result = fetch.save_weather(weather_data, PORTLAND_PATHS)
 
-        assert result == tmp_path / "live" / "weather.json"
+        assert result == tmp_path / "live" / "portland" / "weather.json"
         assert result.exists()
 
         saved_data = json.loads(result.read_text())
@@ -141,10 +145,10 @@ class TestSaveSunshine:
             }
         }
 
-        result = fetch.save_sunshine(sunshine_15min, sunshine_16day)
+        result = fetch.save_sunshine(sunshine_15min, sunshine_16day, PORTLAND_PATHS)
 
         # Returns path to 15-min file (last write)
-        assert result == tmp_path / "live" / "sunshine_15min.json"
+        assert result == tmp_path / "live" / "portland" / "sunshine_15min.json"
         assert result.exists()
 
         saved_15 = json.loads(result.read_text())
@@ -152,7 +156,7 @@ class TestSaveSunshine:
         assert saved_15["data"] == sunshine_15min
 
         # Also writes 16-day file
-        path_16 = tmp_path / "live" / "sunshine_16day.json"
+        path_16 = tmp_path / "live" / "portland" / "sunshine_16day.json"
         assert path_16.exists()
         saved_16 = json.loads(path_16.read_text())
         assert saved_16["data"] == sunshine_16day
@@ -324,9 +328,9 @@ class TestSaveInaturalist:
             ],
         }
 
-        result = fetch.save_inaturalist(inat_data)
+        result = fetch.save_inaturalist(inat_data, PORTLAND_PATHS)
 
-        assert result == tmp_path / "live" / "inaturalist.json"
+        assert result == tmp_path / "live" / "portland" / "inaturalist.json"
         assert result.exists()
 
         saved_data = json.loads(result.read_text())
@@ -404,9 +408,11 @@ class TestSaveHistoricalWeather:
             "2024-06-15": {"high_c": 22.0, "low_c": 10.0, "precip_mm": 0.0, "weather_code": 0},
         }
 
-        result = fetch.save_historical_weather(weather_by_date)
+        result = fetch.save_historical_weather(weather_by_date, PORTLAND_PATHS)
 
-        assert result == tmp_path / "historical" / "weather" / "historical_weather.json"
+        assert (
+            result == tmp_path / "historical" / "portland" / "weather" / "historical_weather.json"
+        )
         assert result.exists()
 
         saved_data = json.loads(result.read_text())
@@ -506,9 +512,11 @@ class TestFetchAllFlow:
         assert result["current_gdd"] == 150.0
 
         # Verify files were created at tiered paths
-        assert (tmp_path / "live" / "weather.json").exists()
-        assert (tmp_path / "live" / "sunshine_15min.json").exists()
-        assert (tmp_path / "live" / "sunshine_16day.json").exists()
-        assert (tmp_path / "live" / "inaturalist.json").exists()
-        assert (tmp_path / "historical" / "weather" / "historical_weather.json").exists()
-        assert (tmp_path / "historical" / "gdd" / "gdd.json").exists()
+        assert (tmp_path / "live" / "portland" / "weather.json").exists()
+        assert (tmp_path / "live" / "portland" / "sunshine_15min.json").exists()
+        assert (tmp_path / "live" / "portland" / "sunshine_16day.json").exists()
+        assert (tmp_path / "live" / "portland" / "inaturalist.json").exists()
+        assert (
+            tmp_path / "historical" / "portland" / "weather" / "historical_weather.json"
+        ).exists()
+        assert (tmp_path / "historical" / "portland" / "gdd" / "gdd.json").exists()

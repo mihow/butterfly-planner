@@ -22,19 +22,13 @@ from prefect import flow, task
 from butterfly_planner.datasources import gdd, inaturalist, sunshine
 from butterfly_planner.datasources.weather import forecast as weather_forecast
 from butterfly_planner.datasources.weather import historical as weather_historical
+from butterfly_planner.flows.paths import LocationPaths, location_paths
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.reference.viewing import OBS_WINDOW_DAYS_AHEAD, OBS_WINDOW_DAYS_BACK
 from butterfly_planner.store import DataStore
 
 # Data store with tiered directories
 store = DataStore(Path("data"))
-
-# Relative paths within the store
-WEATHER_PATH = Path("live/weather.json")
-SUNSHINE_15MIN_PATH = Path("live/sunshine_15min.json")
-SUNSHINE_16DAY_PATH = Path("live/sunshine_16day.json")
-INAT_PATH = Path("live/inaturalist.json")
-HIST_WEATHER_PATH = Path("historical/weather/historical_weather.json")
-GDD_PATH = Path("historical/gdd/gdd.json")
 
 
 @task(name="fetch-weather", retries=2, retry_delay_seconds=5)
@@ -70,10 +64,10 @@ def fetch_sunshine_16day(lat: float = 45.5, lon: float = -122.6) -> dict[str, An
 
 
 @task(name="save-weather")
-def save_weather(weather: dict[str, Any]) -> Path:
+def save_weather(weather: dict[str, Any], paths: LocationPaths) -> Path:
     """Save weather data via store."""
     return store.write(
-        WEATHER_PATH,
+        paths.weather,
         weather,
         source="open-meteo.com",
         valid_until=datetime.now(UTC) + timedelta(hours=6),
@@ -81,16 +75,18 @@ def save_weather(weather: dict[str, Any]) -> Path:
 
 
 @task(name="save-sunshine")
-def save_sunshine(sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any]) -> Path:
+def save_sunshine(
+    sunshine_15min: dict[str, Any], sunshine_16day: dict[str, Any], paths: LocationPaths
+) -> Path:
     """Save sunshine 15-min and 16-day data via store."""
     store.write(
-        SUNSHINE_16DAY_PATH,
+        paths.sunshine_16day,
         sunshine_16day,
         source="open-meteo.com",
         valid_until=datetime.now(UTC) + timedelta(hours=6),
     )
     return store.write(
-        SUNSHINE_15MIN_PATH,
+        paths.sunshine_15min,
         sunshine_15min,
         source="open-meteo.com",
         valid_until=datetime.now(UTC) + timedelta(hours=1),
@@ -159,10 +155,10 @@ def fetch_inaturalist() -> dict[str, Any]:
 
 
 @task(name="save-inaturalist")
-def save_inaturalist(inat_data: dict[str, Any]) -> Path:
+def save_inaturalist(inat_data: dict[str, Any], paths: LocationPaths) -> Path:
     """Save iNaturalist data via store."""
     return store.write(
-        INAT_PATH,
+        paths.inaturalist,
         inat_data,
         source="inaturalist.org",
         valid_until=datetime.now(UTC) + timedelta(hours=6),
@@ -220,10 +216,12 @@ def fetch_historical_weather(
 
 
 @task(name="save-historical-weather")
-def save_historical_weather(weather_by_date: dict[str, dict[str, Any]]) -> Path:
+def save_historical_weather(
+    weather_by_date: dict[str, dict[str, Any]], paths: LocationPaths
+) -> Path:
     """Save historical weather cache via store."""
     return store.write(
-        HIST_WEATHER_PATH,
+        paths.historical_weather,
         {"by_date": weather_by_date},
         source="open-meteo.com (archive)",
         valid_until=datetime.now(UTC) + timedelta(hours=24),
@@ -269,10 +267,10 @@ def fetch_gdd(
 
 
 @task(name="save-gdd")
-def save_gdd(gdd_data: dict[str, Any]) -> Path:
+def save_gdd(gdd_data: dict[str, Any], paths: LocationPaths) -> Path:
     """Save GDD data via store."""
     return store.write(
-        GDD_PATH,
+        paths.gdd,
         gdd_data,
         source="open-meteo.com (archive)",
         valid_until=datetime.now(UTC) + timedelta(hours=24),
@@ -287,68 +285,69 @@ def fetch_all(lat: float = 45.5, lon: float = -122.6) -> dict[str, Any]:  # noqa
     This is the main Prefect flow that orchestrates data fetching.
     Checks freshness before fetching — skips sources that are still valid.
     """
+    paths = location_paths(PORTLAND)
     results: dict[str, Any] = {}
 
     # --- Weather forecast ---
-    if store.is_fresh(WEATHER_PATH):
+    if store.is_fresh(paths.weather):
         print("Weather data is fresh, skipping fetch.")
-        weather = store.read(WEATHER_PATH) or {}
+        weather = store.read(paths.weather) or {}
     else:
         print(f"Fetching weather for ({lat}, {lon})...")
         weather = fetch_weather(lat, lon)
-        output_path = save_weather(weather)
+        output_path = save_weather(weather, paths)
         days = len(weather.get("daily", {}).get("time", []))
         print(f"Saved {days} days of weather data to {output_path}")
 
     results["weather_days"] = len(weather.get("daily", {}).get("time", []))
 
     # --- Sunshine ---
-    if store.is_fresh(SUNSHINE_15MIN_PATH) and store.is_fresh(SUNSHINE_16DAY_PATH):
+    if store.is_fresh(paths.sunshine_15min) and store.is_fresh(paths.sunshine_16day):
         print("Sunshine data is fresh, skipping fetch.")
-        sunshine_15min = store.read(SUNSHINE_15MIN_PATH) or {}
-        sunshine_16day = store.read(SUNSHINE_16DAY_PATH) or {}
+        sunshine_15min = store.read(paths.sunshine_15min) or {}
+        sunshine_16day = store.read(paths.sunshine_16day) or {}
     else:
         print(f"Fetching sunshine data for ({lat}, {lon})...")
         sunshine_15min = fetch_sunshine_15min(lat, lon)
         sunshine_16day = fetch_sunshine_16day(lat, lon)
-        save_sunshine(sunshine_15min, sunshine_16day)
+        save_sunshine(sunshine_15min, sunshine_16day, paths)
 
     results["sunshine_slots"] = len(sunshine_15min.get("minutely_15", {}).get("time", []))
 
     # --- iNaturalist ---
-    if store.is_fresh(INAT_PATH):
+    if store.is_fresh(paths.inaturalist):
         print("iNaturalist data is fresh, skipping fetch.")
-        inat_data = store.read(INAT_PATH) or {}
+        inat_data = store.read(paths.inaturalist) or {}
     else:
         print("Fetching iNaturalist butterfly sightings...")
         inat_data = fetch_inaturalist()
-        inat_path = save_inaturalist(inat_data)
+        inat_path = save_inaturalist(inat_data, paths)
         print(f"Saved {len(inat_data.get('species', []))} butterfly species to {inat_path}")
 
     results["inat_species"] = len(inat_data.get("species", []))
 
     # --- Historical weather ---
     obs_list = inat_data.get("observations", [])
-    if store.is_fresh(HIST_WEATHER_PATH):
+    if store.is_fresh(paths.historical_weather):
         print("Historical weather is fresh, skipping fetch.")
-        hist_raw = store.read(HIST_WEATHER_PATH) or {}
+        hist_raw = store.read(paths.historical_weather) or {}
         hist_weather = hist_raw.get("by_date", {}) if isinstance(hist_raw, dict) else {}
     else:
         print("Fetching historical weather for observation dates...")
         hist_weather = fetch_historical_weather(obs_list, lat, lon)
-        hist_path = save_historical_weather(hist_weather)
+        hist_path = save_historical_weather(hist_weather, paths)
         print(f"Cached historical weather for {len(hist_weather)} dates to {hist_path}")
 
     results["historical_weather_dates"] = len(hist_weather)
 
     # --- GDD ---
-    if store.is_fresh(GDD_PATH):
+    if store.is_fresh(paths.gdd):
         print("GDD data is fresh, skipping fetch.")
-        gdd_data = store.read(GDD_PATH) or {}
+        gdd_data = store.read(paths.gdd) or {}
     else:
         print(f"Fetching GDD data for ({lat}, {lon})...")
         gdd_data = fetch_gdd(lat, lon)
-        gdd_path = save_gdd(gdd_data)
+        gdd_path = save_gdd(gdd_data, paths)
         current_gdd = gdd_data.get("current_year", {}).get("total_gdd", 0)
         print(f"Saved GDD data ({current_gdd:.0f} accumulated) to {gdd_path}")
 

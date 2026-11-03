@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from butterfly_planner.flows import build
+from butterfly_planner.flows.paths import location_paths
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.renderers.date_utils import date_range_label
 from butterfly_planner.renderers.sightings_map import (
     _build_weather_html,
@@ -26,6 +28,8 @@ from butterfly_planner.store import DataStore
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+PORTLAND_PATHS = location_paths(PORTLAND)
 
 
 def write_envelope(base_dir: Path, path: str, data: object, source: str = "test") -> None:
@@ -60,9 +64,11 @@ class TestLoadWeather:
         monkeypatch.setattr(build, "store", ds)
 
         weather_payload = {"daily": {}}
-        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/weather.json", weather_payload, source="open-meteo.com"
+        )
 
-        result = build.load_weather()
+        result = build.load_weather(PORTLAND_PATHS)
         assert result == weather_payload
 
     def test_load_weather_not_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -70,7 +76,7 @@ class TestLoadWeather:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_weather()
+        result = build.load_weather(PORTLAND_PATHS)
         assert result is None
 
 
@@ -84,10 +90,14 @@ class TestLoadSunshine:
 
         data_15min = {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}}
         data_16day = {"daily": {"time": [], "sunshine_duration": [], "daylight_duration": []}}
-        write_envelope(tmp_path, "live/sunshine_15min.json", data_15min, source="open-meteo.com")
-        write_envelope(tmp_path, "live/sunshine_16day.json", data_16day, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/sunshine_15min.json", data_15min, source="open-meteo.com"
+        )
+        write_envelope(
+            tmp_path, "live/portland/sunshine_16day.json", data_16day, source="open-meteo.com"
+        )
 
-        result = build.load_sunshine()
+        result = build.load_sunshine(PORTLAND_PATHS)
         assert result is not None
         assert result["fetched_at"] == "2026-02-04T12:00:00+00:00"
         assert result["source"] == "open-meteo.com"
@@ -101,7 +111,7 @@ class TestLoadSunshine:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_sunshine()
+        result = build.load_sunshine(PORTLAND_PATHS)
         assert result is None
 
 
@@ -508,9 +518,11 @@ class TestLoadInaturalist:
 
         # The envelope data payload is what was under SAMPLE_INAT_DATA["data"]
         inat_payload = SAMPLE_INAT_DATA["data"]
-        write_envelope(tmp_path, "live/inaturalist.json", inat_payload, source="inaturalist.org")
+        write_envelope(
+            tmp_path, "live/portland/inaturalist.json", inat_payload, source="inaturalist.org"
+        )
 
-        result = build.load_inaturalist()
+        result = build.load_inaturalist(PORTLAND_PATHS)
         assert result is not None
         assert result["fetched_at"] == "2026-02-04T12:00:00+00:00"
         assert result["source"] == "inaturalist.org"
@@ -523,7 +535,7 @@ class TestLoadInaturalist:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_inaturalist()
+        result = build.load_inaturalist(PORTLAND_PATHS)
         assert result is None
 
 
@@ -547,12 +559,12 @@ class TestLoadHistoricalWeather:
         }
         write_envelope(
             tmp_path,
-            "historical/weather/historical_weather.json",
+            "historical/portland/weather/historical_weather.json",
             hw_payload,
             source="open-meteo.com (archive)",
         )
 
-        result = build.load_historical_weather()
+        result = build.load_historical_weather(PORTLAND_PATHS)
         assert result is not None
         assert "2024-06-15" in result
         assert result["2024-06-15"]["high_c"] == 22.0
@@ -562,7 +574,7 @@ class TestLoadHistoricalWeather:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_historical_weather()
+        result = build.load_historical_weather(PORTLAND_PATHS)
         assert result is None
 
 
@@ -911,7 +923,9 @@ class TestBuildAllFlow:
                 "weather_code": [0],
             }
         }
-        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/weather.json", weather_payload, source="open-meteo.com"
+        )
 
         result = build.build_all()
 
@@ -935,7 +949,9 @@ class TestBuildAllFlow:
                 "weather_code": [1],
             }
         }
-        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/weather.json", weather_payload, source="open-meteo.com"
+        )
 
         sunshine_15min_payload = {
             "minutely_15": {
@@ -952,14 +968,22 @@ class TestBuildAllFlow:
             }
         }
         write_envelope(
-            tmp_path, "live/sunshine_15min.json", sunshine_15min_payload, source="open-meteo.com"
+            tmp_path,
+            "live/portland/sunshine_15min.json",
+            sunshine_15min_payload,
+            source="open-meteo.com",
         )
         write_envelope(
-            tmp_path, "live/sunshine_16day.json", sunshine_16day_payload, source="open-meteo.com"
+            tmp_path,
+            "live/portland/sunshine_16day.json",
+            sunshine_16day_payload,
+            source="open-meteo.com",
         )
 
         inat_payload = SAMPLE_INAT_DATA["data"]
-        write_envelope(tmp_path, "live/inaturalist.json", inat_payload, source="inaturalist.org")
+        write_envelope(
+            tmp_path, "live/portland/inaturalist.json", inat_payload, source="inaturalist.org"
+        )
 
         result = build.build_all()
 

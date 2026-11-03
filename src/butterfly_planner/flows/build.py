@@ -19,6 +19,8 @@ from prefect import flow, task
 
 from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
+from butterfly_planner.flows.paths import LocationPaths, location_paths
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.gdd import build_gdd_timeline_html, build_gdd_today_html
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
@@ -35,14 +37,6 @@ from butterfly_planner.store import DataStore
 store = DataStore(Path("data"))
 SITE_DIR = store.derived / "site"
 
-# Paths matching what fetch.py writes
-WEATHER_PATH = Path("live/weather.json")
-SUNSHINE_15MIN_PATH = Path("live/sunshine_15min.json")
-SUNSHINE_16DAY_PATH = Path("live/sunshine_16day.json")
-INAT_PATH = Path("live/inaturalist.json")
-HIST_WEATHER_PATH = Path("historical/weather/historical_weather.json")
-GDD_PATH = Path("historical/gdd/gdd.json")
-
 
 # =============================================================================
 # Data loading tasks
@@ -50,24 +44,24 @@ GDD_PATH = Path("historical/gdd/gdd.json")
 
 
 @task(name="load-weather")
-def load_weather() -> dict[str, Any] | None:
+def load_weather(paths: LocationPaths) -> dict[str, Any] | None:
     """Load weather data from store."""
-    return store.read(WEATHER_PATH)
+    return store.read(paths.weather)
 
 
 @task(name="load-sunshine")
-def load_sunshine() -> dict[str, Any] | None:
+def load_sunshine(paths: LocationPaths) -> dict[str, Any] | None:
     """Load sunshine data from store.
 
     Combines 15-min and 16-day sunshine into the format renderers expect.
     """
-    data_15min = store.read(SUNSHINE_15MIN_PATH)
-    data_16day = store.read(SUNSHINE_16DAY_PATH)
+    data_15min = store.read(paths.sunshine_15min)
+    data_16day = store.read(paths.sunshine_16day)
     if not data_15min and not data_16day:
         return None
 
     # Read the full envelope for fetched_at timestamp
-    raw = store.read_raw(SUNSHINE_15MIN_PATH) or store.read_raw(SUNSHINE_16DAY_PATH)
+    raw = store.read_raw(paths.sunshine_15min) or store.read_raw(paths.sunshine_16day)
     fetched_at = (raw or {}).get("meta", {}).get("fetched_at", "")
 
     return {
@@ -79,21 +73,21 @@ def load_sunshine() -> dict[str, Any] | None:
 
 
 @task(name="load-inaturalist")
-def load_inaturalist() -> dict[str, Any] | None:
+def load_inaturalist(paths: LocationPaths) -> dict[str, Any] | None:
     """Load iNaturalist data from store."""
-    data = store.read(INAT_PATH)
+    data = store.read(paths.inaturalist)
     if data is None:
         return None
     # Wrap in the format build_html expects (with "data" key for species/observations)
-    raw = store.read_raw(INAT_PATH) or {}
+    raw = store.read_raw(paths.inaturalist) or {}
     fetched_at = raw.get("meta", {}).get("fetched_at", "")
     return {"fetched_at": fetched_at, "source": "inaturalist.org", "data": data}
 
 
 @task(name="load-historical-weather")
-def load_historical_weather() -> dict[str, dict[str, Any]] | None:
+def load_historical_weather(paths: LocationPaths) -> dict[str, dict[str, Any]] | None:
     """Load cached historical weather keyed by date string."""
-    data = store.read(HIST_WEATHER_PATH)
+    data = store.read(paths.historical_weather)
     if data is None:
         return None
     by_date: dict[str, dict[str, Any]] = data.get("by_date", {})
@@ -101,12 +95,12 @@ def load_historical_weather() -> dict[str, dict[str, Any]] | None:
 
 
 @task(name="load-gdd")
-def load_gdd() -> dict[str, Any] | None:
+def load_gdd(paths: LocationPaths) -> dict[str, Any] | None:
     """Load GDD data from store."""
-    data = store.read(GDD_PATH)
+    data = store.read(paths.gdd)
     if data is None:
         return None
-    raw = store.read_raw(GDD_PATH) or {}
+    raw = store.read_raw(paths.gdd) or {}
     fetched_at = raw.get("meta", {}).get("fetched_at", "")
     return {"fetched_at": fetched_at, "source": "open-meteo.com (archive)", "data": data}
 
@@ -252,15 +246,17 @@ def build_all() -> dict[str, Any]:
 
     This is the main Prefect flow that generates the static site.
     """
+    paths = location_paths(PORTLAND)
+
     print("Loading weather data...")
-    weather = load_weather()
+    weather = load_weather(paths)
 
     if not weather:
         print("No weather data found. Run fetch flow first.")
         return {"error": "no data"}
 
     # Weather data needs a fetched_at for the template header
-    weather_raw = store.read_raw(WEATHER_PATH) or {}
+    weather_raw = store.read_raw(paths.weather) or {}
     weather_envelope: dict[str, Any] = {
         "fetched_at": weather_raw.get("meta", {}).get("fetched_at", ""),
         "source": "open-meteo.com",
@@ -268,22 +264,22 @@ def build_all() -> dict[str, Any]:
     }
 
     print("Loading sunshine data...")
-    sunshine = load_sunshine()
+    sunshine = load_sunshine(paths)
     if not sunshine:
         print("Warning: No sunshine data found. Building without sunshine modules.")
 
     print("Loading iNaturalist data...")
-    inat = load_inaturalist()
+    inat = load_inaturalist(paths)
     if not inat:
         print("Warning: No iNaturalist data found. Building without butterfly sightings.")
 
     print("Loading GDD data...")
-    gdd_data = load_gdd()
+    gdd_data = load_gdd(paths)
     if not gdd_data:
         print("Warning: No GDD data found. Building without growing degree days.")
 
     print("Loading historical weather...")
-    hist_weather = load_historical_weather()
+    hist_weather = load_historical_weather(paths)
 
     print("Building HTML...")
     html = build_html(weather_envelope, sunshine, inat, gdd_data, hist_weather)
