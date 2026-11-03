@@ -428,6 +428,20 @@ class TestGetCurrentWeekSpecies:
         assert isinstance(call_args, list)
         assert len(call_args) >= 1
 
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_uses_given_today_and_bbox(self, mock_species: object, mock_obs: object) -> None:
+        mock_species.return_value = []  # type: ignore[union-attr]
+        mock_obs.return_value = []  # type: ignore[union-attr]
+        bbox = {"swlat": 31.33, "swlng": -110.45, "nelat": 32.05, "nelng": -109.05}
+
+        summary = inaturalist.get_current_week_species(bbox=bbox, today=date(2026, 8, 15))
+
+        months, sent_bbox = mock_species.call_args[0]  # type: ignore[union-attr]
+        assert months == [8]
+        assert sent_bbox == bbox
+        assert summary.bbox == bbox
+
 
 class TestGetSpeciesForWeek:
     """Test get_species_for_week function."""

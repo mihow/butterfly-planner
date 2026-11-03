@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import butterfly_planner.datasources.gdd.client as gdd_client
 import butterfly_planner.renderers.gdd as gdd_renderer
 from butterfly_planner.datasources.gdd import (
     DailyGDD,
@@ -151,6 +152,42 @@ class TestComputeAccumulatedGDD:
 # =============================================================================
 # YearGDD
 # =============================================================================
+
+
+class TestFetchTimezone:
+    """GDD temperature requests send the requested timezone to Open-Meteo."""
+
+    @staticmethod
+    def _empty_response() -> MagicMock:
+        resp = MagicMock()
+        resp.json.return_value = {"daily": {"time": []}}
+        return resp
+
+    def test_fetch_temperature_data_passes_timezone(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_temperature_data(
+            31.4, -109.9, date(2025, 1, 1), date(2025, 1, 2), timezone="America/Phoenix"
+        )
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Phoenix"
+
+    def test_fetch_temperature_data_defaults_to_pacific(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_temperature_data(45.5, -122.6, date(2025, 1, 1), date(2025, 1, 2))
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Los_Angeles"
+
+    def test_fetch_year_gdd_passes_timezone(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_year_gdd(31.4, -109.9, 2025, timezone="America/Phoenix")
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Phoenix"
+
+    def test_fetch_year_gdd_defaults_to_pacific(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_year_gdd(45.5, -122.6, 2025)
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Los_Angeles"
 
 
 class TestYearGDD:

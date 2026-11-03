@@ -13,6 +13,8 @@ def fetch_historical_daily(
     end_date: str,
     lat: float = 45.5,
     lon: float = -122.6,
+    *,
+    timezone: str = "America/Los_Angeles",
 ) -> dict[str, Any]:
     """
     Fetch historical daily weather from Open-Meteo Archive API.
@@ -21,7 +23,8 @@ def fetch_historical_daily(
         start_date: ISO date string (YYYY-MM-DD).
         end_date: ISO date string (YYYY-MM-DD).
         lat: Latitude (default: Portland, OR).
-        lon: Longitude.
+        lon: Longitude (default: Portland, OR).
+        timezone: IANA timezone that sets where each daily value starts and ends.
 
     Returns:
         Raw API response dict with ``daily`` key containing arrays.
@@ -32,7 +35,7 @@ def fetch_historical_daily(
         "start_date": start_date,
         "end_date": end_date,
         "daily": DAILY_VARS,
-        "timezone": "America/Los_Angeles",
+        "timezone": timezone,
     }
     resp = session.get(OPEN_METEO_HISTORICAL, params=params)
     resp.raise_for_status()
