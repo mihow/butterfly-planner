@@ -177,7 +177,7 @@ class TestCmdRefresh:
         args = argparse.Namespace()
         call_order: list[str] = []
 
-        def mock_fetch(**_kwargs: object) -> dict[str, object]:
+        def mock_fetch(*_args: object) -> dict[str, object]:
             call_order.append("fetch")
             return {}
 
@@ -192,21 +192,18 @@ class TestCmdRefresh:
             cmd_refresh(args)
             assert call_order == ["fetch", "build"]
 
-    def test_passes_lat_lon_from_settings(self) -> None:
-        """Refresh passes lat/lon from settings to fetch_all."""
+    def test_fetches_default_location(self) -> None:
+        """Refresh fetches the location published at the site root."""
         args = argparse.Namespace()
 
         with (
             patch("butterfly_planner.cli.fetch_all") as mock_fetch,
             patch("butterfly_planner.cli.build_all"),
-            patch("butterfly_planner.cli.get_settings") as mock_settings,
         ):
-            mock_settings.return_value.lat = 44.0
-            mock_settings.return_value.lon = -123.0
             mock_fetch.return_value = {}
 
             cmd_refresh(args)
-            mock_fetch.assert_called_once_with(lat=44.0, lon=-123.0)
+            mock_fetch.assert_called_once_with("portland")
 
 
 class TestCmdServe:

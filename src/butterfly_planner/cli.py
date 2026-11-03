@@ -16,6 +16,7 @@ from butterfly_planner.config import get_settings
 from butterfly_planner.core import process_example
 from butterfly_planner.flows.build import build_all
 from butterfly_planner.flows.fetch import fetch_all
+from butterfly_planner.reference.geography import DEFAULT_LOCATION
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -92,9 +93,8 @@ def cmd_info(_args: argparse.Namespace) -> int:
 
 def cmd_refresh(_args: argparse.Namespace) -> int:
     """Handle the 'refresh' command: fetch data then build site."""
-    settings = get_settings()
-    print(f"Fetching data for ({settings.lat}, {settings.lon})...")
-    fetch_all(lat=settings.lat, lon=settings.lon)
+    print(f"Fetching data for {DEFAULT_LOCATION.name}...")
+    fetch_all(DEFAULT_LOCATION.slug)
 
     print("Building site...")
     build_all()
