@@ -14,9 +14,11 @@ from pathlib import Path
 from butterfly_planner import __version__
 from butterfly_planner.config import get_settings
 from butterfly_planner.core import process_example
-from butterfly_planner.flows.build import build_all
-from butterfly_planner.flows.fetch import fetch_all
-from butterfly_planner.reference.geography import DEFAULT_LOCATION
+from butterfly_planner.flows.build import build_all, build_all_locations
+from butterfly_planner.flows.fetch import fetch_all, fetch_all_locations
+from butterfly_planner.reference.geography import LOCATIONS
+
+ALL_LOCATIONS = "all"
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -52,7 +54,13 @@ def create_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("info", help="Show application info")
 
     # 'refresh' command - fetch data and build site
-    subparsers.add_parser("refresh", help="Fetch data and build site")
+    refresh_parser = subparsers.add_parser("refresh", help="Fetch data and build site")
+    refresh_parser.add_argument(
+        "--location",
+        choices=[*LOCATIONS, ALL_LOCATIONS],
+        default=ALL_LOCATIONS,
+        help="Location slug to refresh, or 'all' (default: all)",
+    )
 
     # 'serve' command - serve built site locally
     serve_parser = subparsers.add_parser("serve", help="Serve site locally")
@@ -91,13 +99,23 @@ def cmd_info(_args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_refresh(_args: argparse.Namespace) -> int:
-    """Handle the 'refresh' command: fetch data then build site."""
-    print(f"Fetching data for {DEFAULT_LOCATION.name}...")
-    fetch_all(DEFAULT_LOCATION.slug)
+def cmd_refresh(args: argparse.Namespace) -> int:
+    """Handle the 'refresh' command: fetch data then build the site.
 
-    print("Building site...")
-    build_all()
+    With ``--location all`` every registered location is fetched and built.
+    With one slug, only that location's data and page are refreshed; its
+    page still links to the other locations that already have data.
+    """
+    if args.location == ALL_LOCATIONS:
+        print("Fetching data for all locations...")
+        fetch_all_locations()
+        print("Building site for all locations...")
+        build_all_locations()
+    else:
+        print(f"Fetching data for {args.location}...")
+        fetch_all(args.location)
+        print(f"Building site for {args.location}...")
+        build_all(args.location)
 
     print("Done.")
     return 0
