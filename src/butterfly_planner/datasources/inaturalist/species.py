@@ -81,7 +81,7 @@ def fetch_species_counts(
     Args:
         month: Month number (1-12) or list of months.
         bbox: Bounding box dict with swlat/swlng/nelat/nelng.
-              Defaults to NW Oregon / SW Washington.
+              Defaults to the Portland location's box (NW Oregon / SW Washington).
         quality_grade: Filter by quality (research, needs_id, casual).
         per_page: Max species to return (API max 500).
 
@@ -115,7 +115,8 @@ def fetch_weekly_histogram(
     Covers all years. Useful for identifying peak butterfly activity periods.
 
     Args:
-        bbox: Bounding box. Defaults to NW Oregon / SW Washington.
+        bbox: Bounding box. Defaults to the Portland location's box
+            (NW Oregon / SW Washington).
 
     Returns:
         List of WeeklyActivity (week 1-53) sorted by week number.

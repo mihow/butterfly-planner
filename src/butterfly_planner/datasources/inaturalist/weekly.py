@@ -65,7 +65,8 @@ def get_current_week_species(
     converting to months for the iNaturalist API.
 
     Args:
-        bbox: Bounding box. Defaults to NW Oregon / SW Washington.
+        bbox: Bounding box. Defaults to the Portland location's box
+            (NW Oregon / SW Washington).
         today: The date whose ISO week is "current". Defaults to the
             system date; pass the location's local date to avoid an
             off-by-one week near midnight.
@@ -106,7 +107,8 @@ def get_species_for_week(
 
     Args:
         week: ISO week number (1-53).
-        bbox: Bounding box. Defaults to NW Oregon / SW Washington.
+        bbox: Bounding box. Defaults to the Portland location's box
+            (NW Oregon / SW Washington).
 
     Returns:
         OccurrenceSummary with species and observations.

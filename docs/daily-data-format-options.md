@@ -19,10 +19,12 @@ is independent of both the upstream API shapes and the downstream HTML rendering
 
 **Where**: `src/butterfly_planner/serialization/daily_data.py` (v0.2; moved from renderers/)
 **When**: Runs as a task in `flows/build.py`, alongside HTML generation
-**Output**: `data/derived/daily/<date>.json` + `data/derived/daily/today.json`
-plus `data/derived/daily/daily-data.schema.json` (the exported JSON Schema,
-written next to today.json so consumers can fetch the contract alongside
-the data)
+**Output**: `data/derived/daily/<slug>/<date>.json` +
+`data/derived/daily/<slug>/today.json` for each location (for example
+`portland` or `bisbee`), plus one shared
+`data/derived/daily/daily-data.schema.json` (the exported JSON Schema,
+written one level above every location's today.json so consumers can fetch
+the contract alongside the data)
 
 The build flow already loads and transforms all the data. This option adds a
 pure function that extracts a structured `DailyData` dict from the same inputs
