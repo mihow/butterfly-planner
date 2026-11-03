@@ -15,7 +15,7 @@ from butterfly_planner import __version__
 from butterfly_planner.config import get_settings
 from butterfly_planner.core import process_example
 from butterfly_planner.flows.build import build_all, build_all_locations
-from butterfly_planner.flows.fetch import fetch_all, fetch_all_locations
+from butterfly_planner.flows.fetch import all_locations_failed, fetch_all, fetch_all_locations
 from butterfly_planner.reference.geography import LOCATIONS
 
 ALL_LOCATIONS = "all"
@@ -105,10 +105,13 @@ def cmd_refresh(args: argparse.Namespace) -> int:
     With ``--location all`` every registered location is fetched and built.
     With one slug, only that location's data and page are refreshed; its
     page still links to the other locations that already have data.
+    The command fails without building when every location's fetch failed.
     """
     if args.location == ALL_LOCATIONS:
         print("Fetching data for all locations...")
-        fetch_all_locations()
+        if all_locations_failed(fetch_all_locations()):
+            print("Fetching failed for every location.", file=sys.stderr)
+            return 1
         print("Building site for all locations...")
         build_all_locations()
     else:

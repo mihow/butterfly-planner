@@ -430,13 +430,20 @@ def fetch_all_locations() -> dict[str, dict[str, Any]]:
     return results
 
 
+def all_locations_failed(results: dict[str, dict[str, Any]] | None) -> bool:
+    """Return True if ``fetch_all_locations`` recorded an error for every location.
+
+    Entry points exit non-zero only in this case, so one failed location does
+    not stop the others from updating.
+    """
+    return bool(results) and all("error" in r for r in results.values())
+
+
 def main() -> int:
     """Fetch every location; return exit code 1 only if all of them failed."""
     results = fetch_all_locations()
     print(f"Flow complete: {results}")
-    if results and all("error" in r for r in results.values()):
-        return 1
-    return 0
+    return 1 if all_locations_failed(results) else 0
 
 
 if __name__ == "__main__":

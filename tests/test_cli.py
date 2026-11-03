@@ -190,6 +190,37 @@ class TestCmdRefresh:
             exit_code = cmd_refresh(args)
             assert exit_code == 0
 
+    def test_returns_one_when_every_fetch_failed(self) -> None:
+        """Refresh of all locations fails, without building, when no fetch succeeded."""
+        args = argparse.Namespace(location="all")
+
+        with (
+            patch("butterfly_planner.cli.fetch_all_locations") as mock_fetch,
+            patch("butterfly_planner.cli.build_all_locations") as mock_build,
+        ):
+            mock_fetch.return_value = {
+                "portland": {"error": "ConnectError()"},
+                "bisbee": {"error": "ConnectError()"},
+            }
+
+            assert cmd_refresh(args) == 1
+        mock_build.assert_not_called()
+
+    def test_returns_zero_when_some_fetches_succeeded(self) -> None:
+        """One failed location does not fail the whole refresh."""
+        args = argparse.Namespace(location="all")
+
+        with (
+            patch("butterfly_planner.cli.fetch_all_locations") as mock_fetch,
+            patch("butterfly_planner.cli.build_all_locations"),
+        ):
+            mock_fetch.return_value = {
+                "portland": {"weather_days": 7},
+                "bisbee": {"error": "ConnectError()"},
+            }
+
+            assert cmd_refresh(args) == 0
+
     def test_all_fetches_then_builds_every_location(self) -> None:
         """Refresh of all locations fetches every location before building."""
         args = argparse.Namespace(location="all")
