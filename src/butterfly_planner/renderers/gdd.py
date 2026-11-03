@@ -111,6 +111,7 @@ def build_gdd_timeline_html(
     normals: list[DayOfYearStats] | None = None,
     normal_year_range: str = "",
     species_profiles: dict[str, SpeciesGDDProfile] | None = None,
+    today: date | None = None,
 ) -> str:
     """Build the GDD timeline SVG chart HTML.
 
@@ -122,6 +123,7 @@ def build_gdd_timeline_html(
         normals: Optional list of DayOfYearStats for the normal band.
         normal_year_range: Label for the normal range (e.g. "1996-2025").
         species_profiles: Optional species GDD profiles for threshold markers.
+        today: The date of the "today" marker. Defaults to the current date.
 
     Returns:
         Rendered HTML string with inline SVG chart.
@@ -185,7 +187,8 @@ def build_gdd_timeline_html(
 
     # Build normal band, today marker, and species markers
     normal_band_points, normal_mean_points = _build_normal_band(normals, x_for_doy, y_for_gdd)
-    today = date.today()
+    if today is None:
+        today = date.today()
     today_x = round(x_for_doy(today.timetuple().tm_yday), 1)
     species_markers = _build_species_markers(species_profiles, y_max, y_for_gdd)
 

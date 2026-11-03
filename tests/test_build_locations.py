@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
@@ -108,6 +109,40 @@ class TestBuildHtmlForLocation:
             _weather_envelope("2026-02-04T20:00:00+00:00"), None, loc=PORTLAND
         )
         assert "Last updated 2026-02-04 12:00 PST" in html
+
+    def test_gdd_modules_use_the_location_date(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The GDD card and timeline get the location's date, not the machine's.
+
+        The build runs on a UTC machine, which is a day ahead of Arizona
+        during the Arizona evening.
+        """
+        local_date = date(2026, 7, 4)
+        seen: dict[str, object] = {}
+
+        def fake_local_today(timezone: str) -> date:
+            seen["timezone"] = timezone
+            return local_date
+
+        def fake_today_html(gdd_data: object, today: date | None = None) -> str:
+            seen["card"] = today
+            return ""
+
+        def fake_timeline_html(gdd_data: object, today: date | None = None) -> str:
+            seen["timeline"] = today
+            return ""
+
+        monkeypatch.setattr(build, "local_today", fake_local_today)
+        monkeypatch.setattr(build, "build_gdd_today_html", fake_today_html)
+        monkeypatch.setattr(build, "build_gdd_timeline_html", fake_timeline_html)
+
+        build.build_html.fn(
+            _weather_envelope("2026-07-05T02:00:00+00:00"),
+            None,
+            gdd_data={"data": {}},
+            loc=TEST_AREA,
+        )
+
+        assert seen == {"timezone": "America/Phoenix", "card": local_date, "timeline": local_date}
 
     def test_no_nav_for_a_single_location(self) -> None:
         nav = build.location_nav(PORTLAND, [PORTLAND])

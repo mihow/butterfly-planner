@@ -19,6 +19,7 @@ from prefect import flow, task
 
 from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
+from butterfly_planner.flows.fetch import local_today
 from butterfly_planner.flows.paths import LocationPaths, location_paths
 from butterfly_planner.reference.geography import (
     DEFAULT_LOCATION,
@@ -174,8 +175,11 @@ def build_html(
     gdd_today_html = ""
     gdd_timeline_html = ""
     if gdd_data:
-        gdd_today_html = build_gdd_today_html(gdd_data)
-        gdd_timeline_html = build_gdd_timeline_html(gdd_data)
+        # The build machine runs on UTC, so its own date can be a day ahead
+        # of the location's date. Use the location's date, as the daily JSON does.
+        gdd_today = local_today(loc.timezone)
+        gdd_today_html = build_gdd_today_html(gdd_data, today=gdd_today)
+        gdd_timeline_html = build_gdd_timeline_html(gdd_data, today=gdd_today)
 
     # Cache-bust on every rebuild (not weather fetch time), so template/JS/CSS
     # edits invalidate CDN-cached assets even when weather data is cached.

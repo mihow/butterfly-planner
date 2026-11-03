@@ -532,6 +532,16 @@ class TestRendering:
         assert len(kwargs["current_year_points"]) > 0
         assert len(kwargs["previous_year_points"]) > 0
 
+    def test_build_gdd_timeline_html_today_marker_follows_given_date(
+        self, sample_gdd_data, mock_render
+    ):
+        """The "today" marker sits at the given date, not the machine's date."""
+        build_gdd_timeline_html(sample_gdd_data, today=date(2026, 1, 1))
+        jan_x = mock_render.call_args[1]["today_x"]
+        build_gdd_timeline_html(sample_gdd_data, today=date(2026, 7, 1))
+        jul_x = mock_render.call_args[1]["today_x"]
+        assert jan_x < jul_x
+
     def test_build_gdd_timeline_html_with_normals(self, sample_gdd_data, mock_render):
         """Should include normal band when normals are provided."""
         normals = [
