@@ -314,6 +314,18 @@ class TestFetchSpeciesCounts:
         assert call_args["swlat"] == 42.0
 
     @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
+    def test_default_requests_api_maximum_so_rich_regions_are_not_truncated(
+        self, mock_api: object
+    ) -> None:
+        """A species-rich box (SE Arizona has 200+ butterfly species) fits in one page."""
+        mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
+
+        inaturalist.fetch_species_counts(month=8)
+
+        call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
+        assert call_args["per_page"] == 500
+
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_empty_results(self, mock_api: object) -> None:
         mock_api.return_value = {"total_results": 0, "results": []}  # type: ignore[union-attr]
 

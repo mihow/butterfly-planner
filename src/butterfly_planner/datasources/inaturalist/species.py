@@ -65,12 +65,16 @@ def _parse_species_record(result: dict[str, Any]) -> SpeciesRecord:
 # =============================================================================
 
 
+# /observations/species_counts accepts up to 500 results per page.
+SPECIES_COUNTS_MAX_PER_PAGE = 500
+
+
 def fetch_species_counts(
     month: int | list[int],
     bbox: dict[str, float] | None = None,
     *,
     quality_grade: str = "research",
-    per_page: int = 100,
+    per_page: int = SPECIES_COUNTS_MAX_PER_PAGE,
 ) -> list[SpeciesRecord]:
     """
     Fetch butterfly species and observation counts for a given month.
@@ -83,7 +87,8 @@ def fetch_species_counts(
         bbox: Bounding box dict with swlat/swlng/nelat/nelng.
               Defaults to the Portland location's box (NW Oregon / SW Washington).
         quality_grade: Filter by quality (research, needs_id, casual).
-        per_page: Max species to return (API max 500).
+        per_page: Max species to return. Defaults to the API maximum so that
+            species-rich regions are not silently cut off at the first page.
 
     Returns:
         List of SpeciesRecord sorted by observation count (descending).
