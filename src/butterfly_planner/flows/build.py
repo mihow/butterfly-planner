@@ -10,6 +10,7 @@ Run locally:
 from __future__ import annotations
 
 import json as json_mod
+import sys
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
@@ -379,17 +380,38 @@ def build_all_locations() -> dict[str, Any]:
     Build one static page per location, each linked to the others.
 
     A location with no weather data is skipped and recorded as
-    ``{"error": "no data"}``. It is also left out of the other pages' links,
-    so no page links to a page that this build did not write.
+    ``{"error": "no data"}``. A location whose build raises is recorded as
+    ``{"error": ...}`` and does not stop the others, so one location's bad
+    data cannot block every page from deploying. Either way, the location is
+    left out of the other pages' links, so no page links to a page that this
+    build did not write.
     """
-    ready = [loc for loc in LOCATIONS.values() if _has_data(loc)]
-    results: dict[str, dict[str, Any]] = {}
+    linked = [loc for loc in LOCATIONS.values() if _has_data(loc)]
+    # Every location starts as "no data", which keeps the results in registry
+    # order; a build below replaces the entry.
+    results: dict[str, dict[str, Any]] = {slug: {"error": "no data"} for slug in LOCATIONS}
     for loc in LOCATIONS.values():
-        if loc in ready:
-            results[loc.slug] = _build_location(loc, location_nav(loc, ready))
-        else:
+        if loc not in linked:
             print(f"No weather data found for {loc.name}. Skipping.")
-            results[loc.slug] = {"error": "no data"}
+
+    # A failure can come after earlier pages were written with a link to the
+    # failed page, so those pages are rebuilt without it. Each pass drops at
+    # least one location, so the loop ends.
+    while linked:
+        for loc in linked:
+            try:
+                results[loc.slug] = _build_location(loc, location_nav(loc, linked))
+            except Exception as exc:
+                # GitHub Actions shows this line as a warning on the run
+                # summary. It goes to stderr directly so that no log prefix
+                # comes before the annotation.
+                sys.stderr.write(f"::warning::Building {loc.slug} failed: {exc!r}\n")
+                results[loc.slug] = {"error": repr(exc)}
+        built = [loc for loc in linked if "error" not in results[loc.slug]]
+        if len(built) == len(linked):
+            break
+        linked = built
+
     pages = sum(r.get("pages", 0) for r in results.values())
     return {"pages": pages, "locations": results}
 

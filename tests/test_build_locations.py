@@ -207,6 +207,34 @@ class TestBuildAllLocations:
         assert area_today["location"]["lat"] == pytest.approx(31.4)
         assert (daily / "daily-data.schema.json").exists()
 
+    @pytest.mark.parametrize("failing", ["portland", "testarea"])
+    def test_failed_location_does_not_stop_or_get_linked_from_others(
+        self, store: build.DataStore, monkeypatch: pytest.MonkeyPatch, failing: str
+    ) -> None:
+        """A page that fails to build is recorded, and the other page is still
+        written without a link to it, whichever order the two are built in."""
+        _seed_weather(store.base, "portland")
+        _seed_weather(store.base, "testarea")
+        real_build_location = build._build_location
+
+        def flaky_build_location(loc: object, nav: list[dict[str, object]]) -> dict[str, object]:
+            if getattr(loc, "slug", None) == failing:
+                raise ValueError("bad data")
+            return real_build_location(loc, nav)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(build, "_build_location", flaky_build_location)
+
+        result = build.build_all_locations()
+
+        assert result["pages"] == 1
+        assert result["locations"][failing] == {"error": "ValueError('bad data')"}
+        site = store.derived / "site"
+        if failing == "portland":
+            other_html = (site / "testarea" / "index.html").read_text()
+        else:
+            other_html = (site / "index.html").read_text()
+        assert 'class="locations"' not in other_html
+
     def test_location_without_data_is_skipped_and_not_linked(self, store: build.DataStore) -> None:
         _seed_weather(store.base, "portland")
 
