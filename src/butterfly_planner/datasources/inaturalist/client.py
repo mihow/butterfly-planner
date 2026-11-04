@@ -13,6 +13,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.services.http import session
 
 # ---------------------------------------------------------------------------
@@ -35,12 +36,7 @@ WASHINGTON = 46
 # Covers Portland metro, northern Willamette Valley, Oregon coast (north),
 # Clark County WA, and SW Washington lowlands.
 # ---------------------------------------------------------------------------
-NW_OREGON_SW_WASHINGTON = {
-    "swlat": 44.5,
-    "swlng": -124.2,
-    "nelat": 46.5,
-    "nelng": -121.5,
-}
+NW_OREGON_SW_WASHINGTON = PORTLAND.bbox.as_dict()
 
 # ---------------------------------------------------------------------------
 # API configuration

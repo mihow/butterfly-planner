@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Butterfly Planner &mdash; Sunshine &amp; Weather Forecast</title>
+    <title>Butterfly Planner &mdash; {{ location.name }}</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v={{ build_version }}"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin="" />
@@ -42,6 +42,10 @@
         header .updated {
             font-size: 0.85rem;
             color: #888;
+            margin-top: 0.5rem;
+        }
+        header .locations {
+            font-size: 0.85rem;
             margin-top: 0.5rem;
         }
 
@@ -390,8 +394,15 @@
 <body>
     <header>
         <h1>Butterfly Planner</h1>
-        <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; Portland, OR</div>
-        <div class="updated">Last updated {{ updated }} PST</div>
+        <div class="subtitle">Sunshine &amp; Weather Forecast &mdash; {{ location.name }}</div>
+        {% if nav|length > 1 %}
+        <nav class="locations" aria-label="Locations">
+            {% for item in nav %}
+            {% if item.current %}<span aria-current="page">{{ item.name }}</span>{% else %}<a href="{{ item.href }}">{{ item.name }}</a>{% endif %}{% if not loop.last %} &middot; {% endif %}
+            {% endfor %}
+        </nav>
+        {% endif %}
+        <div class="updated">Last updated {{ updated }} {{ tz_abbr }}</div>
     </header>
 
     <main>
@@ -419,7 +430,7 @@
         <p>Planned features:</p>
         <ul>
             <li>Butterfly abundance hotspots by week of year</li>
-            <li>Species diversity maps for Oregon &amp; Washington</li>
+            <li>Species diversity maps for each area</li>
             <li>Drive-time isochrone analysis</li>
             <li>Nearby campground locations</li>
         </ul>

@@ -56,6 +56,7 @@ class OccurrenceSummary:
 
 def get_current_week_species(
     bbox: dict[str, float] | None = None,
+    today: date | None = None,
 ) -> OccurrenceSummary:
     """
     Fetch butterfly occurrence data for the current week +/- 1 week.
@@ -64,12 +65,17 @@ def get_current_week_species(
     converting to months for the iNaturalist API.
 
     Args:
-        bbox: Bounding box. Defaults to NW Oregon / SW Washington.
+        bbox: Bounding box. Defaults to the Portland location's box
+            (NW Oregon / SW Washington).
+        today: The date whose ISO week is "current". Defaults to the
+            system date; pass the location's local date to avoid an
+            off-by-one week near midnight.
 
     Returns:
         OccurrenceSummary with species and observations.
     """
-    today = date.today()
+    if today is None:
+        today = date.today()
     current_week = today.isocalendar()[1]
     weeks = _week_range(current_week)
     months = _weeks_to_months(weeks)
@@ -101,7 +107,8 @@ def get_species_for_week(
 
     Args:
         week: ISO week number (1-53).
-        bbox: Bounding box. Defaults to NW Oregon / SW Washington.
+        bbox: Bounding box. Defaults to the Portland location's box
+            (NW Oregon / SW Washington).
 
     Returns:
         OccurrenceSummary with species and observations.

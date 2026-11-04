@@ -314,6 +314,18 @@ class TestFetchSpeciesCounts:
         assert call_args["swlat"] == 42.0
 
     @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
+    def test_default_requests_api_maximum_so_rich_regions_are_not_truncated(
+        self, mock_api: object
+    ) -> None:
+        """A species-rich box (SE Arizona has 200+ butterfly species) fits in one page."""
+        mock_api.return_value = SAMPLE_SPECIES_COUNTS_RESPONSE  # type: ignore[union-attr]
+
+        inaturalist.fetch_species_counts(month=8)
+
+        call_args = mock_api.call_args[0][0]  # type: ignore[union-attr]
+        assert call_args["per_page"] == 500
+
+    @patch("butterfly_planner.datasources.inaturalist.client.get_species_counts")
     def test_empty_results(self, mock_api: object) -> None:
         mock_api.return_value = {"total_results": 0, "results": []}  # type: ignore[union-attr]
 
@@ -427,6 +439,20 @@ class TestGetCurrentWeekSpecies:
         call_args = mock_species.call_args[0][0]  # type: ignore[union-attr]
         assert isinstance(call_args, list)
         assert len(call_args) >= 1
+
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_observations_for_month")
+    @patch("butterfly_planner.datasources.inaturalist.weekly.fetch_species_counts")
+    def test_uses_given_today_and_bbox(self, mock_species: object, mock_obs: object) -> None:
+        mock_species.return_value = []  # type: ignore[union-attr]
+        mock_obs.return_value = []  # type: ignore[union-attr]
+        bbox = {"swlat": 31.33, "swlng": -110.45, "nelat": 32.05, "nelng": -109.05}
+
+        summary = inaturalist.get_current_week_species(bbox=bbox, today=date(2026, 8, 15))
+
+        months, sent_bbox = mock_species.call_args[0]  # type: ignore[union-attr]
+        assert months == [8]
+        assert sent_bbox == bbox
+        assert summary.bbox == bbox
 
 
 class TestGetSpeciesForWeek:

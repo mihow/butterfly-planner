@@ -63,10 +63,28 @@ class TestCreateParser:
         assert args.command == "info"
 
     def test_parser_refresh_command(self) -> None:
-        """Parser accepts refresh command."""
+        """Parser accepts refresh command and refreshes every location by default."""
         parser = create_parser()
         args = parser.parse_args(["refresh"])
         assert args.command == "refresh"
+        assert args.location == "all"
+
+    def test_parser_refresh_one_location(self) -> None:
+        """Parser accepts a registered location slug."""
+        parser = create_parser()
+        args = parser.parse_args(["refresh", "--location", "bisbee"])
+        assert args.location == "bisbee"
+
+    def test_parser_refresh_unknown_location_exits_nonzero(self) -> None:
+        """An unknown location slug is rejected before anything is fetched."""
+        parser = create_parser()
+        with (
+            patch("sys.stderr", new_callable=StringIO) as stderr,
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            parser.parse_args(["refresh", "--location", "atlantis"])
+        assert exc_info.value.code != 0
+        assert "atlantis" in stderr.getvalue()
 
     def test_parser_serve_command(self) -> None:
         """Parser accepts serve command with optional --port."""
@@ -160,53 +178,88 @@ class TestCmdRefresh:
 
     def test_returns_zero(self) -> None:
         """Refresh command returns exit code 0."""
-        args = argparse.Namespace()
+        args = argparse.Namespace(location="all")
 
         with (
-            patch("butterfly_planner.cli.fetch_all") as mock_fetch,
-            patch("butterfly_planner.cli.build_all") as mock_build,
+            patch("butterfly_planner.cli.fetch_all_locations") as mock_fetch,
+            patch("butterfly_planner.cli.build_all_locations") as mock_build,
         ):
-            mock_fetch.return_value = {"weather_days": 7, "output": "data/raw/weather.json"}
-            mock_build.return_value = {"pages": 1, "output": "site/index.html"}
+            mock_fetch.return_value = {"portland": {"weather_days": 7}}
+            mock_build.return_value = {"pages": 1, "locations": {}}
 
             exit_code = cmd_refresh(args)
             assert exit_code == 0
 
-    def test_calls_fetch_then_build(self) -> None:
-        """Refresh calls fetch_all before build_all."""
-        args = argparse.Namespace()
-        call_order: list[str] = []
-
-        def mock_fetch(**_kwargs: object) -> dict[str, object]:
-            call_order.append("fetch")
-            return {}
-
-        def mock_build() -> dict[str, object]:
-            call_order.append("build")
-            return {}
+    def test_returns_one_when_every_fetch_failed(self) -> None:
+        """Refresh of all locations fails, without building, when no fetch succeeded."""
+        args = argparse.Namespace(location="all")
 
         with (
-            patch("butterfly_planner.cli.fetch_all", side_effect=mock_fetch),
-            patch("butterfly_planner.cli.build_all", side_effect=mock_build),
+            patch("butterfly_planner.cli.fetch_all_locations") as mock_fetch,
+            patch("butterfly_planner.cli.build_all_locations") as mock_build,
+        ):
+            mock_fetch.return_value = {
+                "portland": {"error": "ConnectError()"},
+                "bisbee": {"error": "ConnectError()"},
+            }
+
+            assert cmd_refresh(args) == 1
+        mock_build.assert_not_called()
+
+    def test_returns_zero_when_some_fetches_succeeded(self) -> None:
+        """One failed location does not fail the whole refresh."""
+        args = argparse.Namespace(location="all")
+
+        with (
+            patch("butterfly_planner.cli.fetch_all_locations") as mock_fetch,
+            patch("butterfly_planner.cli.build_all_locations"),
+        ):
+            mock_fetch.return_value = {
+                "portland": {"weather_days": 7},
+                "bisbee": {"error": "ConnectError()"},
+            }
+
+            assert cmd_refresh(args) == 0
+
+    def test_all_fetches_then_builds_every_location(self) -> None:
+        """Refresh of all locations fetches every location before building."""
+        args = argparse.Namespace(location="all")
+        call_order: list[str] = []
+
+        with (
+            patch(
+                "butterfly_planner.cli.fetch_all_locations",
+                side_effect=lambda: call_order.append("fetch"),
+            ),
+            patch(
+                "butterfly_planner.cli.build_all_locations",
+                side_effect=lambda: call_order.append("build"),
+            ),
+            patch("butterfly_planner.cli.fetch_all") as mock_fetch_one,
+            patch("butterfly_planner.cli.build_all") as mock_build_one,
         ):
             cmd_refresh(args)
-            assert call_order == ["fetch", "build"]
 
-    def test_passes_lat_lon_from_settings(self) -> None:
-        """Refresh passes lat/lon from settings to fetch_all."""
-        args = argparse.Namespace()
+        assert call_order == ["fetch", "build"]
+        mock_fetch_one.assert_not_called()
+        mock_build_one.assert_not_called()
+
+    def test_one_location_runs_only_its_flows(self) -> None:
+        """Refresh of one location fetches and builds only that location."""
+        args = argparse.Namespace(location="bisbee")
 
         with (
             patch("butterfly_planner.cli.fetch_all") as mock_fetch,
-            patch("butterfly_planner.cli.build_all"),
-            patch("butterfly_planner.cli.get_settings") as mock_settings,
+            patch("butterfly_planner.cli.build_all") as mock_build,
+            patch("butterfly_planner.cli.fetch_all_locations") as mock_fetch_all,
+            patch("butterfly_planner.cli.build_all_locations") as mock_build_all,
         ):
-            mock_settings.return_value.lat = 44.0
-            mock_settings.return_value.lon = -123.0
-            mock_fetch.return_value = {}
-
             cmd_refresh(args)
-            mock_fetch.assert_called_once_with(lat=44.0, lon=-123.0)
+
+        mock_fetch.assert_called_once_with("bisbee")
+        mock_build.assert_called_once_with("bisbee")
+        mock_fetch_all.assert_not_called()
+        mock_build_all.assert_not_called()
 
 
 class TestCmdServe:

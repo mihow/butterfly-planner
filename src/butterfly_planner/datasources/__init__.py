@@ -25,10 +25,12 @@ Adding a new datasource
 3. Re-export public API in ``__init__.py`` with ``__all__``.
 
 4. Wire into the pipeline (see ``flows/fetch.py``):
-   - Add a ``@task`` that calls your fetch function
-   - Pick a store tier + path (e.g. ``live/mydata.json``)
+   - Add a ``@task`` that takes a ``Location`` and calls your fetch function
+     with the location's point, bbox or timezone
+   - Add the cache path to ``LocationPaths`` in ``flows/paths.py``, so each
+     location gets its own file (e.g. ``live/<slug>/mydata.json``)
    - Call ``store.write(path, data, source="...", valid_until=...)``
-   - Add the task call to ``fetch_all()``
+   - Add the task call to ``_fetch_location()``
 
 5. Add tests in ``tests/test_{name}.py``.
 """

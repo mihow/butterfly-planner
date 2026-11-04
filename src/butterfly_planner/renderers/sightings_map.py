@@ -6,8 +6,9 @@ for rich popups with thumbnail images and weather info.
 
 from __future__ import annotations
 
+import dataclasses
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -18,6 +19,9 @@ from butterfly_planner.renderers.species_palette import (
     build_species_palette,
 )
 from butterfly_planner.renderers.weather_utils import wmo_code_to_conditions
+
+if TYPE_CHECKING:
+    from butterfly_planner.reference.geography import Location
 
 
 class _MarkerData(BaseModel):
@@ -77,6 +81,8 @@ def _build_weather_html(w: dict[str, Any]) -> str:
 def build_butterfly_map_html(
     inat_data: dict[str, Any],
     palette: dict[str, SpeciesStyle] | None = None,
+    *,
+    location: Location,
 ) -> tuple[str, str]:
     """Build an interactive Leaflet map of butterfly observations.
 
@@ -85,6 +91,9 @@ def build_butterfly_map_html(
 
     Observations should be pre-enriched with a ``"weather"`` key (see
     ``analysis.species_weather.enrich_observations_with_weather``).
+
+    ``location`` supplies the initial map view, the search rectangle and its
+    label, and any points of interest drawn as extra markers.
 
     Returns a (map_div_html, map_script_js) tuple.
     """
@@ -147,6 +156,7 @@ def build_butterfly_map_html(
     map_div = render_template(
         "sightings_map.html.j2",
         label=label.title(),
+        region_label=location.region_label,
         years=years,
         obs_count=len(observations),
     )
@@ -154,6 +164,11 @@ def build_butterfly_map_html(
     map_script = render_template(
         "sightings_map_script.html.j2",
         markers_json=markers_json,
+        region_label=location.region_label,
+        map_center=location.map_center,
+        map_zoom=location.map_zoom,
+        bbox_bounds=location.bbox.leaflet_bounds,
+        points_of_interest=[dataclasses.asdict(poi) for poi in location.points_of_interest],
     )
 
     return (map_div, map_script)

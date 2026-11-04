@@ -101,5 +101,5 @@ CMD ["butterfly-planner", "info"]
 # Labels
 # =============================================================================
 LABEL org.opencontainers.image.title="butterfly-planner" \
-      org.opencontainers.image.description="Butterfly abundance and species diversity forecasting for Oregon and Washington" \
+      org.opencontainers.image.description="Butterfly abundance and species diversity forecasting for Portland, OR and Bisbee, AZ" \
       org.opencontainers.image.source="https://github.com/mihow/butterfly-planner"

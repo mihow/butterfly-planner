@@ -10,15 +10,24 @@ Run locally:
 from __future__ import annotations
 
 import json as json_mod
+import sys
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from prefect import flow, task
 
 from butterfly_planner.analysis.species_weather import enrich_observations_with_weather
 from butterfly_planner.analysis.weekly_forecast import merge_sunshine_weather
+from butterfly_planner.flows.fetch import local_today
+from butterfly_planner.flows.paths import LocationPaths, location_paths
+from butterfly_planner.reference.geography import (
+    DEFAULT_LOCATION,
+    LOCATIONS,
+    Location,
+    get_location,
+)
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.gdd import build_gdd_timeline_html, build_gdd_today_html
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
@@ -31,17 +40,12 @@ from butterfly_planner.renderers.sunshine import (
 from butterfly_planner.serialization.daily_data import DailyData, build_daily_data
 from butterfly_planner.store import DataStore
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 # Store and output paths
 store = DataStore(Path("data"))
 SITE_DIR = store.derived / "site"
-
-# Paths matching what fetch.py writes
-WEATHER_PATH = Path("live/weather.json")
-SUNSHINE_15MIN_PATH = Path("live/sunshine_15min.json")
-SUNSHINE_16DAY_PATH = Path("live/sunshine_16day.json")
-INAT_PATH = Path("live/inaturalist.json")
-HIST_WEATHER_PATH = Path("historical/weather/historical_weather.json")
-GDD_PATH = Path("historical/gdd/gdd.json")
 
 
 # =============================================================================
@@ -50,24 +54,24 @@ GDD_PATH = Path("historical/gdd/gdd.json")
 
 
 @task(name="load-weather")
-def load_weather() -> dict[str, Any] | None:
+def load_weather(paths: LocationPaths) -> dict[str, Any] | None:
     """Load weather data from store."""
-    return store.read(WEATHER_PATH)
+    return store.read(paths.weather)
 
 
 @task(name="load-sunshine")
-def load_sunshine() -> dict[str, Any] | None:
+def load_sunshine(paths: LocationPaths) -> dict[str, Any] | None:
     """Load sunshine data from store.
 
     Combines 15-min and 16-day sunshine into the format renderers expect.
     """
-    data_15min = store.read(SUNSHINE_15MIN_PATH)
-    data_16day = store.read(SUNSHINE_16DAY_PATH)
+    data_15min = store.read(paths.sunshine_15min)
+    data_16day = store.read(paths.sunshine_16day)
     if not data_15min and not data_16day:
         return None
 
     # Read the full envelope for fetched_at timestamp
-    raw = store.read_raw(SUNSHINE_15MIN_PATH) or store.read_raw(SUNSHINE_16DAY_PATH)
+    raw = store.read_raw(paths.sunshine_15min) or store.read_raw(paths.sunshine_16day)
     fetched_at = (raw or {}).get("meta", {}).get("fetched_at", "")
 
     return {
@@ -79,21 +83,21 @@ def load_sunshine() -> dict[str, Any] | None:
 
 
 @task(name="load-inaturalist")
-def load_inaturalist() -> dict[str, Any] | None:
+def load_inaturalist(paths: LocationPaths) -> dict[str, Any] | None:
     """Load iNaturalist data from store."""
-    data = store.read(INAT_PATH)
+    data = store.read(paths.inaturalist)
     if data is None:
         return None
     # Wrap in the format build_html expects (with "data" key for species/observations)
-    raw = store.read_raw(INAT_PATH) or {}
+    raw = store.read_raw(paths.inaturalist) or {}
     fetched_at = raw.get("meta", {}).get("fetched_at", "")
     return {"fetched_at": fetched_at, "source": "inaturalist.org", "data": data}
 
 
 @task(name="load-historical-weather")
-def load_historical_weather() -> dict[str, dict[str, Any]] | None:
+def load_historical_weather(paths: LocationPaths) -> dict[str, dict[str, Any]] | None:
     """Load cached historical weather keyed by date string."""
-    data = store.read(HIST_WEATHER_PATH)
+    data = store.read(paths.historical_weather)
     if data is None:
         return None
     by_date: dict[str, dict[str, Any]] = data.get("by_date", {})
@@ -101,12 +105,12 @@ def load_historical_weather() -> dict[str, dict[str, Any]] | None:
 
 
 @task(name="load-gdd")
-def load_gdd() -> dict[str, Any] | None:
+def load_gdd(paths: LocationPaths) -> dict[str, Any] | None:
     """Load GDD data from store."""
-    data = store.read(GDD_PATH)
+    data = store.read(paths.gdd)
     if data is None:
         return None
-    raw = store.read_raw(GDD_PATH) or {}
+    raw = store.read_raw(paths.gdd) or {}
     fetched_at = raw.get("meta", {}).get("fetched_at", "")
     return {"fetched_at": fetched_at, "source": "open-meteo.com (archive)", "data": data}
 
@@ -123,13 +127,23 @@ def build_html(
     inat_data: dict[str, Any] | None = None,
     gdd_data: dict[str, Any] | None = None,
     historical_weather: dict[str, dict[str, Any]] | None = None,
+    *,
+    loc: Location,
+    nav: list[dict[str, Any]] | None = None,
 ) -> str:
-    """Build HTML page from weather, sunshine, iNaturalist, and GDD data."""
+    """Build HTML page from weather, sunshine, iNaturalist, and GDD data.
+
+    ``loc`` decides the area the page describes and the time zone of its
+    "Last updated" stamp. ``nav`` is the list from ``location_nav``; the
+    page shows it only when it names two or more locations.
+    """
     _raw_fetched_at = weather_data.get("fetched_at") or ""
     fetched_dt = datetime.fromisoformat(_raw_fetched_at) if _raw_fetched_at else datetime.now(UTC)
-    pst = ZoneInfo("America/Los_Angeles")
-    local_dt = fetched_dt.astimezone(pst)
+    local_dt = fetched_dt.astimezone(ZoneInfo(loc.timezone))
     updated = local_dt.strftime("%Y-%m-%d %H:%M")
+    # The abbreviation comes from the date itself, so it follows daylight
+    # saving time (PST in winter, PDT in summer; MST all year in Arizona).
+    tz_abbr = local_dt.strftime("%Z")
 
     sunshine_today_html = ""
     sunshine_16day_html = ""
@@ -144,7 +158,7 @@ def build_html(
     if inat_data:
         species_list = inat_data.get("data", {}).get("species", [])
         palette = build_species_palette(species_list)
-        butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette)
+        butterfly_sightings_html = build_butterfly_sightings_html(inat_data, palette, location=loc)
 
         # Enrich observations with historical weather before rendering map
         observations = inat_data.get("data", {}).get("observations", [])
@@ -155,21 +169,30 @@ def build_html(
                 "data": {**inat_data.get("data", {}), "observations": enriched},
             }
 
-        butterfly_map_html, map_script_html = build_butterfly_map_html(inat_data, palette)
+        butterfly_map_html, map_script_html = build_butterfly_map_html(
+            inat_data, palette, location=loc
+        )
 
     gdd_today_html = ""
     gdd_timeline_html = ""
     if gdd_data:
-        gdd_today_html = build_gdd_today_html(gdd_data)
-        gdd_timeline_html = build_gdd_timeline_html(gdd_data)
+        # The build machine runs on UTC, so its own date can be a day ahead
+        # of the location's date. Use the location's date, as the daily JSON does.
+        gdd_today = local_today(loc.timezone)
+        gdd_today_html = build_gdd_today_html(gdd_data, today=gdd_today)
+        gdd_timeline_html = build_gdd_timeline_html(gdd_data, today=gdd_today)
 
     # Cache-bust on every rebuild (not weather fetch time), so template/JS/CSS
     # edits invalidate CDN-cached assets even when weather data is cached.
-    build_version = datetime.now(pst).strftime("%Y%m%d%H%M")
+    # Only uniqueness matters here, so the time zone is fixed to UTC.
+    build_version = datetime.now(UTC).strftime("%Y%m%d%H%M")
 
     return render_template(
         "base.html.j2",
+        location=loc,
+        nav=nav or [],
         updated=updated,
+        tz_abbr=tz_abbr,
         build_version=build_version,
         sunshine_today=sunshine_today_html,
         sunshine_16day=sunshine_16day_html,
@@ -187,20 +210,26 @@ def build_daily_data_task(
     sunshine_data: dict[str, Any] | None,
     inat_data: dict[str, Any] | None = None,
     gdd_data: dict[str, Any] | None = None,
+    *,
+    loc: Location,
 ) -> dict[str, Any]:
-    """Build structured daily data JSON from all data sources."""
+    """Build structured daily data JSON for ``loc`` from all data sources."""
     return build_daily_data(
         weather_data=weather_data,
         sunshine_data=sunshine_data,
         inat_data=inat_data,
         gdd_data=gdd_data,
+        location_name=loc.name,
+        lat=loc.lat,
+        lon=loc.lon,
+        timezone=loc.timezone,
     )
 
 
 @task(name="write-daily-data")
-def write_daily_data(daily_data: dict[str, Any]) -> Path:
-    """Write daily data JSON to derived/daily/<date>.json and today.json."""
-    daily_dir = store.derived / "daily"
+def write_daily_data(daily_data: dict[str, Any], paths: LocationPaths) -> Path:
+    """Write daily data JSON to derived/daily/<slug>/<date>.json and today.json."""
+    daily_dir = store.derived / paths.daily_dir
     daily_dir.mkdir(parents=True, exist_ok=True)
 
     date_str = daily_data.get("date", "unknown")
@@ -221,9 +250,9 @@ def write_daily_data(daily_data: dict[str, Any]) -> Path:
 def write_daily_schema() -> Path:
     """Export the DailyData JSON Schema as a build artifact.
 
-    Written next to today.json (data/derived/daily/) so a consumer can
-    fetch the contract alongside the data. This is the #66 deliverable:
-    a published JSON Schema, not just an in-test assertion.
+    Written once in data/derived/daily/, one level above every location's
+    today.json, because all locations share the same contract. This is the
+    #66 deliverable: a published JSON Schema, not just an in-test assertion.
     """
     daily_dir = store.derived / "daily"
     daily_dir.mkdir(parents=True, exist_ok=True)
@@ -236,31 +265,54 @@ def write_daily_schema() -> Path:
 
 
 @task(name="write-site")
-def write_site(html: str) -> Path:
-    """Write HTML to site directory."""
-    SITE_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = SITE_DIR / "index.html"
+def write_site(html: str, paths: LocationPaths) -> Path:
+    """Write a location's HTML page under the site directory."""
+    output_path = SITE_DIR / paths.site_file
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w") as f:
         f.write(html)
     return output_path
 
 
-@flow(name="build-site", log_prints=True)
-def build_all() -> dict[str, Any]:
-    """
-    Build static site from fetched data.
+def location_nav(current: Location, locations: Iterable[Location]) -> list[dict[str, Any]]:
+    """Return links from ``current``'s page to every location's page.
 
-    This is the main Prefect flow that generates the static site.
+    Each href is relative to ``current``'s page, so the links work wherever
+    the site is published, including under a pull-request preview prefix.
+    The current location gets the href ``./`` and ``current=True``.
     """
-    print("Loading weather data...")
-    weather = load_weather()
+    depth = len(PurePosixPath(current.site_subdir).parts)
+    up = "../" * depth
+    nav: list[dict[str, Any]] = []
+    for loc in locations:
+        if loc.slug == current.slug:
+            href = "./"
+        else:
+            href = up + (f"{loc.site_subdir}/" if loc.site_subdir else "")
+        nav.append(
+            {"slug": loc.slug, "name": loc.name, "href": href, "current": loc.slug == current.slug}
+        )
+    return nav
+
+
+def _has_data(loc: Location) -> bool:
+    """Return True if ``loc`` has the weather data a page needs."""
+    return store.file_path(location_paths(loc).weather) is not None
+
+
+def _build_location(loc: Location, nav: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build the page and daily data JSON for one location."""
+    paths = location_paths(loc)
+
+    print(f"Loading weather data for {loc.name}...")
+    weather = load_weather(paths)
 
     if not weather:
-        print("No weather data found. Run fetch flow first.")
+        print(f"No weather data found for {loc.name}. Run fetch flow first.")
         return {"error": "no data"}
 
     # Weather data needs a fetched_at for the template header
-    weather_raw = store.read_raw(WEATHER_PATH) or {}
+    weather_raw = store.read_raw(paths.weather) or {}
     weather_envelope: dict[str, Any] = {
         "fetched_at": weather_raw.get("meta", {}).get("fetched_at", ""),
         "source": "open-meteo.com",
@@ -268,32 +320,32 @@ def build_all() -> dict[str, Any]:
     }
 
     print("Loading sunshine data...")
-    sunshine = load_sunshine()
+    sunshine = load_sunshine(paths)
     if not sunshine:
         print("Warning: No sunshine data found. Building without sunshine modules.")
 
     print("Loading iNaturalist data...")
-    inat = load_inaturalist()
+    inat = load_inaturalist(paths)
     if not inat:
         print("Warning: No iNaturalist data found. Building without butterfly sightings.")
 
     print("Loading GDD data...")
-    gdd_data = load_gdd()
+    gdd_data = load_gdd(paths)
     if not gdd_data:
         print("Warning: No GDD data found. Building without growing degree days.")
 
     print("Loading historical weather...")
-    hist_weather = load_historical_weather()
+    hist_weather = load_historical_weather(paths)
 
     print("Building HTML...")
-    html = build_html(weather_envelope, sunshine, inat, gdd_data, hist_weather)
+    html = build_html(weather_envelope, sunshine, inat, gdd_data, hist_weather, loc=loc, nav=nav)
 
     print("Writing site...")
-    output_path = write_site(html)
+    output_path = write_site(html, paths)
 
     print("Building daily data JSON...")
-    daily_data = build_daily_data_task(weather_envelope, sunshine, inat, gdd_data)
-    daily_path = write_daily_data(daily_data)
+    daily_data = build_daily_data_task(weather_envelope, sunshine, inat, gdd_data, loc=loc)
+    daily_path = write_daily_data(daily_data, paths)
     print(f"Daily data written: {daily_path}")
 
     print("Exporting daily-data JSON Schema...")
@@ -309,6 +361,61 @@ def build_all() -> dict[str, Any]:
     }
 
 
+@flow(name="build-site", log_prints=True)
+def build_all(location_slug: str = DEFAULT_LOCATION.slug) -> dict[str, Any]:
+    """
+    Build the static page for one location.
+
+    The page links to every other location that has data, as
+    ``build_all_locations`` would.
+    """
+    loc = get_location(location_slug)
+    linked = [other for other in LOCATIONS.values() if other.slug == loc.slug or _has_data(other)]
+    return _build_location(loc, location_nav(loc, linked))
+
+
+@flow(name="build-all-locations", log_prints=True)
+def build_all_locations() -> dict[str, Any]:
+    """
+    Build one static page per location, each linked to the others.
+
+    A location with no weather data is skipped and recorded as
+    ``{"error": "no data"}``. A location whose build raises is recorded as
+    ``{"error": ...}`` and does not stop the others, so one location's bad
+    data cannot block every page from deploying. Either way, the location is
+    left out of the other pages' links, so no page links to a page that this
+    build did not write.
+    """
+    linked = [loc for loc in LOCATIONS.values() if _has_data(loc)]
+    # Every location starts as "no data", which keeps the results in registry
+    # order; a build below replaces the entry.
+    results: dict[str, dict[str, Any]] = {slug: {"error": "no data"} for slug in LOCATIONS}
+    for loc in LOCATIONS.values():
+        if loc not in linked:
+            print(f"No weather data found for {loc.name}. Skipping.")
+
+    # A failure can come after earlier pages were written with a link to the
+    # failed page, so those pages are rebuilt without it. Each pass drops at
+    # least one location, so the loop ends.
+    while linked:
+        for loc in linked:
+            try:
+                results[loc.slug] = _build_location(loc, location_nav(loc, linked))
+            except Exception as exc:
+                # GitHub Actions shows this line as a warning on the run
+                # summary. It goes to stderr directly so that no log prefix
+                # comes before the annotation.
+                sys.stderr.write(f"::warning::Building {loc.slug} failed: {exc!r}\n")
+                results[loc.slug] = {"error": repr(exc)}
+        built = [loc for loc in linked if "error" not in results[loc.slug]]
+        if len(built) == len(linked):
+            break
+        linked = built
+
+    pages = sum(r.get("pages", 0) for r in results.values())
+    return {"pages": pages, "locations": results}
+
+
 if __name__ == "__main__":
-    result = build_all()
+    result = build_all_locations()
     print(f"Flow complete: {result}")
