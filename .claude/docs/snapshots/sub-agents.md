@@ -13,6 +13,7 @@ Back to top
   + [Choose a model](#choose-a-model)
   + [Run every subagent on one model](#run-every-subagent-on-one-model)
   + [Choose an effort level](#choose-an-effort-level)
+  + [When a subagent has no effort field or parameter](#when-a-subagent-has-no-effort-field-or-parameter)
   + [Control subagent capabilities](#control-subagent-capabilities)
   + [Available tools](#available-tools)
   + [Restrict which tools a subagent can use](#restrict-which-tools-a-subagent-can-use)
@@ -436,6 +437,10 @@ While `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is [on](/docs/en/env-vars), Claude Code
 
 To run a subagent at its own [effort level](/docs/en/model-config#adjust-effort-level), set the [`effort`](#supported-frontmatter-fields) field in its definition.
 When you ask Claude to run a non-fork subagent at a specific effort level, it can also pass an `effort` parameter for that invocation. The parameter overrides the `effort` field and stays in effect when the subagent is [resumed](#resume-subagents). The [`CLAUDE_CODE_EFFORT_LEVEL`](/docs/en/env-vars#variables) environment variable takes precedence over both. The per-invocation parameter requires Claude Code v2.1.292 or later.
+
+#### [​](#when-a-subagent-has-no-effort-field-or-parameter) When a subagent has no `effort` field or parameter
+
+On the main conversation’s model, the subagent runs at the level you pick in the session, such as with `/effort`, or set with `--effort`. On another model, [that level doesn’t apply](/docs/en/model-config#effort-level-of-subagents-and-teammates). To choose its level, set the `effort` field.
 
 ### [​](#control-subagent-capabilities) Control subagent capabilities
 
@@ -1025,7 +1030,7 @@ Use **subagents** when:
 * The work is self-contained and can return a summary
 
 Consider [Skills](/docs/en/skills) instead when you want reusable prompts or workflows that run in the main conversation context rather than isolated subagent context.
-For a question about something already in your conversation, use [`/btw`](/docs/en/interactive-mode#side-questions-with-%2Fbtw) instead of a subagent. It sees your full context but has no tool access, and the answer isn’t added to history.
+For a question about something already in your conversation, use [`/btw`](/docs/en/interactive-mode#side-questions-with-%2Fbtw) instead of a subagent. It has no tool access, and the answer isn’t added to history.
 
 ### [​](#let-subagents-spawn-their-own-subagents) Let subagents spawn their own subagents
 
@@ -1191,7 +1196,7 @@ Use these keys to interact with the panel:
 | `x` | Stop the selected fork if it’s running, or dismiss its row if it’s no longer running. On the main session row, or on the row of the fork whose transcript you opened with `Enter`, `x` types into the prompt instead |
 | `Esc` | Return focus to the prompt input |
 
-With a fork’s or subagent’s transcript open, follow-up messages and [skills](/docs/en/skills) go to that agent, and built-in commands go to your main conversation, with these safeguards:
+With a fork’s or subagent’s transcript open, follow-up messages and [skills](/docs/en/skills) go to that agent. On Claude Code v2.1.314 or later, [`/btw`](/docs/en/interactive-mode#ask-btw-about-a-subagent) answers from the open transcript. Other built-in commands go to your main conversation, with these safeguards:
 
 * `/compact`, `/clear`, and `/rewind` act on the main conversation, so Claude Code asks you to confirm before running one of them from this view.
 * `/model` and `/fast` set the main conversation’s model and fast mode, not the viewed agent’s, so they don’t run from this view. A notice tells you why.

@@ -182,7 +182,7 @@ CLAUDE.md
 - Integration tests need DATABASE_URL set, see .env.example
 ```
 
-In a session, run `/context` to confirm that Claude loaded the file.
+In a session, run [`/context all`](/docs/en/commands#all-commands) to confirm that Claude loaded the file.
 Notice that the typecheck line is only the command. Claude needs to know the command so it can check its own work as it goes. If you also want Claude Code to *enforce* a passing typecheck before Claude finishes, that’s a job for a [`Stop` hook](#enforce-the-check-with-a-stop-hook). A line like `Always typecheck before you finish` in this file works most of the time, not every time.
 You don’t have to write the file from scratch:
 
@@ -410,7 +410,7 @@ Both ends of the permission range have a cost:
 * Sensitive data sent to external endpoints
 * Actions that look driven by content Claude read rather than by you
 
-When it does block something, you get a notification and the action shows up under **Recently denied** in `/permissions`, where you can retry it with a manual approval. After [three blocks in a row](/docs/en/permission-modes#when-auto-mode-falls-back) (or twenty in total), auto mode pauses and goes back to asking you.
+When auto mode blocks an action, you get a notification and the action shows up under **Recently blocked** in `/permissions`, where you can [approve the action so Claude may retry](/docs/en/auto-mode-config#review-denials). After [three blocks in a row](/docs/en/permission-modes#when-auto-mode-falls-back) (or twenty in total), auto mode pauses and goes back to asking you.
 None of this replaces your deterministic controls, because it runs *after* them. Deny and ask rules and `PreToolUse` hooks apply before the classifier sees anything, so a deny rule blocks in auto mode exactly like it does everywhere else. The sandbox still confines the [shell commands it wraps](/docs/en/sandboxing#what-runs-outside-the-sandbox).
 
 You can also say `don't push until I've reviewed` in the conversation, and the classifier [treats that as a block signal](/docs/en/permission-modes#boundaries-you-state-in-conversation). It’s still a model reading the transcript, and the sentence can get lost when the conversation compacts, so anything that matters belongs in a deny rule.
@@ -540,7 +540,7 @@ Once it’s going, Claude will carry a long task through on its own. The parts t
 In a script you’ll almost always want a few more flags:
 
 * [`--bare`](/docs/en/headless#start-faster-with-bare-mode) skips hooks, skills, plugins, MCP servers, and `CLAUDE.md` files, the repo’s as well as the machine’s, so the run does the same thing wherever it runs. It also never touches your claude.ai login: auth comes from `ANTHROPIC_API_KEY`, an `apiKeyHelper` in the file you pass with `--settings`, or your cloud provider’s credentials.
-* `--append-system-prompt`, `--mcp-config`, and `--settings` pass in whatever the run *does* need, explicitly.
+* `--append-system-prompt`, `--mcp-config`, and `--settings` explicitly pass in what the run *does* need. Hooks you pass with `--settings` [don’t run under `--bare`](/docs/en/headless#start-faster-with-bare-mode), so don’t use `--bare` for a run that needs them.
 * `--allowedTools` pre-approves its tools, and [`--permission-mode dontAsk`](/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode) refuses anything else that would have prompted.
 * `--output-format json` gives you a single result object to parse, and `stream-json` with `--verbose` streams events as they happen.
 
@@ -593,7 +593,7 @@ You rarely have to clean any of this up yourself:
 
 A `claude -p --worktree` run is one you clean up yourself, since it exits without asking. Remove those with `git worktree remove <path>`, and if git refuses because the worktree is locked, `git worktree unlock <path>` first.
 
-For one big mechanical change across many files, [`/batch migrate every handler to the v2 response helpers`](/docs/en/commands) splits the work into 5 to 30 units and shows you the plan. Then it runs each unit in its own worktree and opens a PR for it. From your shell, [`claude agents`](/docs/en/agent-view) (still a research preview) gives you one screen for everything running in the background on your machine.
+For one big mechanical change across many files, [`/batch migrate every handler to the v2 response helpers`](/docs/en/commands) splits the work into 5 to 30 units and shows you the plan. Once you approve it, each unit gets its own worktree and opens a PR or reports what happened. From your shell, [`claude agents`](/docs/en/agent-view) (still a research preview) gives you one screen for everything running in the background on your machine.
 A second session is also the easiest independent reviewer you can get. One session writes the rate limiter, another reviews `@src/middleware/rateLimiter.ts` without having watched it being written, and you paste the findings back into the first. Same idea as `/code-review`, with you carrying the messages.
 
 [​](#what-you-can-stop-doing) What you can stop doing
