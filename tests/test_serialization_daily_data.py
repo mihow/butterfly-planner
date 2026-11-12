@@ -6,7 +6,7 @@ TDD: these tests were written before the implementation.
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from butterfly_planner.serialization.daily_data import (
@@ -705,3 +705,37 @@ class TestGddMalformedPreviousYearRows:
         assert g is not None
         # No usable prev-year row → no comparison, but no exception.
         assert g["year_comparison"] is None
+
+
+# =============================================================================
+# Location timezone
+# =============================================================================
+
+
+class TestLocationTimezone:
+    """The daily record's date and timestamp follow the location's timezone.
+
+    At 07:30 UTC on 10 January it is already 10 January in Phoenix (UTC-7,
+    no daylight saving time) but still 9 January in Los Angeles (UTC-8). A
+    record built with the wrong timezone would describe the wrong day.
+    """
+
+    NOW = datetime(2026, 1, 10, 7, 30, tzinfo=UTC)
+
+    def test_today_uses_location_timezone(self) -> None:
+        result = build_daily_data(timezone="America/Phoenix", now=self.NOW)
+        assert result["date"] == "2026-01-10"
+
+    def test_default_timezone_is_los_angeles(self) -> None:
+        result = build_daily_data(now=self.NOW)
+        assert result["date"] == "2026-01-09"
+
+    def test_generated_at_carries_location_offset(self) -> None:
+        result = build_daily_data(timezone="America/Phoenix", now=self.NOW)
+        assert result["generated_at"] == "2026-01-10T00:30:00-07:00"
+
+    def test_target_date_overrides_now(self) -> None:
+        result = build_daily_data(
+            timezone="America/Phoenix", now=self.NOW, target_date=date(2026, 3, 16)
+        )
+        assert result["date"] == "2026-03-16"

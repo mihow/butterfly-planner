@@ -6,9 +6,8 @@ photos, and links to iNaturalist.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from butterfly_planner.reference.geography import TARGET_REGION_PARAMS
 from butterfly_planner.renderers import render_template
 from butterfly_planner.renderers.date_utils import date_range_label, year_range
 from butterfly_planner.renderers.species_palette import (
@@ -17,22 +16,31 @@ from butterfly_planner.renderers.species_palette import (
     build_species_palette,
 )
 
+if TYPE_CHECKING:
+    from butterfly_planner.reference.geography import Location
 
-def _inat_obs_url(taxon_id: int, month: int) -> str:
-    """Build an iNaturalist observation search URL for a taxon in the target region."""
+
+def _inat_obs_url(taxon_id: int, month: int, location: Location) -> str:
+    """Build an iNaturalist observation search URL for a taxon in the location's box."""
     return (
         f"https://www.inaturalist.org/observations"
         f"?taxon_id={taxon_id}&month={month}"
         f"&quality_grade=research&verifiable=true"
-        f"&{TARGET_REGION_PARAMS}"
+        f"&{location.bbox.as_query_params()}"
     )
 
 
 def build_butterfly_sightings_html(
     inat_data: dict[str, Any],
     palette: dict[str, SpeciesStyle] | None = None,
+    *,
+    location: Location,
 ) -> str:
-    """Build HTML table for butterfly species sightings from iNaturalist."""
+    """Build HTML table for butterfly species sightings from iNaturalist.
+
+    ``location`` supplies the search label and the bounding box used in the
+    iNaturalist links, so the links search the same area the data came from.
+    """
     data = inat_data.get("data", {})
     species_list: list[dict[str, Any]] = data.get("species", [])
     observations_list: list[dict[str, Any]] = data.get("observations", [])
@@ -86,7 +94,7 @@ def build_butterfly_sightings_html(
 
         name_link = f'<a href="{taxon_url}">{name}</a>' if taxon_url else name
 
-        obs_url = _inat_obs_url(taxon_id, month) if taxon_id and month else ""
+        obs_url = _inat_obs_url(taxon_id, month, location) if taxon_id and month else ""
         count_html = f'<a href="{obs_url}">{count}</a>' if obs_url else str(count)
 
         species_rows.append(
@@ -101,16 +109,12 @@ def build_butterfly_sightings_html(
             }
         )
 
-    all_obs_url = (
-        f"https://www.inaturalist.org/observations"
-        f"?taxon_id=47224&month={month}"
-        f"&quality_grade=research&verifiable=true"
-        f"&{TARGET_REGION_PARAMS}"
-    )
+    all_obs_url = _inat_obs_url(47224, month, location)
 
     return render_template(
         "sightings_table.html.j2",
         period_label=period_label,
+        region_label=location.region_label,
         month_name=month_name,
         all_obs_url=all_obs_url,
         species=species_rows,

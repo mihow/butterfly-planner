@@ -91,7 +91,8 @@ def fetch_observations_for_month(
 
     Args:
         month: Month number (1-12) or list of months.
-        bbox: Bounding box. Defaults to NW Oregon / SW Washington.
+        bbox: Bounding box. Defaults to the Portland location's box
+            (NW Oregon / SW Washington).
         quality_grade: Filter by quality grade.
         max_pages: Maximum API pages to fetch (200 results each).
 

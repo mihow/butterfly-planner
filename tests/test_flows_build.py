@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from butterfly_planner.flows import build
+from butterfly_planner.flows.paths import location_paths
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.renderers.date_utils import date_range_label
 from butterfly_planner.renderers.sightings_map import (
     _build_weather_html,
@@ -26,6 +28,8 @@ from butterfly_planner.store import DataStore
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+PORTLAND_PATHS = location_paths(PORTLAND)
 
 
 def write_envelope(base_dir: Path, path: str, data: object, source: str = "test") -> None:
@@ -60,9 +64,11 @@ class TestLoadWeather:
         monkeypatch.setattr(build, "store", ds)
 
         weather_payload = {"daily": {}}
-        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/weather.json", weather_payload, source="open-meteo.com"
+        )
 
-        result = build.load_weather()
+        result = build.load_weather(PORTLAND_PATHS)
         assert result == weather_payload
 
     def test_load_weather_not_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -70,7 +76,7 @@ class TestLoadWeather:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_weather()
+        result = build.load_weather(PORTLAND_PATHS)
         assert result is None
 
 
@@ -84,10 +90,14 @@ class TestLoadSunshine:
 
         data_15min = {"minutely_15": {"time": [], "sunshine_duration": [], "is_day": []}}
         data_16day = {"daily": {"time": [], "sunshine_duration": [], "daylight_duration": []}}
-        write_envelope(tmp_path, "live/sunshine_15min.json", data_15min, source="open-meteo.com")
-        write_envelope(tmp_path, "live/sunshine_16day.json", data_16day, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/sunshine_15min.json", data_15min, source="open-meteo.com"
+        )
+        write_envelope(
+            tmp_path, "live/portland/sunshine_16day.json", data_16day, source="open-meteo.com"
+        )
 
-        result = build.load_sunshine()
+        result = build.load_sunshine(PORTLAND_PATHS)
         assert result is not None
         assert result["fetched_at"] == "2026-02-04T12:00:00+00:00"
         assert result["source"] == "open-meteo.com"
@@ -101,7 +111,7 @@ class TestLoadSunshine:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_sunshine()
+        result = build.load_sunshine(PORTLAND_PATHS)
         assert result is None
 
 
@@ -368,7 +378,7 @@ class TestBuildHtml:
             },
         }
 
-        result = build.build_html(weather_data, sunshine_data)
+        result = build.build_html(weather_data, sunshine_data, loc=PORTLAND)
 
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Planner" in result
@@ -392,7 +402,7 @@ class TestBuildHtml:
                 }
             },
         }
-        result = build.build_html(weather_data, None)
+        result = build.build_html(weather_data, None, loc=PORTLAND)
 
         # build_version is the rebuild time (YYYYMMDDHHMM), not the weather
         # fetch time, so assert the format rather than a fixed value.
@@ -414,7 +424,7 @@ class TestBuildHtml:
             },
         }
 
-        result = build.build_html(weather_data, None)
+        result = build.build_html(weather_data, None, loc=PORTLAND)
 
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Planner" in result
@@ -508,9 +518,11 @@ class TestLoadInaturalist:
 
         # The envelope data payload is what was under SAMPLE_INAT_DATA["data"]
         inat_payload = SAMPLE_INAT_DATA["data"]
-        write_envelope(tmp_path, "live/inaturalist.json", inat_payload, source="inaturalist.org")
+        write_envelope(
+            tmp_path, "live/portland/inaturalist.json", inat_payload, source="inaturalist.org"
+        )
 
-        result = build.load_inaturalist()
+        result = build.load_inaturalist(PORTLAND_PATHS)
         assert result is not None
         assert result["fetched_at"] == "2026-02-04T12:00:00+00:00"
         assert result["source"] == "inaturalist.org"
@@ -523,7 +535,7 @@ class TestLoadInaturalist:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_inaturalist()
+        result = build.load_inaturalist(PORTLAND_PATHS)
         assert result is None
 
 
@@ -547,12 +559,12 @@ class TestLoadHistoricalWeather:
         }
         write_envelope(
             tmp_path,
-            "historical/weather/historical_weather.json",
+            "historical/portland/weather/historical_weather.json",
             hw_payload,
             source="open-meteo.com (archive)",
         )
 
-        result = build.load_historical_weather()
+        result = build.load_historical_weather(PORTLAND_PATHS)
         assert result is not None
         assert "2024-06-15" in result
         assert result["2024-06-15"]["high_c"] == 22.0
@@ -562,7 +574,7 @@ class TestLoadHistoricalWeather:
         ds = DataStore(tmp_path)
         monkeypatch.setattr(build, "store", ds)
 
-        result = build.load_historical_weather()
+        result = build.load_historical_weather(PORTLAND_PATHS)
         assert result is None
 
 
@@ -643,7 +655,7 @@ class TestBuildButterflyMapHtml:
                 ],
             },
         }
-        map_div, map_script = build_butterfly_map_html(enriched_inat)
+        map_div, map_script = build_butterfly_map_html(enriched_inat, location=PORTLAND)
 
         assert "Butterfly Sightings Map" in map_div
         # Photo URL should be in marker data
@@ -658,7 +670,7 @@ class TestBuildButterflyMapHtml:
 
     def test_map_without_historical_weather(self) -> None:
         """Test map works without historical weather data."""
-        map_div, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        map_div, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "Butterfly Sightings Map" in map_div
         assert "Painted Lady" in map_script
@@ -669,14 +681,14 @@ class TestBuildButterflyMapHtml:
         no_obs: dict = {
             "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
         }
-        map_div, map_script = build_butterfly_map_html(no_obs)
+        map_div, map_script = build_butterfly_map_html(no_obs, location=PORTLAND)
 
         assert "No observation data" in map_div
         assert map_script == ""
 
     def test_map_popup_structure(self) -> None:
         """Test that the JS template builds popups with obs-popup class."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "obs-popup" in map_script
         assert "obs-popup-img" in map_script
@@ -689,14 +701,14 @@ class TestBuildButterflyMapHeatLayer:
 
     def test_heat_layer_present(self) -> None:
         """Test that the map script includes heat layer setup."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "L.heatLayer" in map_script
         assert "heatPoints" in map_script
 
     def test_layer_control_present(self) -> None:
         """Test that the map script includes layer controls."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "L.control.layers" in map_script
         assert '"Sightings"' in map_script
@@ -707,13 +719,13 @@ class TestBuildButterflyMapHeatLayer:
         no_obs: dict = {
             "data": {"observations": [], "date_start": "2026-01-26", "date_end": "2026-02-09"}
         }
-        _, map_script = build_butterfly_map_html(no_obs)
+        _, map_script = build_butterfly_map_html(no_obs, location=PORTLAND)
 
         assert map_script == ""
 
     def test_map_description_mentions_density(self) -> None:
         """Test that the map description mentions the heat map layer."""
-        map_div, _ = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        map_div, _ = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "density" in map_div.lower()
 
@@ -723,14 +735,14 @@ class TestHeatMapIntensitySlider:
 
     def test_intensity_slider_control_present(self) -> None:
         """Test that the map script includes the intensity slider control."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "IntensityControl" in map_script
         assert 'type="range"' in map_script
 
     def test_auto_scaled_default_max(self) -> None:
         """Test that the default max is auto-scaled based on observation count."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         # With 2 observations: max = max(0.08, min(1.0, 0.05 + 2*0.02)) = 0.09
         assert "defaultMax" in map_script
@@ -739,7 +751,7 @@ class TestHeatMapIntensitySlider:
 
     def test_slider_updates_heat_layer(self) -> None:
         """Test that the slider wires up to heat.setOptions."""
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         assert "heat.setOptions" in map_script
 
@@ -751,7 +763,7 @@ class TestHeatMapIntensitySlider:
         must read 100% at the left end (slider=1) and up to 2000% at the right
         (slider=20).
         """
-        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS)
+        _, map_script = build_butterfly_map_html(SAMPLE_INAT_DATA_WITH_OBS, location=PORTLAND)
 
         # Slider input range must be inverted scale (1 to 20), not raw heat max
         assert 'min="1"' in map_script
@@ -767,7 +779,7 @@ class TestBuildButterflySightingsHtml:
 
     def test_with_species_data(self) -> None:
         """Test building HTML with species data."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         assert "Butterfly Sightings" in result
         assert "June" in result
@@ -781,20 +793,20 @@ class TestBuildButterflySightingsHtml:
 
     def test_with_photo(self) -> None:
         """Test that photo URL renders as img tag."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         assert 'class="species-photo"' in result
         assert "photos/123/medium.jpg" in result
 
     def test_without_photo(self) -> None:
         """Test placeholder when no photo URL."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         assert "species-photo-placeholder" in result
 
     def test_deep_links(self) -> None:
         """Test that observation counts link to iNaturalist search."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         # Observation count should link to filtered search
         assert "taxon_id=48662&month=6" in result
@@ -808,13 +820,13 @@ class TestBuildButterflySightingsHtml:
     def test_empty_species(self) -> None:
         """Test with no species data."""
         empty_data: dict = {"data": {"month": 1, "species": []}}
-        result = build_butterfly_sightings_html(empty_data)
+        result = build_butterfly_sightings_html(empty_data, location=PORTLAND)
 
         assert "No butterfly sightings data available" in result
 
     def test_observation_bar_scaling(self) -> None:
         """Test that observation bars scale relative to max count."""
-        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA)
+        result = build_butterfly_sightings_html(SAMPLE_INAT_DATA, location=PORTLAND)
 
         # First species (542) should have full-width bar (200px)
         assert "width: 200px;" in result
@@ -839,7 +851,9 @@ class TestBuildHtmlWithInaturalist:
             },
         }
 
-        result = build.build_html(weather_data, None, SAMPLE_INAT_DATA, historical_weather=None)
+        result = build.build_html(
+            weather_data, None, SAMPLE_INAT_DATA, historical_weather=None, loc=PORTLAND
+        )
 
         assert "Butterfly Sightings" in result
         assert "June" in result
@@ -860,7 +874,7 @@ class TestBuildHtmlWithInaturalist:
             },
         }
 
-        result = build.build_html(weather_data, None, None)
+        result = build.build_html(weather_data, None, None, loc=PORTLAND)
 
         assert "<!DOCTYPE html>" in result
         assert "Butterfly Sightings" not in result
@@ -875,7 +889,7 @@ class TestWriteSite:
         monkeypatch.setattr(build, "SITE_DIR", site_dir)
 
         html_content = "<html><body>Test</body></html>"
-        result = build.write_site(html_content)
+        result = build.write_site(html_content, PORTLAND_PATHS)
 
         assert result == site_dir / "index.html"
         assert result.exists()
@@ -911,13 +925,17 @@ class TestBuildAllFlow:
                 "weather_code": [0],
             }
         }
-        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/weather.json", weather_payload, source="open-meteo.com"
+        )
 
         result = build.build_all()
 
         assert result["pages"] == 1
         assert "output" in result
         assert (site_dir / "index.html").exists()
+        # Portland's daily JSON lives in its own folder, like every location's.
+        assert (ds.derived / "daily" / "portland" / "today.json").exists()
 
     def test_build_all_with_all_data(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test flow with weather, sunshine, and iNaturalist data."""
@@ -935,7 +953,9 @@ class TestBuildAllFlow:
                 "weather_code": [1],
             }
         }
-        write_envelope(tmp_path, "live/weather.json", weather_payload, source="open-meteo.com")
+        write_envelope(
+            tmp_path, "live/portland/weather.json", weather_payload, source="open-meteo.com"
+        )
 
         sunshine_15min_payload = {
             "minutely_15": {
@@ -952,14 +972,22 @@ class TestBuildAllFlow:
             }
         }
         write_envelope(
-            tmp_path, "live/sunshine_15min.json", sunshine_15min_payload, source="open-meteo.com"
+            tmp_path,
+            "live/portland/sunshine_15min.json",
+            sunshine_15min_payload,
+            source="open-meteo.com",
         )
         write_envelope(
-            tmp_path, "live/sunshine_16day.json", sunshine_16day_payload, source="open-meteo.com"
+            tmp_path,
+            "live/portland/sunshine_16day.json",
+            sunshine_16day_payload,
+            source="open-meteo.com",
         )
 
         inat_payload = SAMPLE_INAT_DATA["data"]
-        write_envelope(tmp_path, "live/inaturalist.json", inat_payload, source="inaturalist.org")
+        write_envelope(
+            tmp_path, "live/portland/inaturalist.json", inat_payload, source="inaturalist.org"
+        )
 
         result = build.build_all()
 
@@ -1001,7 +1029,7 @@ class TestBuildHtmlFetchedAtFallback:
             },
         }
         # Call .fn() to bypass the Prefect task runner (no server needed)
-        result = build.build_html.fn(weather_data, None)
+        result = build.build_html.fn(weather_data, None, loc=PORTLAND)
         assert "<!DOCTYPE html>" in result
 
     def test_build_html_missing_fetched_at_does_not_raise(self) -> None:
@@ -1017,5 +1045,5 @@ class TestBuildHtmlFetchedAtFallback:
                 }
             }
         }
-        result = build.build_html.fn(weather_data, None)
+        result = build.build_html.fn(weather_data, None, loc=PORTLAND)
         assert "<!DOCTYPE html>" in result

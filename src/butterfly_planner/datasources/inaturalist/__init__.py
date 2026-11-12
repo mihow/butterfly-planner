@@ -10,7 +10,9 @@ Public API:
   - observations: ButterflyObservation, fetch_observations_for_month
   - weekly: OccurrenceSummary, get_current_week_species, get_species_for_week
 
-Geographic focus: NW Oregon / SW Washington (Portland metro + coast + valley).
+Every query takes a bounding box. The fetch flow passes each location's own
+box; without one, queries default to ``NW_OREGON_SW_WASHINGTON``, the Portland
+location's box.
 """
 
 from butterfly_planner.datasources.inaturalist.client import NW_OREGON_SW_WASHINGTON

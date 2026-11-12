@@ -13,14 +13,16 @@ def fetch_forecast(
     lon: float = -122.6,
     *,
     forecast_days: int = 16,
+    timezone: str = "America/Los_Angeles",
 ) -> dict[str, Any]:
     """
     Fetch multi-day weather forecast from Open-Meteo.
 
     Args:
         lat: Latitude (default: Portland, OR).
-        lon: Longitude.
+        lon: Longitude (default: Portland, OR).
         forecast_days: Number of days to forecast (max 16).
+        timezone: IANA timezone that sets where each daily value starts and ends.
 
     Returns:
         Raw API response dict with ``daily`` key containing arrays.
@@ -29,7 +31,7 @@ def fetch_forecast(
         "latitude": lat,
         "longitude": lon,
         "daily": DAILY_VARS,
-        "timezone": "America/Los_Angeles",
+        "timezone": timezone,
         "forecast_days": forecast_days,
     }
 
