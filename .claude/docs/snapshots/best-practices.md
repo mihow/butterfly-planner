@@ -45,7 +45,7 @@ Copy pageCopy page
 Claude Code is built in a way that, in most cases, your first plain prompt in a fresh session already does the right thing, without any setup on your part.
 For example:
 
-* To let commands run safely without you approving each one, new terminal and VS Code sessions start in [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), where a classifier reviews anything risky before it runs.
+* To let commands run without you approving each one, new terminal and VS Code sessions start in [auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode).
 * To keep your main conversation focused while independent work happens in parallel, Claude delegates to subagents and checks in only when it has to.
 * To keep a long session going without you managing it, your conversation is compacted automatically before the context window fills.
 
@@ -68,8 +68,8 @@ When a session doesn’t go the way you expected, it’s almost always one of th
 
 Setup for a whole team is on a separate page: [Set up Claude Code for your organization](/docs/en/admin-setup).
 
-[​](#deterministic-and-non-deterministic-instructions) Deterministic and non-deterministic instructions
--------------------------------------------------------------------------------------------------------
+Deterministic and non-deterministic instructions
+------------------------------------------------
 
 Every instruction you give Claude Code is one of these:
 
@@ -97,8 +97,8 @@ You could’ve written either of these as a line in `CLAUDE.md` or in your promp
 
 If you keep adding emphasis to a `CLAUDE.md` line and Claude still misses it, that’s a sign the line belongs in a hook. The reverse holds too: if you have hooks for things that are only preferences, delete them and let Claude decide.
 
-[​](#tell-claude-what-it-cant-see) Tell Claude what it can’t see
-----------------------------------------------------------------
+Tell Claude what it can’t see
+-----------------------------
 
 Only write down what Claude can’t find by reading the repo, or what it would otherwise spend time rediscovering every session.
 
@@ -117,7 +117,7 @@ A good test before you write anything down for Claude:
 
 If both are yes, leave it out.
 
-### [​](#write-a-specific-prompt) Write a specific prompt
+### Write a specific prompt
 
 A specific prompt helps for the same reason, because it gives Claude information it doesn’t already have. If you name the file, describe the symptom, and say what “fixed” looks like up front, you usually save yourself a round of corrections later.
 The same goes for a preference between two reasonable approaches: Claude can’t read that from the code, so if you care which one it picks, say so up front.
@@ -144,7 +144,7 @@ build the settings page from the mockup. be ambitious: empty and error states, t
 That’s telling Claude about scope, which only you know, rather than how hard to think.
 And when you’re exploring rather than fixing something specific, a vague prompt like `what would you improve in this file?` is completely fine. You’ll correct a bit more as you go, and that’s the trade-off.
 
-### [​](#brainstorm-with-claude-first) Brainstorm with Claude first
+### Brainstorm with Claude first
 
 When you don’t know exactly what you want yet, you don’t have to work it all out before you prompt. Ask Claude to interview you instead:
 
@@ -155,7 +155,7 @@ I want to add rate limiting to the public API but haven't thought it through yet
 Claude comes back with multiple-choice questions about the parts you haven’t pinned down: per-user versus per-key limits, what happens to requests over the limit, what’s out of scope. It keeps asking until the answers add up to a spec.
 Once `SPEC.md` exists, start a fresh session to build from it, so the build begins with a clean context and a written definition of done. It’s also the file you’ll point the reviewer at later, in [Give Claude a check to run](#give-claude-a-check-to-run).
 
-### [​](#keep-claude-md-short) Keep CLAUDE.md short
+### Keep CLAUDE.md short
 
 Claude Code loads [`CLAUDE.md`](/docs/en/memory) into every session, which means every line in it takes a little of Claude’s attention on *every* task, whether it’s relevant or not. That’s why the file works best when it only holds what Claude couldn’t work out from the code itself:
 
@@ -194,7 +194,7 @@ Your personal preferences go in `CLAUDE.local.md` instead of `CLAUDE.md`, and yo
 
 If Claude keeps ignoring a line that *is* in `CLAUDE.md`, adding IMPORTANT probably won’t fix it. Either the file has grown long enough that the line gets lost, or the line is a rule that can’t have exceptions, in which case it belongs in a [hook](#enforce-the-rules-that-cant-have-exceptions).
 
-### [​](#scope-rules-to-one-part-of-the-codebase) Scope rules to one part of the codebase
+### Scope rules to one part of the codebase
 
 If a rule only matters in one part of the codebase, put it in [`.claude/rules/`](/docs/en/memory#path-specific-rules) with a `paths:` filter so it only loads when Claude is actually working there. For example, this `.claude/rules/api.md` loads for TypeScript files under `src/api/`:
 
@@ -209,7 +209,7 @@ paths:
 - Every new endpoint needs an entry in openapi.yaml, CI fails without it
 ```
 
-### [​](#put-team-procedures-in-skills) Put team procedures in skills
+### Put team procedures in skills
 
 A more capable model knows more about engineering, but not how *your* team does a release, what your incident runbook says, or how you want API docs written. That kind of knowledge goes in a [skill](/docs/en/skills): a procedure or a piece of team knowledge saved at `.claude/skills/<name>/SKILL.md`.
 Skills are also lighter on context than `CLAUDE.md` for this kind of thing. For a skill Claude can start on its own, it sees the name and description in every session, but only [reads the full file](/docs/en/skills#skill-content-lifecycle) when the task calls for it. A long release procedure sitting in a skill doesn’t weigh on your unrelated bug fix the way it would in `CLAUDE.md`.
@@ -232,7 +232,7 @@ disable-model-invocation: true
 4. Tag `v<new version>` and push the tag. CI publishes from there, never publish from your machine.
 ```
 
-### [​](#connect-the-tools-claude-needs) Connect the tools Claude needs
+### Connect the tools Claude needs
 
 Some of what Claude can’t see lives in another system entirely, like your issue tracker or your error dashboard. If that system has a CLI, that’s usually the easiest way in. With `gh` installed and signed in, for example, Claude will open pull requests and read review comments without any explanation from you. For a CLI it hasn’t seen before, pointing it at `--help` is enough.
 For systems without a CLI, there’s [MCP](/docs/en/mcp). You add a server from your shell:
@@ -244,8 +244,8 @@ claude mcp add --transport http notion https://mcp.notion.com/mcp
 The server then shows up under `/mcp` inside a session. Connected servers add their tool names and instructions to the context even when you’re not using them, so it’s worth [turning off the ones you don’t need](/docs/en/mcp#disable-a-server-without-removing-it) there.
 And if you work in a typed language, a [code intelligence plugin](/docs/en/plugins/code-intelligence) lets Claude jump straight to a definition instead of reading through many files to find it.
 
-[​](#give-claude-a-check-to-run) Give Claude a check to run
------------------------------------------------------------
+Give Claude a check to run
+--------------------------
 
 Claude stops when the work looks done. If it has nothing to run that tells it whether the work actually *is* done, “looks done” is all it has to go on. In practice that makes you the test suite, and every mistake sits there until you happen to notice it.
 If you give it something that comes back pass or fail, Claude can close that loop itself. It makes the change, runs the check, and if something broke it reads the output and fixes it before running the check again.
@@ -272,7 +272,7 @@ Whichever option you use, ask Claude for *evidence*: the command it ran and its 
 
 Once Claude says it’s done, you can also run [`/verify`](/docs/en/skills#run-and-verify-your-app) in the session, which has Claude build and run the app and look at the result. That catches the kind of problem that tests and typechecks miss.
 
-### [​](#review-against-your-spec) Review against your spec
+### Review against your spec
 
 If you’d rather have the review check the work against your plan than hunt for bugs in general, write the review prompt yourself:
 
@@ -282,7 +282,7 @@ use a subagent to review the rate limiter diff against SPEC.md, check every requ
 
 Don’t drop the `skip style` part of that prompt. A reviewer that’s asked to find problems will always find *something*. If you fix every finding, you end up with extra abstraction layers and tests for cases that can’t happen.
 
-### [​](#enforce-the-check-with-a-stop-hook) Enforce the check with a Stop hook
+### Enforce the check with a Stop hook
 
 The `Stop` hook version of the typecheck rule is a few lines in `.claude/settings.json`. Exit code 2 is what blocks the stop. Whatever the command prints to stderr goes back to Claude as the reason it can’t finish yet, which is why the compiler output is redirected there:
 
@@ -304,14 +304,14 @@ The `Stop` hook version of the typecheck rule is a few lines in `.claude/setting
 
 To see it work, ask Claude for a change that breaks a type: instead of finishing, it gets the compiler errors back and keeps going until `tsc` passes. If the hook blocks [eight stops in a row](/docs/en/hooks#stop-input) with no tool call between them, Claude Code overrides the next block and ends the turn. To raise the cap, set [`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`](/docs/en/env-vars).
 
-[​](#enforce-the-rules-that-cant-have-exceptions) Enforce the rules that can’t have exceptions
-----------------------------------------------------------------------------------------------
+Enforce the rules that can’t have exceptions
+--------------------------------------------
 
 If something has to happen every time, make it a hook, a deny rule, or a managed setting. `CLAUDE.md` is for guidelines, and Claude is allowed to decide a guideline doesn’t apply.
 
 Take three rules you might have in `CLAUDE.md` today: `Never read .env`, `Always run the formatter after editing`, `Don't touch the migrations folder`. Claude will follow these almost every time. For the few where “almost” isn’t good enough, move them out of `CLAUDE.md` and into configuration that Claude Code (the harness) applies itself. From then on, the outcome doesn’t depend on what the model remembers or decides.
 
-### [​](#enforce-steps-with-hooks) Enforce steps with hooks
+### Enforce steps with hooks
 
 [Hooks](/docs/en/hooks-guide) run something of yours at fixed points in Claude’s loop: before or after a tool call, when Claude tries to stop, when a session starts, and so on. That something can be:
 
@@ -332,7 +332,7 @@ Here’s the formatter rule as a `PostToolUse` hook. It runs after every `Edit` 
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "npx prettier --write --ignore-unknown \"$(jq -r '.tool_input.file_path')\"" }
+          { "type": "command", "command": "f=$(jq -r '.tool_input.file_path') && npx prettier --write --ignore-unknown \"$f\"" }
         ]
       }
     ]
@@ -343,7 +343,7 @@ Here’s the formatter rule as a `PostToolUse` hook. It runs after every `Edit` 
 To check the hook, ask Claude to add a badly indented line to a file Prettier formats. The saved file comes back with the indentation fixed.
 The migrations rule becomes a [`PreToolUse` hook](/docs/en/hooks-guide#block-edits-to-protected-files) that exits with code 2 for any path under `migrations/`. You don’t have to write it yourself: `write a hook that blocks edits to the migrations folder` works as a prompt, and `/hooks` shows the result. Don’t overdo it, though: a hook is for a rule with *zero* exceptions, and `Prefer named exports` has plenty, so that one stays in `CLAUDE.md`.
 
-### [​](#limit-access-with-permission-rules-and-the-sandbox) Limit access with permission rules and the sandbox
+### Limit access with permission rules and the sandbox
 
 [Permission rules](/docs/en/permissions) decide what Claude is allowed to run, read, and fetch. `deny` rules hold in every permission mode, including auto and `bypassPermissions`, which is exactly why the `.env` rule belongs there:
 
@@ -371,7 +371,7 @@ By default Claude can still ask to retry a blocked command outside the sandbox, 
 
 Auto mode is a classifier model judging each action rather than a hard rule. It’s good at that, but like any judgment call it can be wrong. You can also tune what it treats as risky, and your org can turn it off entirely, so your “never” rules belong in deny rules or hooks.
 
-### [​](#choose-who-a-rule-applies-to) Choose who a rule applies to
+### Choose who a rule applies to
 
 Where a rule lives decides who it applies to:
 
@@ -381,8 +381,8 @@ Where a rule lives decides who it applies to:
 
 Whatever the scope, keep the enforced set small. Every hook and deny rule will occasionally fire when it shouldn’t, and someone has to maintain each one. If you ever find yourself at forty of them, most are probably preferences that Claude could have weighed on its own.
 
-[​](#change-a-default) Change a default
----------------------------------------
+Change a default
+----------------
 
 The defaults are good enough to leave alone until a task costs more time, tokens, or interruptions than it should. When that happens, run `/usage` in the session to see where it went.
 
@@ -395,7 +395,7 @@ A new session already makes a handful of decisions for you:
 
 Most of the time you never think about these. When a task does cost more than it should, one of these four is usually why.
 
-### [​](#change-the-permission-mode) Change the permission mode
+### Change the permission mode
 
 Both ends of the permission range have a cost:
 
@@ -439,18 +439,18 @@ Keep `"$defaults"` in every list you set, because without it your entries *repla
 
 If you’d rather see every edit and command before it happens, `Shift+Tab` in the session cycles through the permission modes, Manual included, or start with `claude --permission-mode manual` from your shell. And if Manual then asks too often, `/fewer-permission-prompts` scans your recent transcripts for common read-only Bash and MCP calls and adds them to an allowlist in `.claude/settings.json`.
 
-### [​](#change-the-model-and-effort) Change the model and effort
+### Change the model and effort
 
-[Effort](/docs/en/model-config#adjust-effort-level) is the main control for how long Claude thinks, and it replaces most of what people used to do with prompt wording. Claude Opus 5.5, Sonnet 5.5, and Haiku 5.5 default to `medium`, which is plenty for everyday feature work with a clear scope. The times you’d move it, with `/effort` in the session:
+[Effort](/docs/en/model-config#adjust-effort-level) is the main control for how long Claude thinks, and it replaces most of what people used to do with prompt wording. Claude Fable 5.2, Opus 5.5, Sonnet 5.5, and Haiku 5.5 default to `medium`, which is plenty for everyday feature work with a clear scope. The times you’d move it, with `/effort` in the session:
 
 * Raise it with `/effort high` or `/effort xhigh` when getting it right depends on cases that are quick to overlook. Think of a bug in code you didn’t write, a flaky test, or a schema change where Claude has to find every reader of the old shape. Claude then checks more edge cases and verifies more of its work before answering, which is where the extra time and tokens go.
 * Lower it with `/effort low` when you’re going back and forth quickly and reviewing each result anyway: brainstorming, a first sketch, a rename across a few files. Claude gets you a starting point sooner, and since you’re steering every step, the extra deliberation wouldn’t have changed much besides the wait.
 * Save `max` for a hard problem you want Claude to work through without you, like hunting for a security vulnerability. On ordinary tasks it tends to overthink, so you pay more for an answer that may be no better than `high` would have given you.
 * When only the next message needs it, like one tricky question in the middle of otherwise routine work, put [`ultrathink`](/docs/en/model-config#use-ultrathink-for-one-off-deep-reasoning) in that prompt instead of changing the setting.
 
-For the model itself, the default Opus 5.5 handles most coding well and Sonnet costs less on routine work. [Claude Fable 5.1](/docs/en/model-config#work-with-fable) is there when you select it explicitly with `/model fable`, and Haiku is a good fit for subagents doing simple jobs. [Model configuration](/docs/en/model-config) has the full list per plan and provider.
+For the model itself, the default Opus 5.5 handles most coding well and Sonnet costs less on routine work. To use [Claude Fable 5.2](/docs/en/model-config#work-with-fable), run `/model fable`. Haiku is a good fit for subagents doing simple jobs. [Model configuration](/docs/en/model-config) has the full list per plan and provider.
 
-### [​](#know-what-subagents-cost) Know what subagents cost
+### Know what subagents cost
 
 Claude delegates to [subagents](/docs/en/sub-agents) on its own:
 
@@ -492,7 +492,7 @@ and report only the gaps that affect correctness. Skip style.
 
 Ask Claude to `have the reviewer compare the rate limiter against SPEC.md` and the gaps come back into your session, where Claude can fix them.
 
-### [​](#keep-cost-and-context-down) Keep cost and context down
+### Keep cost and context down
 
 With a 1M-token window on most current models and compaction near the top of it, you’ll rarely run out of context. You can still *pay* for context you don’t need, though. Every request sends the whole conversation, so a session that’s collected three unrelated tasks re-reads all three on every turn of the fourth. That’s [discounted while the cache is warm](/docs/en/costs#why-usage-climbs-in-a-long-session) and full price once it expires.
 [`/usage`](/docs/en/costs) is the first place to look. On Pro, Max, Ultra, Team, and Enterprise it breaks your usage down by skill, subagent, plugin, and MCP server. It also flags patterns like long context or frequent cache misses once one of them passes 10% of your usage. From there, the usual fixes:
@@ -503,8 +503,8 @@ With a 1M-token window on most current models and compaction near the top of it,
 
 The [prompt cache](/docs/en/prompt-caching) lasts about an hour on a subscription and five minutes on an API key, cloud provider, or usage credits. Subagents get five minutes unless you change it.On the one-hour cache, a session past about 200K tokens that sits idle is compacted shortly before the cache expires, so after lunch you continue from a summary. If you don’t need the history at all, a fresh session still costs less.
 
-[​](#steer-the-session) Steer the session
------------------------------------------
+Steer the session
+-----------------
 
 Watch the first minute, press `Esc` the moment Claude drifts, and after two failed corrections run `/clear` and write a better prompt instead of a third.
 
@@ -518,8 +518,8 @@ Checkpoints cover the files Claude edited with its own file tools in your main c
 
 Two smaller ones: [`/btw`](/docs/en/interactive-mode#side-questions-with-%2Fbtw) answers a quick question without adding anything to the history. And for work that spans several days, `/rename oauth-migration` in the session names it, so that [`claude --resume oauth-migration`](/docs/en/sessions#resume-by-session-id-or-name) from your shell picks it back up later, checkpoints included. `claude --continue` resumes the most recent one.
 
-[​](#let-claude-run-without-you) Let Claude run without you
------------------------------------------------------------
+Let Claude run without you
+--------------------------
 
 Before a run goes unattended, make sure it knows what done looks like, can check its own work, and can only touch what it should. Give it a cap on turns or spend, and have a person approve the result at the end.
 
@@ -534,7 +534,7 @@ Before you leave a task running on its own, it’s worth going through these fiv
 
 Once it’s going, Claude will carry a long task through on its own. The parts that stay with you are starting it, deciding what “done” means this time, and approving the merge at the end.
 
-### [​](#run-claude-from-a-script) Run Claude from a script
+### Run Claude from a script
 
 [`claude -p "prompt"`](/docs/en/headless) runs once and exits, which is how Claude Code ends up in CI jobs, git hooks, and shell loops.
 In a script you’ll almost always want a few more flags:
@@ -558,7 +558,7 @@ done
 When a run finishes, Claude replies `OK` or `FAIL`, and a run that hits the turn limit exits with an error instead. Try it on three files first, see what goes wrong, fix the prompt, then run the rest.
 Auto mode works with `-p` too if you pass `--permission-mode auto`. In a non-interactive run, a classifier block denies that one action and Claude carries on, and repeated blocks don’t pause the run the way they do in a terminal. Read [how the thresholds apply there](/docs/en/permission-modes#repeated-block-thresholds) before you rely on it.
 
-### [​](#start-runs-on-a-schedule-or-an-event) Start runs on a schedule or an event
+### Start runs on a schedule or an event
 
 Once a run is going, Claude can handle the rest by itself. The one thing it can’t do is decide to *start*, so something has to: you, a timer, or an event like a failed CI check or a new PR.
 Inside an open session that’s [`/loop`](/docs/en/scheduled-tasks#run-a-prompt-repeatedly-with-%2Floop), which repeats a prompt on an interval:
@@ -571,7 +571,7 @@ Each run is another turn in the same session, so don’t leave one going in a lo
 
 Before you leave a cloud scheduled task running, protect `main` with a [GitHub branch rule the task can’t bypass](/docs/en/routines#repositories-and-branch-permissions). And watch the first few runs of anything new before trusting it unattended.
 
-### [​](#run-sessions-in-parallel) Run sessions in parallel
+### Run sessions in parallel
 
 When you have separate pieces of work going at once, give each its own checkout so the edits can’t collide. [`claude -w feature-auth`](/docs/en/worktrees#start-claude-in-a-worktree) starts a session in a new worktree, the [desktop app](/docs/en/desktop#work-in-parallel-with-sessions) runs several of these side by side, and [cloud sessions](/docs/en/claude-code-on-the-web) run them in the cloud instead of on your machine.
 A worktree is a fresh checkout, which means gitignored files like `.env` aren’t there and dependencies aren’t installed. For the first, list the gitignored files you need in a [`.worktreeinclude`](/docs/en/worktrees#copy-gitignored-files-into-worktrees) at the repo root (same syntax as `.gitignore`) and Claude Code copies them into every worktree it creates:
@@ -587,7 +587,7 @@ config/dev-credentials.json
 Keep it to small files: it copies rather than links, so `node_modules` in there would mean a full copy per worktree. For large directories there’s the [`worktree.symlinkDirectories`](/docs/en/settings-reference#worktree-symlinkdirectories) setting, or keep the install command in `CLAUDE.md` so Claude runs it whenever it starts in a new checkout.
 You rarely have to clean any of this up yourself:
 
-* When you exit an unnamed worktree session, Claude Code [removes the worktree](/docs/en/worktrees#clean-up-worktrees) if there’s nothing in it. For a named session, or one with changes, it asks what to do.
+* When you exit an unnamed worktree session, Claude Code [removes a worktree it created with git](/docs/en/worktrees#clean-up-worktrees) if there’s nothing in it. For a named session, or one with changes, it asks what to do.
 * Subagent worktrees disappear when the subagent finishes without changes.
 * Subagent and background-session worktrees that do get left behind are swept once they’re older than `cleanupPeriodDays` and hold no work.
 
@@ -596,8 +596,8 @@ A `claude -p --worktree` run is one you clean up yourself, since it exits withou
 For one big mechanical change across many files, [`/batch migrate every handler to the v2 response helpers`](/docs/en/commands) splits the work into 5 to 30 units and shows you the plan. Once you approve it, each unit gets its own worktree and opens a PR or reports what happened. From your shell, [`claude agents`](/docs/en/agent-view) (still a research preview) gives you one screen for everything running in the background on your machine.
 A second session is also the easiest independent reviewer you can get. One session writes the rate limiter, another reviews `@src/middleware/rateLimiter.ts` without having watched it being written, and you paste the findings back into the first. Same idea as `/code-review`, with you carrying the messages.
 
-[​](#what-you-can-stop-doing) What you can stop doing
------------------------------------------------------
+What you can stop doing
+-----------------------
 
 Every one of these was good advice when it was written. Most were workarounds for something the model couldn’t reliably do yet, and the models have since caught up. If a few are still habits, here’s why it’s safe to drop them.
 
@@ -614,8 +614,8 @@ Every one of these was good advice when it was written. Most were workarounds fo
 
 If any other advice on this page ever starts to feel like busywork, that’s probably a sign it belongs in this table too.
 
-[​](#related-resources) Related resources
------------------------------------------
+Related resources
+-----------------
 
 * [How Claude Code works](/docs/en/how-claude-code-works): the loop, the tools, and what loads at startup
 * [Explore the context window](/docs/en/context-window): what uses space in a session and when it loads
