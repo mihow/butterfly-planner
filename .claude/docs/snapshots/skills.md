@@ -223,8 +223,8 @@ Where you save a skill decides which sessions load it. Save it under your home d
 | --- | --- | --- |
 | Enterprise | `.claude/skills/<skill-name>/SKILL.md` in the [managed settings directory](/docs/en/managed-settings#delivery-mechanisms) | All users on machines where your organization deploys it |
 | Personal | `~/.claude/skills/<skill-name>/SKILL.md` | All your projects on this machine, but not [Cowork or cloud sessions](#skills-in-cowork-and-cloud-sessions) |
-| Project | `.claude/skills/<skill-name>/SKILL.md` | Sessions in this repository, but not [cloud threads in a project](/docs/en/claude-projects#what-threads-pick-up-from-your-repositories). Commit it so your team gets it too |
-| Nested | `<subdir>/.claude/skills/<skill-name>/SKILL.md` | Sessions started in or below `<subdir>`, but not cloud threads in a project. Outside those threads, a session started above it loads the skill once Claude works on files there. See [monorepos and subdirectories](#discovery-from-parent-and-nested-directories) |
+| Project | `.claude/skills/<skill-name>/SKILL.md` | Sessions in this repository. For a project’s cloud threads, check [which threads load it](/docs/en/claude-projects#what-threads-pick-up-from-your-repositories). Commit it so your team gets it too |
+| Nested | `<subdir>/.claude/skills/<skill-name>/SKILL.md` | Sessions started in or below `<subdir>`. A session started above it can load the skill once Claude works on files there. See [monorepos and subdirectories](#discovery-from-parent-and-nested-directories). For a project’s cloud threads, check [which threads load it](/docs/en/claude-projects#what-threads-pick-up-from-your-repositories) |
 | Additional directory | `.claude/skills/<skill-name>/SKILL.md` in a directory you pass with `--add-dir` | That session. See [directories outside the project](#skills-from-additional-directories) |
 | Plugin | `<plugin>/skills/<skill-name>/SKILL.md` | Wherever the [plugin](/docs/en/plugins/overview) is enabled, as `/plugin-name:skill-name` |
 | claude.ai account | Skills enabled for your claude.ai account | Cowork sessions, cloud sessions, and terminal sessions where you sign in with that account. See [Skills synced from claude.ai](#how-synced-skills-behave) |
@@ -281,11 +281,11 @@ When two skills share a directory or file name, where each one came from decides
 
 ### Use skills in Cowork and cloud sessions
 
-[Cowork](https://claude.com/product/cowork) sessions and [cloud sessions](/docs/en/cloud-environments#what-carries-over-from-your-setup), including [cloud scheduled tasks](/docs/en/routines), don’t read `~/.claude/skills/` on your machine. Both interactive and scheduled Cowork sessions load the skills enabled for your claude.ai account, synced at session start. Manage them from **Customize** in the Desktop app sidebar or from the skills settings on claude.ai.
+[Cowork](https://claude.com/product/cowork) sessions and [cloud sessions](/docs/en/cloud-environments#what-carries-over-from-your-setup), including [cloud scheduled tasks](/docs/en/routines), don’t read `~/.claude/skills/` on your machine. Both interactive and scheduled Cowork sessions load the skills enabled for your claude.ai account, synced at session start. Manage those skills at [claude.ai/customize/skills/yours](https://claude.ai/customize/skills/yours).
 If a skill exists only in `~/.claude/skills/` on your machine, Claude Code reports that the skill was not found when a [cloud scheduled task](/docs/en/routines) invokes it. This happens because each run starts as a fresh cloud session. To make a personal skill available in these sessions:
 
-* For Cowork sessions, cloud sessions, and cloud threads in a [project](/docs/en/claude-projects#what-threads-pick-up-from-your-repositories), enable the skill for your claude.ai account. In a project’s cloud thread, skills committed to a repository’s `.claude/skills/` aren’t available. [Some sessions in a self-hosted environment](/docs/en/self-hosted-environments-configuration#how-each-session%E2%80%99s-config-is-assembled) don’t load your account’s skills.
-* For cloud sessions other than project threads, you can instead commit the skill to the repository’s `.claude/skills/`. Plugins declared in the repository’s `.claude/settings.json` and plugins enabled only in your user settings [don’t load in cloud sessions](/docs/en/cloud-environments#what-carries-over-from-your-setup).
+* For Cowork sessions, cloud sessions, and cloud threads in a [project](/docs/en/claude-projects#what-threads-pick-up-from-your-repositories), enable the skill for your claude.ai account. [Some sessions in a self-hosted environment](/docs/en/self-hosted-environments-configuration#how-each-session%E2%80%99s-config-is-assembled) don’t load your account’s skills.
+* For cloud sessions, you can instead commit the skill to the repository’s `.claude/skills/`. For a project, check [which threads load it](/docs/en/claude-projects#what-threads-pick-up-from-your-repositories). Plugins declared in the repository’s `.claude/settings.json` and plugins enabled only in your user settings [don’t load in cloud sessions](/docs/en/cloud-environments#what-carries-over-from-your-setup).
 
 [Desktop scheduled tasks](/docs/en/desktop-scheduled-tasks) run locally on your machine, so they do load `~/.claude/skills/`.
 
@@ -361,7 +361,7 @@ What Claude Code does with a synced skill’s body depends on where the session 
 ### Edit a skill during a session
 
 Claude Code watches skill directories for file changes, except in [bare mode](/docs/en/headless#start-faster-with-bare-mode). When you add, edit, or remove a skill under `~/.claude/skills/`, the project `.claude/skills/`, or a `.claude/skills/` inside an `--add-dir` directory, Claude Code picks up the change within the current session, without a restart.
-If you create a top-level skills directory that didn’t exist when the session started, run [`/reload-skills`](/docs/en/commands#all-commands) to pick up the skills you put there. Claude Code isn’t watching that directory yet, so run `/reload-skills` again after each later change there.
+If a new skill doesn’t appear, run [`/reload-skills`](/docs/en/commands#all-commands).
 
 Live change detection covers `SKILL.md` text. For a skill folder that is also a [plugin](/docs/en/plugins/loading#plugins-shared-through-a-repository), changes to `.mcp.json`, `agents/`, and `output-styles/` need `/reload-plugins` to take effect. Changes to `hooks/` need it too, except a [mod](/docs/en/plugins/mods/overview)’s module file when it [reloads on its own](/docs/en/env-vars).
 
@@ -453,7 +453,7 @@ Claude Code reads the frontmatter only when the opening `---` is the file’s fi
 | `agent` | No | Which subagent type to use when `context: fork` is set. |
 | `background` | No | Only applies with `context: fork`. Set to `false` to wait for the forked subagent’s result in the turn that invoked the skill, instead of [running it in the background](#run-skills-in-a-subagent). Default: `true`. |
 | `hooks` | No | Hooks that Claude Code registers when the skill is invoked and keeps running for the rest of the session. See [Hooks in skills and agents](/docs/en/hooks#hooks-in-skills-and-agents) for the configuration format, the `once` option, and the [limits on skill hooks](/docs/en/hooks#limits-on-skill-hooks). |
-| `paths` | No | Glob patterns that limit when this skill is activated. Accepts a comma-separated string or a YAML list. When set, Claude loads the skill automatically only when working with files matching the patterns. Patterns are relative to Claude’s current working directory, and files outside that directory don’t match. Uses the same glob format as [path-specific rules](/docs/en/memory#path-specific-rules). |
+| `paths` | No | Glob patterns for the files that activate this skill. Accepts a comma-separated string or a YAML list. Patterns are relative to Claude’s current working directory. In the main conversation, they stay relative to the [primary working directory](/docs/en/permissions#working-directories) after a `cd` into one of its subdirectories in the same Git worktree. Patterns match only files inside the directory they’re relative to. Uses the same glob format as [path-specific rules](/docs/en/memory#path-specific-rules). |
 | `shell` | No | Shell to use for `` !`command` `` and ```` ```! ```` blocks in this skill. Accepts `bash` (default) or `powershell`. Setting `powershell` runs inline shell commands via PowerShell when the [PowerShell tool](/docs/en/tools-reference#powershell-tool) is enabled: it’s on by default on Windows without Git Bash, on by default with Git Bash for claude.ai and Console accounts, and needs `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` in Amazon Bedrock, Google Cloud’s Agent Platform, and Microsoft Foundry sessions and on macOS, Linux, and WSL. Set it to `0` to turn the tool off. |
 | `metadata` | No | Free-form YAML map for your own key-value data, such as entitlement or catalog fields, read by your own tooling from `SKILL.md`. Claude Code doesn’t act on its contents, and drops a value that isn’t a map. Don’t reuse frontmatter field names such as `paths` as keys. |
 | `license` | No | License covering the skill. Part of the [Agent Skills](https://agentskills.io) spec; see [Using skill frontmatter outside Claude Code](#using-skill-frontmatter-outside-claude-code). Claude Code accepts the field but doesn’t act on it. |
@@ -1198,7 +1198,7 @@ If Claude doesn’t use your skill when expected:
 3. Try rephrasing your request to match the description more closely
 4. Invoke it directly with `/skill-name` if the skill is user-invocable
 5. If `/skill-name` isn’t recognized either, check whether Claude Code [refused the skill’s name](#characters-a-skill-name-cant-hold)
-6. If the skill sets `paths`, check that the files Claude reads, edits, or writes are inside Claude’s current working directory. The skill doesn’t activate for files outside it, such as those in a sibling git worktree, even one you added with `/add-dir`. To have the skill activate for those files, start Claude Code in that worktree or [move the session there with `/cd`](/docs/en/permissions#move-the-session-to-another-directory).
+6. If the skill sets `paths`, check that the files Claude reads, edits, or writes are inside the [directory the patterns are relative to](#frontmatter-reference). The skill doesn’t activate for files outside it, such as those in a sibling git worktree, even one you added with `/add-dir`. To have the skill activate for those files, start Claude Code in that worktree or [move the session there with `/cd`](/docs/en/permissions#move-the-session-to-another-directory).
 
 If the frontmatter YAML is malformed, Claude Code loads the skill body with empty metadata, so `/skill-name` still works but Claude can’t match against your `description`. Run with `--debug` to see the parse error.
 If the skill ships in a plugin, you can measure how often it triggers across realistic prompts rather than checking one at a time: write an eval case with a [`tool_used: Skill` grader](/docs/en/plugin-evals#create-your-first-eval-suite) and run it with `claude plugin eval` after each description change.
@@ -1215,7 +1215,7 @@ If Claude uses your skill when you don’t want it:
 
 If Claude follows a skill in its first response and stops following it later, start with whichever of these cases matches:
 
-* **Claude skipped a rule that must hold every time**: move the rule into a [hook](/docs/en/hooks-guide). Claude Code runs a hook every time its event occurs, such as before each file edit, whether or not Claude is following the skill. To keep the rule with the skill, define the hook in the skill’s [`hooks` frontmatter](/docs/en/hooks#hooks-in-skills-and-agents). That hook applies from the time the skill is invoked until the session ends.
+* **Claude skipped a rule that must hold every time**: move the rule into a [hook](/docs/en/hooks-guide) in a [settings file](/docs/en/hooks#hook-locations) or a plugin’s `hooks/hooks.json`. Claude Code runs that hook when its event occurs, such as before a file edit, whether or not Claude is following the skill.
 * **Claude skipped guidance it should apply with judgment**: word the guidance so it applies to the whole task, for example “Run the tests after every edit” rather than “Run the tests”. Claude Code adds the skill’s content to the conversation when the skill is invoked and [doesn’t re-read the file](#skill-content-lifecycle) on later turns.
 * **The conversation was compacted**: invoke the skill again to restore its full content. After [compaction](/docs/en/how-claude-code-works#when-context-fills-up), Claude Code [can keep only the start of an invoked skill](#skill-content-lifecycle), so put the most important instructions near the top of `SKILL.md`.
 
@@ -1252,9 +1252,5 @@ Related resources
 * **[Commands](/docs/en/commands)**: reference for built-in commands and bundled skills
 * **[Permissions](/docs/en/permissions)**: control tool and skill access
 * **[Claude Tag skills](https://claude.com/docs/claude-tag/admins/skills-repo)**: project skills committed to a repo also load when that repo is used in a Claude Tag channel
-
-Was this page helpful?
-
-YesNo
 
 [Reference](/docs/en/mcp)[Share session output as artifacts](/docs/en/artifacts)

@@ -320,7 +320,7 @@ Take three rules you might have in `CLAUDE.md` today: `Never read .env`, `Always
 * A tool call on one of your MCP servers
 * A [`prompt` or `agent` hook](/docs/en/hooks#hook-handler-fields), which lets a model decide
 
-A `prompt` or `agent` hook asks *another model* to decide, so it isn’t deterministic either. For real enforcement, use a `command` or `http` hook, and add [`onFailure: "block"`](/docs/en/hooks#block-the-action-when-a-hook-fails) if the action should also be stopped when the hook itself crashes or times out. For a hook that scans commits for secrets, say, you’d rather block the commit than let it through unscanned while the scanner is down.
+A `prompt` or `agent` hook asks *another model* to decide, so it isn’t deterministic either. For real enforcement, use a `command`, `http`, or `mcp_tool` hook, and add [`onFailure: "block"`](/docs/en/hooks#block-the-action-when-a-hook-fails) if the action should also be stopped when the hook itself crashes or times out. For a hook that scans commits for secrets, say, you’d rather block the commit than let it through unscanned while the scanner is down.
 Here’s the formatter rule as a `PostToolUse` hook. It runs after every `Edit` or `Write`, and whether Claude remembers the rule no longer matters, because Claude isn’t the one running it:
 
 .claude/settings.json
@@ -411,7 +411,7 @@ Both ends of the permission range have a cost:
 * Actions that look driven by content Claude read rather than by you
 
 When auto mode blocks an action, you get a notification and the action shows up under **Recently blocked** in `/permissions`, where you can [approve the action so Claude may retry](/docs/en/auto-mode-config#review-denials). After [three blocks in a row](/docs/en/permission-modes#when-auto-mode-falls-back) (or twenty in total), auto mode pauses and goes back to asking you.
-None of this replaces your deterministic controls, because it runs *after* them. Deny and ask rules and `PreToolUse` hooks apply before the classifier sees anything, so a deny rule blocks in auto mode exactly like it does everywhere else. The sandbox still confines the [shell commands it wraps](/docs/en/sandboxing#what-runs-outside-the-sandbox).
+The sandbox still confines the [shell commands it wraps](/docs/en/sandboxing#what-runs-outside-the-sandbox).
 
 You can also say `don't push until I've reviewed` in the conversation, and the classifier [treats that as a block signal](/docs/en/permission-modes#boundaries-you-state-in-conversation). It’s still a model reading the transcript, and the sentence can get lost when the conversation compacts, so anything that matters belongs in a deny rule.
 
@@ -435,7 +435,7 @@ The opposite problem is the classifier repeatedly stopping something that’s ro
 }
 ```
 
-Keep `"$defaults"` in every list you set, because without it your entries *replace* that list’s built-in rules instead of adding to them. For `environment` and `allow` you’d lose the built-in context and exceptions, and a `soft_deny` list without it drops the built-in blocks on force pushes and production deploys.The `autoMode` block also has to live in `~/.claude/settings.json` rather than the project, because the classifier ignores `autoMode` in project settings.
+Keep `"$defaults"` in every list you set, because without it your entries [can replace](/docs/en/auto-mode-config#override-the-block-and-allow-rules) that list’s built-in rules instead of adding to them. You can lose the built-in context in `environment`, the exceptions in `allow`, and the blocks on force pushes and production deploys in `soft_deny`.The `autoMode` block also has to live in `~/.claude/settings.json` rather than the project, because the classifier ignores `autoMode` in project settings.
 
 If you’d rather see every edit and command before it happens, `Shift+Tab` in the session cycles through the permission modes, Manual included, or start with `claude --permission-mode manual` from your shell. And if Manual then asks too often, `/fewer-permission-prompts` scans your recent transcripts for common read-only Bash and MCP calls and adds them to an allowlist in `.claude/settings.json`.
 
@@ -539,7 +539,7 @@ Once it’s going, Claude will carry a long task through on its own. The parts t
 [`claude -p "prompt"`](/docs/en/headless) runs once and exits, which is how Claude Code ends up in CI jobs, git hooks, and shell loops.
 In a script you’ll almost always want a few more flags:
 
-* [`--bare`](/docs/en/headless#start-faster-with-bare-mode) skips hooks, skills, plugins, MCP servers, and `CLAUDE.md` files, the repo’s as well as the machine’s, so the run does the same thing wherever it runs. It also never touches your claude.ai login: auth comes from `ANTHROPIC_API_KEY`, an `apiKeyHelper` in the file you pass with `--settings`, or your cloud provider’s credentials.
+* [`--bare`](/docs/en/headless#start-faster-with-bare-mode) skips your hooks, skills, plugins, MCP servers, and `CLAUDE.md` files from the repo and your home directory. It also doesn’t use your claude.ai login: auth comes from `ANTHROPIC_API_KEY`, an `apiKeyHelper` in the file you pass with `--settings`, or your cloud provider’s credentials.
 * `--append-system-prompt`, `--mcp-config`, and `--settings` explicitly pass in what the run *does* need. Hooks you pass with `--settings` [don’t run under `--bare`](/docs/en/headless#start-faster-with-bare-mode), so don’t use `--bare` for a run that needs them.
 * `--allowedTools` pre-approves its tools, and [`--permission-mode dontAsk`](/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode) refuses anything else that would have prompted.
 * `--output-format json` gives you a single result object to parse, and `stream-json` with `--verbose` streams events as they happen.
@@ -624,9 +624,5 @@ Related resources
 * [Manage costs effectively](/docs/en/costs)
 * [Run Claude Code programmatically](/docs/en/headless) and [Automate work with cloud scheduled tasks](/docs/en/routines)
 * For team leads and admins: [Set up Claude Code for your organization](/docs/en/admin-setup)
-
-Was this page helpful?
-
-YesNo
 
 [Prompt library](/docs/en/prompt-library)[Overview](/docs/en/platforms)
