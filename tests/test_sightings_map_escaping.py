@@ -14,11 +14,13 @@ Covers #31 (manual string escaping -> json.dumps) and associated CVEs for:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 
 import pytest
 
+from butterfly_planner.reference.geography import PORTLAND
 from butterfly_planner.renderers.sightings_map import build_butterfly_map_html
 
 # U+2028 LINE SEPARATOR and U+2029 PARAGRAPH SEPARATOR as string constants so
@@ -85,7 +87,7 @@ class TestScriptTagInjection:
     )
     def test_no_premature_script_close(self, name: str) -> None:
         """The rendered HTML must not contain a bare </script> that closes the block."""
-        _, map_script = build_butterfly_map_html(_make_inat(name))
+        _, map_script = build_butterfly_map_html(_make_inat(name), location=PORTLAND)
         # The only valid </script> should be the one closing the template block
         # itself. The injected name must NOT produce an unescaped </script>
         # inside the JSON.
@@ -100,7 +102,7 @@ class TestScriptTagInjection:
     def test_script_tag_value_survives_roundtrip(self) -> None:
         """The raw </script> value must parse back correctly from the JSON."""
         name = "</script>"
-        _, map_script = build_butterfly_map_html(_make_inat(name))
+        _, map_script = build_butterfly_map_html(_make_inat(name), location=PORTLAND)
         markers = _extract_markers_json(map_script)
         assert markers[0]["name"] == name
 
@@ -118,7 +120,7 @@ class TestNewlineEmbedding:
     )
     def test_newline_in_name(self, name: str) -> None:
         """Newlines in the name must be escaped so the JSON is valid."""
-        _, map_script = build_butterfly_map_html(_make_inat(name))
+        _, map_script = build_butterfly_map_html(_make_inat(name), location=PORTLAND)
         markers = _extract_markers_json(map_script)
         assert markers[0]["name"] == name, "Newline chars must survive round-trip"
 
@@ -136,7 +138,7 @@ class TestUnicodeSeparators:
     )
     def test_unicode_separators_escaped(self, name: str) -> None:
         """U+2028/U+2029 must appear as \\u2028/\\u2029 in the rendered script."""
-        _, map_script = build_butterfly_map_html(_make_inat(name))
+        _, map_script = build_butterfly_map_html(_make_inat(name), location=PORTLAND)
         # The raw characters must NOT appear in the script source
         assert _LS not in map_script, "Raw U+2028 found in script -- must be escaped"
         assert _PS not in map_script, "Raw U+2029 found in script -- must be escaped"
@@ -161,7 +163,7 @@ class TestQuoteAndBackslashEscaping:
     )
     def test_quotes_and_backslash(self, name: str) -> None:
         """Quotes and backslashes must survive round-trip without breaking JSON."""
-        _, map_script = build_butterfly_map_html(_make_inat(name))
+        _, map_script = build_butterfly_map_html(_make_inat(name), location=PORTLAND)
         markers = _extract_markers_json(map_script)
         assert markers[0]["name"] == name
 
@@ -172,7 +174,7 @@ class TestCombinedAdversarialInput:
     def test_combined_attack_string(self) -> None:
         """A name combining all attack vectors must render safely."""
         name = f"</script><script>alert(1)</script>\n\r{_LS}{_PS}\"'\\xss"
-        _, map_script = build_butterfly_map_html(_make_inat(name))
+        _, map_script = build_butterfly_map_html(_make_inat(name), location=PORTLAND)
 
         # No bare </script> break (only the template's own closing tag allowed)
         assert map_script.lower().count("</script>") <= 1
@@ -197,9 +199,23 @@ class TestCombinedAdversarialInput:
         inat_data = _make_inat(name)
         # Inject weather via obs enrichment
         inat_data["data"]["observations"][0]["weather"] = weather
-        _, map_script = build_butterfly_map_html(inat_data)
+        _, map_script = build_butterfly_map_html(inat_data, location=PORTLAND)
         # Weather appears in the JSON under "weather" key
         markers = _extract_markers_json(map_script)
         assert isinstance(markers[0].get("weather"), str)
         # Script must remain parseable (no premature close)
         assert map_script.lower().count("</script>") <= 1
+
+
+class TestLocationLabelEscaping:
+    """A location's search label is data too, and must not break the script."""
+
+    @pytest.mark.parametrize("label", ["O'Brien Flats", 'The "Big" Canyon', "</script>"])
+    def test_label_is_a_safe_js_string(self, label: str) -> None:
+        location = dataclasses.replace(PORTLAND, region_label=label)
+        _, map_script = build_butterfly_map_html(_make_inat("Painted Lady"), location=location)
+
+        match = re.search(r"bindPopup\('Search area: ' \+ (\".*?\")\)", map_script)
+        assert match, "search area popup not found in map script"
+        assert json.loads(match.group(1)) == label
+        assert map_script.lower().count("</script>") == 1

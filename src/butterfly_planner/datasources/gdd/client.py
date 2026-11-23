@@ -22,6 +22,7 @@ def fetch_temperature_data(
     lon: float,
     start: date,
     end: date,
+    timezone: str = "America/Los_Angeles",
 ) -> list[tuple[date, float, float]]:
     """Fetch daily min/max temperatures from the Open-Meteo archive API.
 
@@ -30,6 +31,7 @@ def fetch_temperature_data(
         lon: Longitude of the location.
         start: Start date (inclusive).
         end: End date (inclusive).
+        timezone: IANA timezone that sets where each daily value starts and ends.
 
     Returns:
         List of (date, tmax_f, tmin_f) tuples.
@@ -44,7 +46,7 @@ def fetch_temperature_data(
         "end_date": end.isoformat(),
         "daily": "temperature_2m_max,temperature_2m_min",
         "temperature_unit": "fahrenheit",
-        "timezone": "America/Los_Angeles",
+        "timezone": timezone,
     }
 
     resp = requests.get(ARCHIVE_API, params=params, timeout=30)
@@ -73,6 +75,7 @@ def fetch_year_gdd(
     through: date | None = None,
     base_temp_f: float = DEFAULT_BASE_TEMP_F,
     upper_cutoff_f: float = DEFAULT_UPPER_CUTOFF_F,
+    timezone: str = "America/Los_Angeles",
 ) -> YearGDD:
     """Fetch temperatures and compute GDD for a full year (or year-to-date).
 
@@ -83,6 +86,7 @@ def fetch_year_gdd(
         through: End date (defaults to Dec 31 or yesterday if current year).
         base_temp_f: Base temperature for GDD computation.
         upper_cutoff_f: Upper cutoff temperature.
+        timezone: IANA timezone for the daily temperature values.
 
     Returns:
         YearGDD with daily GDD entries.
@@ -92,6 +96,6 @@ def fetch_year_gdd(
         today = date.today()
         through = today - timedelta(days=1) if year == today.year else date(year, 12, 31)
 
-    temps = fetch_temperature_data(lat, lon, start, through)
+    temps = fetch_temperature_data(lat, lon, start, through, timezone=timezone)
     daily = compute_accumulated_gdd(temps, base_temp_f, upper_cutoff_f)
     return YearGDD(year=year, daily=daily)

@@ -1,6 +1,6 @@
 <script>
 (function() {
-  var map = L.map("sightings-map").setView([45.5, -122.8], 8);
+  var map = L.map("sightings-map").setView({{ map_center|tojson }}, {{ map_zoom|int }});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 16,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -87,10 +87,27 @@
   heat.addTo(map);
   markers.addTo(map);
 
-  L.rectangle([[44.5, -124.2], [46.5, -121.5]], {
+  L.rectangle({{ bbox_bounds|tojson }}, {
     color: '#555', weight: 1.5, dashArray: '6 4',
     fill: false, opacity: 0.5
-  }).addTo(map).bindPopup('Search area: NW Oregon / SW Washington');
+  }).addTo(map).bindPopup('Search area: ' + {{ region_label|tojson }});
+{%- if points_of_interest %}
+
+  // Named places in the search area. The popup is built from DOM nodes with
+  // textContent, so a name is always shown as text, never parsed as HTML.
+  var pois = {{ points_of_interest|tojson }};
+  for (var j = 0; j < pois.length; j++) {
+    var p = pois[j];
+    var popup = document.createElement(p.url ? 'a' : 'span');
+    popup.textContent = p.name;
+    if (p.url) {
+      popup.href = p.url;
+      popup.target = '_blank';
+      popup.rel = 'noopener';
+    }
+    L.marker([p.lat, p.lon], {title: p.name}).addTo(map).bindPopup(popup);
+  }
+{%- endif %}
   if (obs.length > 0) {
     var bounds = L.latLngBounds(obs.map(function(o) { return [o.lat, o.lon]; }));
     map.fitBounds(bounds, {padding: [30, 30]});

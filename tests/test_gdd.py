@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import butterfly_planner.datasources.gdd.client as gdd_client
 import butterfly_planner.renderers.gdd as gdd_renderer
 from butterfly_planner.datasources.gdd import (
     DailyGDD,
@@ -35,6 +36,10 @@ from butterfly_planner.renderers.gdd import (
     build_gdd_timeline_html,
     build_gdd_today_html,
 )
+
+# The slider tests compare against last year's entry on the same day of year,
+# so they pin "today" to the date their fixtures use.
+SLIDER_TODAY = date(2026, 5, 17)
 
 # =============================================================================
 # compute_daily_gdd
@@ -147,6 +152,42 @@ class TestComputeAccumulatedGDD:
 # =============================================================================
 # YearGDD
 # =============================================================================
+
+
+class TestFetchTimezone:
+    """GDD temperature requests send the requested timezone to Open-Meteo."""
+
+    @staticmethod
+    def _empty_response() -> MagicMock:
+        resp = MagicMock()
+        resp.json.return_value = {"daily": {"time": []}}
+        return resp
+
+    def test_fetch_temperature_data_passes_timezone(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_temperature_data(
+            31.4, -109.9, date(2025, 1, 1), date(2025, 1, 2), timezone="America/Phoenix"
+        )
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Phoenix"
+
+    def test_fetch_temperature_data_defaults_to_pacific(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_temperature_data(45.5, -122.6, date(2025, 1, 1), date(2025, 1, 2))
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Los_Angeles"
+
+    def test_fetch_year_gdd_passes_timezone(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_year_gdd(31.4, -109.9, 2025, timezone="America/Phoenix")
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Phoenix"
+
+    def test_fetch_year_gdd_defaults_to_pacific(self, monkeypatch) -> None:
+        mock_get = MagicMock(return_value=self._empty_response())
+        monkeypatch.setattr(gdd_client.requests, "get", mock_get)
+        gdd_client.fetch_year_gdd(45.5, -122.6, 2025)
+        assert mock_get.call_args.kwargs["params"]["timezone"] == "America/Los_Angeles"
 
 
 class TestYearGDD:
@@ -491,6 +532,16 @@ class TestRendering:
         assert len(kwargs["current_year_points"]) > 0
         assert len(kwargs["previous_year_points"]) > 0
 
+    def test_build_gdd_timeline_html_today_marker_follows_given_date(
+        self, sample_gdd_data, mock_render
+    ):
+        """The "today" marker sits at the given date, not the machine's date."""
+        build_gdd_timeline_html(sample_gdd_data, today=date(2026, 1, 1))
+        jan_x = mock_render.call_args[1]["today_x"]
+        build_gdd_timeline_html(sample_gdd_data, today=date(2026, 7, 1))
+        jul_x = mock_render.call_args[1]["today_x"]
+        assert jan_x < jul_x
+
     def test_build_gdd_timeline_html_with_normals(self, sample_gdd_data, mock_render):
         """Should include normal band when normals are provided."""
         normals = [
@@ -523,10 +574,10 @@ class TestRendering:
     ) -> dict:
         """Build minimal GDD data structure for slider direction tests.
 
-        Uses May 17 as the reference date (DOY 137) so that the previous year's
-        same-DOY entry is found correctly by build_gdd_today_html's lookup loop.
+        The entries fall on May 17. Pass ``today=SLIDER_TODAY`` to
+        build_gdd_today_html so its same-day-of-year lookup finds the May 17
+        entry whatever the real date is.
         """
-        # Use May 17 as a stable reference date that matches today's DOY (137)
         curr_date = f"{current_year}-05-17"
         prev_date = f"{previous_year}-05-17"
         return {
@@ -578,7 +629,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=62.0, previous_accumulated=40.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert "ahead" in kwargs["status_text"].lower(), (
@@ -594,7 +645,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=30.0, previous_accumulated=60.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert "behind" in kwargs["status_text"].lower(), (
@@ -610,7 +661,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=50.0, previous_accumulated=50.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert "tracking" in kwargs["status_text"].lower(), (
@@ -624,7 +675,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=200.0, previous_accumulated=10.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert status_pct >= 15, f"Ahead pct should clamp to at least 15, got {status_pct}"
@@ -636,7 +687,7 @@ class TestRendering:
         data = self._make_gdd_data_with_comparison(
             current_accumulated=5.0, previous_accumulated=200.0
         )
-        build_gdd_today_html(data)
+        build_gdd_today_html(data, today=SLIDER_TODAY)
         kwargs = mock_render.call_args[1]
         status_pct = float(kwargs["status_pct"])
         assert status_pct <= 85, f"Behind pct should clamp to at most 85, got {status_pct}"

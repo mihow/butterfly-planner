@@ -27,7 +27,7 @@ consumer forces a change):
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -40,9 +40,6 @@ from butterfly_planner.reference.viewing import MIN_GOOD_SUNSHINE_HOURS, MIN_GOO
 # Promotion to "1.0" is deferred until a real consumer validates the
 # contract end to end.  Bump the major on breaking changes after 1.0.
 SCHEMA_VERSION = "0.2"
-
-# Timezone for local display
-_PST = ZoneInfo("America/Los_Angeles")
 
 # ---------------------------------------------------------------------------
 # WMO code → plain-text description (no emoji).
@@ -227,6 +224,8 @@ def build_daily_data(
     location_name: str = "Portland, OR",
     lat: float = 45.5,
     lon: float = -122.6,
+    timezone: str = "America/Los_Angeles",
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build structured daily data from all data sources.
 
@@ -252,20 +251,24 @@ def build_daily_data(
         location_name: Human-readable location label.
         lat: Latitude.
         lon: Longitude.
+        timezone: IANA timezone of the location. It decides which calendar
+            day "today" is and the offset written in ``generated_at``.
+        now: The build instant (defaults to the current time). Tests pass a
+            fixed instant to check day boundaries.
 
     Returns:
         Validated, JSON-native daily data dict (``DailyData.model_dump(
         mode="json")``) with schema version.
     """
-    today = target_date or datetime.now(_PST).date()
+    local_now = (now or datetime.now(UTC)).astimezone(ZoneInfo(timezone))
+    today = target_date or local_now.date()
     today_str = today.isoformat()
-    now = datetime.now(_PST)
 
     result: dict[str, Any] = {
         "version": SCHEMA_VERSION,
         "date": today_str,
         "location": {"name": location_name, "lat": lat, "lon": lon},
-        "generated_at": now.isoformat(),
+        "generated_at": local_now.isoformat(),
     }
 
     result["sunshine"] = _extract_sunshine(sunshine_data, today_str)
